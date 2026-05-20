@@ -1,0 +1,104 @@
+# Employee Leave Management System
+
+Laravel + Inertia + React + TypeScript implementation for employee leave operations.
+
+## Features
+
+- Role-based access for staff, managers, HR, and admins.
+- Email login, password reset, and optional email 2FA.
+- Staff leave request submission with attachments.
+- Working-day calculation excluding weekends and configured public holidays.
+- Real-time balances for allowance, used, pending, adjustments, and available days.
+- Manager approval and rejection with comments.
+- Email notifications and in-app system alerts for submission and decisions.
+- HR/admin management for departments, users, leave types, public holidays, and balance overrides.
+- Monthly leave attendance CSV export.
+- FAQ-backed AI help module scaffold with chat logging.
+- PostgreSQL-ready relational schema with audit logs.
+
+## Local Setup
+
+1. Install PHP 8.3+, Composer, Node 20.15+ and PostgreSQL.
+2. Enable PHP PostgreSQL support (`pdo_pgsql` and `pgsql`) in `php.ini`.
+3. Create the database:
+
+```sql
+CREATE DATABASE elms_leave;
+```
+
+4. Configure `.env`:
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=elms_leave
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+
+MAIL_MAILER=smtp
+MAIL_HOST=your.smtp.host
+MAIL_PORT=587
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=hr@elms.local
+MAIL_FROM_NAME="Employee Leave Management System"
+```
+
+5. Run:
+
+```bash
+composer install
+npm install
+php artisan key:generate
+php artisan storage:link
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
+
+Default seeded accounts all use password `password`:
+
+- `staff@elms.test`
+- `manager@elms.test`
+- `hr@elms.test`
+- `admin@elms.test`
+
+## Production Notes
+
+Use a queue worker for reliable notifications:
+
+```bash
+php artisan queue:work --tries=3
+```
+
+Recommended Nginx server block:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name leave.elms.example;
+    root /var/www/elms/public;
+
+    index index.php;
+    client_max_body_size 10M;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+    }
+}
+```
+
+On GCP VM, terminate HTTPS with a valid certificate, keep `.env` out of source control, run `php artisan config:cache`, and schedule Laravel maintenance tasks with:
+
+```cron
+* * * * * cd /var/www/elms && php artisan schedule:run >> /dev/null 2>&1
+```

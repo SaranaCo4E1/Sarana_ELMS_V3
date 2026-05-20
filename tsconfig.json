@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "target": "ES2022",
+    "types": ["vite/client"],
+    "skipLibCheck": true
+  },
+  "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx"]
+}
