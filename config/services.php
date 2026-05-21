@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'google_generative_ai' => [
+        'key' => env('GOOGLE_GENERATIVE_AI_API_KEY'),
+        'model' => env('GOOGLE_GENERATIVE_AI_MODEL', 'gemini-3.1-flash-lite'),
+    ],
+
 ];

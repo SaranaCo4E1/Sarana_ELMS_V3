@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
+    Route::post('/ai-help/stream', [AiHelpController::class, 'stream'])->name('ai-help.stream');
 
     Route::middleware('role:manager,hr,admin')->group(function () {
         Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
