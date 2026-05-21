@@ -1,6 +1,7 @@
-import { Bot, Clock3, Loader2, MessageSquarePlus, Send, Sparkles, Square, UserRound, HelpCircle, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { ArrowRight, Bot, CalendarPlus, Clock3, CornerDownLeft, HelpCircle, Loader2, MessageSquarePlus, Send, Sparkles, Square, UserRound } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import AppLayout from '../Layouts/AppLayout';
 
@@ -16,16 +17,23 @@ type ChatMessage = {
   content: string;
   createdAt: string;
 };
+type LeaveDraft = {
+  leave_type: string;
+  starts_at: string;
+  ends_at: string;
+  duration: 'full_day' | 'half_day';
+  reason: string;
+};
 
 export default function AiAssistant({ faqs, recentChats }: Props) {
-  const initialMessages = useMemo(() => chatsToMessages(recentChats.slice().reverse()), [recentChats]);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamError, setStreamError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'history' | 'faq'>('chat');
+  const [leaveDraft, setLeaveDraft] = useState<LeaveDraft | null>(null);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' });
@@ -42,11 +50,15 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     const userMessage = makeMessage('user', nextPrompt);
     const assistantMessage = makeMessage('assistant', '');
     const history = messages.slice(-18).map((message) => ({ role: message.role, content: message.content }));
+    let responseIntent = 'general';
+    let assistantText = '';
+    let fakeStreamQueue = Promise.resolve();
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setPrompt('');
     setStreamError('');
     setLoading(true);
+    setLeaveDraft(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -71,7 +83,20 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
         const token = event.token;
 
         if (token) {
-          setMessages((current) => appendToken(current, assistantMessage.id, token));
+          assistantText += token;
+          if (responseIntent === 'leave_draft') {
+            setMessages((current) => appendToken(current, assistantMessage.id, token));
+          } else {
+            fakeStreamQueue = fakeStreamQueue.then(() =>
+              appendFakeStreamText(assistantMessage.id, token, controller.signal, (chunk) => {
+                setMessages((current) => appendToken(current, assistantMessage.id, chunk));
+              }),
+            );
+          }
+        }
+
+        if (event.intent) {
+          responseIntent = event.intent;
         }
 
         if (event.error) {
@@ -85,6 +110,10 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
         setMessages((current) => appendToken(current, assistantMessage.id, `I could not complete that request. ${message}`));
       }
     } finally {
+      await fakeStreamQueue.catch(() => undefined);
+      if (responseIntent === 'leave_draft' && assistantText.trim()) {
+        setLeaveDraft(parseLeaveDraftResponse(assistantText));
+      }
       abortRef.current = null;
       setLoading(false);
     }
@@ -101,6 +130,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     setMessages([]);
     setPrompt('');
     setStreamError('');
+    setLeaveDraft(null);
   }
 
   function loadRecentChat(chat: RecentChat) {
@@ -265,6 +295,44 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             activeTab !== 'chat' ? 'flex h-[calc(100svh-14rem)]' : 'hidden'
           }`}>
             {/* History Panel */}
+            {leaveDraft && (
+              <section className="border border-emerald-100 bg-emerald-50/50 p-5 rounded-2xl shadow-premium-sm">
+                <div className="mb-4 flex items-center gap-2 border-b border-emerald-100/70 pb-3">
+                  <CalendarPlus size={15} className="text-emerald-700" />
+                  <h2 className="text-[10px] font-semibold uppercase tracking-widest text-emerald-800">Leave Draft Ready</h2>
+                </div>
+                <div className="space-y-3 text-xs font-medium text-emerald-900">
+                  <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Type</div>
+                    <div className="mt-1 font-semibold">{leaveDraft.leave_type || 'Review in form'}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Start</div>
+                      <div className="mt-1 font-semibold">{leaveDraft.starts_at || 'Choose'}</div>
+                    </div>
+                    <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">End</div>
+                      <div className="mt-1 font-semibold">{leaveDraft.ends_at || 'Choose'}</div>
+                    </div>
+                  </div>
+                  {leaveDraft.reason && (
+                    <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Application note</div>
+                      <div className="mt-1.5 text-xs leading-relaxed text-emerald-950">{leaveDraft.reason}</div>
+                    </div>
+                  )}
+                  <Link
+                    href={leaveDraftUrl(leaveDraft)}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-semibold text-white shadow-md shadow-emerald-600/10 transition-all hover:bg-emerald-700 active:scale-98"
+                  >
+                    Autofill Application <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </section>
+            )}
+
+            {/* History Panel */}
             <section className={`min-h-0 flex-1 flex-col border border-neutral-200/50 bg-white p-5 rounded-2xl shadow-premium-sm ${
               activeTab === 'history' ? 'flex h-full' : 'hidden lg:flex'
             }`}>
@@ -335,6 +403,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
 function ChatBubble({ message, loading }: { message: ChatMessage; loading: boolean }) {
   const isAssistant = message.role === 'assistant';
+  const draft = isAssistant && !loading ? draftFromAssistantMessage(message.content) : null;
 
   return (
     <div className={`flex gap-3.5 ${isAssistant ? '' : 'justify-end'} animate-fade-in`}>
@@ -353,6 +422,8 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
             <Loader2 size={13} className="animate-spin text-emerald-600" /> 
             Thinking...
           </span>
+        ) : draft ? (
+          <LeaveDraftMessage draft={draft} />
         ) : (
           <div className="whitespace-normal break-words markdown-prose">
             <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -368,7 +439,54 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
   );
 }
 
-async function readStream(body: ReadableStream<Uint8Array>, onEvent: (event: { token?: string; error?: string; done?: boolean }) => void) {
+function LeaveDraftMessage({ draft }: { draft: LeaveDraft }) {
+  return (
+    <div className="w-full min-w-[min(26rem,70vw)] space-y-3">
+      <div className="flex items-center gap-2 border-b border-emerald-100 pb-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-700 shadow-premium-sm">
+          <CalendarPlus size={15} />
+        </div>
+        <div>
+          <div className="text-sm font-semibold text-neutral-900">Leave draft ready</div>
+          <div className="text-[11px] font-medium text-neutral-500">Review before filling the application form.</div>
+        </div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <DraftField label="Type" value={draft.leave_type || 'Review in form'} />
+        <DraftField label="Start" value={draft.starts_at || 'Choose'} />
+        <DraftField label="End" value={draft.ends_at || 'Choose'} />
+      </div>
+
+      <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-premium-sm">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Application note</div>
+        <div className="mt-1.5 text-xs font-medium leading-relaxed text-neutral-700">
+          {draft.reason || 'No note generated yet.'}
+        </div>
+      </div>
+
+      <Link
+        href={leaveDraftUrl(draft)}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-emerald-600/10 transition-all hover:bg-emerald-700 active:scale-98"
+      >
+        Autofill Application <ArrowRight size={13} />
+      </Link>
+    </div>
+  );
+}
+
+function DraftField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-premium-sm">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</div>
+      <div className="mt-1 truncate text-xs font-semibold text-neutral-850" title={value}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+async function readStream(body: ReadableStream<Uint8Array>, onEvent: (event: { token?: string; intent?: string; error?: string; done?: boolean }) => void) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -397,6 +515,61 @@ function appendToken(messages: ChatMessage[], id: string, token: string) {
   return messages.map((message) => (message.id === id ? { ...message, content: message.content + token } : message));
 }
 
+async function appendFakeStreamText(id: string, text: string, signal: AbortSignal, append: (chunk: string) => void) {
+  for (const chunk of fakeStreamChunks(text)) {
+    if (signal.aborted) throw new DOMException('Streaming stopped', 'AbortError');
+
+    append(chunk);
+    await sleep(fakeStreamDelay(chunk), signal);
+  }
+}
+
+function fakeStreamChunks(text: string) {
+  const chunks = text.match(/\s+|[^\s]+/g) ?? [];
+  const grouped: string[] = [];
+  let buffer = '';
+
+  for (const chunk of chunks) {
+    buffer += chunk;
+
+    if (buffer.length >= 14 || /[.!?]\s$/.test(buffer) || /\n$/.test(buffer)) {
+      grouped.push(buffer);
+      buffer = '';
+    }
+  }
+
+  if (buffer) grouped.push(buffer);
+
+  return grouped;
+}
+
+function fakeStreamDelay(chunk: string) {
+  if (/\n$/.test(chunk)) return 90;
+  if (/[.!?]\s$/.test(chunk)) return 120;
+
+  return Math.min(85, Math.max(24, chunk.length * 8));
+}
+
+function sleep(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Streaming stopped', 'AbortError'));
+      return;
+    }
+
+    const timeout = window.setTimeout(resolve, ms);
+
+    signal.addEventListener(
+      'abort',
+      () => {
+        window.clearTimeout(timeout);
+        reject(new DOMException('Streaming stopped', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
+}
+
 // Map chats to messages utility
 function chatsToMessages(chats: RecentChat[]): ChatMessage[] {
   return chats.flatMap((chat) => [
@@ -419,8 +592,64 @@ function formatDate(value: string) {
 }
 
 const suggestedPrompts = [
+  'Draft annual leave for May 25 to May 28 for family travel.',
   'How much annual leave can I use this month?',
   'What happens after I submit a leave request?',
   'Which leave types require an attachment?',
   'Show me how managers approve or reject a request.',
 ];
+
+function parseLeaveDraftResponse(response: string): LeaveDraft {
+  return {
+    leave_type: valueAfterLabel(response, 'Leave type'),
+    starts_at: normalizeDraftDate(valueAfterLabel(response, 'Start date')),
+    ends_at: normalizeDraftDate(valueAfterLabel(response, 'End date')),
+    duration: normalizeDuration(valueAfterLabel(response, 'Duration')),
+    reason: applicationNoteFromResponse(response),
+  };
+}
+
+function draftFromAssistantMessage(response: string): LeaveDraft | null {
+  if (!/draft request ready|leave draft ready|application note:/i.test(response)) return null;
+
+  const draft = parseLeaveDraftResponse(response);
+  const hasDraftContent = Boolean(draft.leave_type || draft.starts_at || draft.ends_at || draft.reason);
+
+  return hasDraftContent ? draft : null;
+}
+
+function valueAfterLabel(response: string, label: string) {
+  const match = response.match(new RegExp(`^${label}:\\s*(.+)$`, 'im'));
+  const value = match?.[1]?.trim() ?? '';
+  return /review in form|choose|unknown|n\/a/i.test(value) ? '' : value;
+}
+
+function normalizeDraftDate(value: string) {
+  const match = value.match(/\b20\d{2}-\d{2}-\d{2}\b/);
+  return match?.[0] ?? '';
+}
+
+function normalizeDuration(value: string): LeaveDraft['duration'] {
+  return /half/i.test(value) ? 'half_day' : 'full_day';
+}
+
+function applicationNoteFromResponse(response: string) {
+  const match = response.match(/application note:\s*([\s\S]*)/i);
+  const note = match?.[1]?.trim() ?? '';
+
+  return note
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^[-*]\s*/gm, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+}
+
+function leaveDraftUrl(draft: LeaveDraft) {
+  const params = new URLSearchParams({ source: 'ai', duration: draft.duration, reason: draft.reason });
+
+  if (draft.leave_type) params.set('leave_type', draft.leave_type);
+  if (draft.starts_at) params.set('starts_at', draft.starts_at);
+  if (draft.ends_at) params.set('ends_at', draft.ends_at);
+
+  return `/apply-leave?${params.toString()}`;
+}

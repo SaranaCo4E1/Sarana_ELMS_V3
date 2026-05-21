@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, IdCard, LogOut, Menu, Settings, Users, X } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, IdCard, LogOut, Menu, Settings, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
@@ -49,8 +49,8 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
     <div className="flex h-full flex-col justify-between py-6 bg-white">
       <div>
         <div className="flex items-center gap-3 px-6">
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/10">
-            <CalendarCheck size={16} />
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/10 border border-emerald-500/10">
+            <Bot size={16} />
           </div>
           <div>
             <div className="font-semibold tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
@@ -101,8 +101,8 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
 
       <div className="px-4">
         {/* User Mini Profile Card */}
-        <div className="mb-4 flex items-center gap-3.5 border border-neutral-200 bg-neutral-50/20 rounded-2xl p-3.5 shadow-premium-sm">
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 font-semibold text-neutral-900 text-xs shadow-inner shrink-0">
+        <div className="mb-4 flex items-center gap-3.5 border border-neutral-200 bg-[#fafbfa]/70 rounded-2xl p-3.5 shadow-premium-sm">
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100 font-semibold text-emerald-800 text-xs shadow-inner shrink-0">
             {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -122,7 +122,11 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#fafbfa]">
+    <div className="relative flex flex-col min-h-screen overflow-hidden bg-[#fafbfa]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -right-40 top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-emerald-400/8 to-teal-500/8 blur-3xl" />
+        <div className="absolute bottom-0 left-40 h-[24rem] w-[24rem] rounded-full bg-gradient-to-tr from-emerald-400/5 to-amber-300/5 blur-3xl" />
+      </div>
       {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
         <div
@@ -148,12 +152,12 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
       </aside>
 
       {/* Desktop Permanent Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-neutral-200 bg-white lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-neutral-200/70 bg-white/90 backdrop-blur-md lg:block">
         <NavContent />
       </aside>
 
       {/* Main Container */}
-      <div className="lg:pl-64 flex flex-col h-screen">
+      <div className="relative z-10 lg:pl-64 flex flex-col h-screen">
         {/* Top Navbar */}
         <header className="sticky top-0 z-20 border-b border-neutral-200/50 bg-white/80 backdrop-blur-md px-4 py-3 sm:px-8">
           <div className="flex items-center justify-between gap-4">
@@ -166,7 +170,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                 <Menu size={16} />
               </button>
               <div>
-                <h1 className="text-base font-semibold tracking-tight text-neutral-800">Leave Portal</h1>
+                <h1 className="text-base font-semibold tracking-tight text-neutral-900">Leave Portal</h1>
                 <p className="hidden text-xs font-medium text-neutral-450 sm:block">
                   {user.department?.name ?? 'General Staff'} · {user.employee_code ?? 'EMP'}
                 </p>
@@ -174,26 +178,40 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
             </div>
 
             {/* Right Action Menu: Notifications */}
-            <div className="relative">
-              <button
-                className={`relative flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-premium-sm ${
-                  notificationOpen ? 'bg-neutral-50' : 'bg-white'
-                }`}
-                onClick={() => setNotificationOpen((open) => !open)}
-                type="button"
-                aria-label="Open notifications"
-                aria-expanded={notificationOpen}
+            <div className="flex items-center gap-2.5">
+              <Link
+                href="/ai-assistant"
+                className="hidden items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-premium-sm transition-all hover:bg-emerald-50 sm:inline-flex"
               >
-                <Bell size={16} />
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-semibold text-white shadow-2xs">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              
-              {notificationOpen && (
-                <div className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200/50 bg-white p-2.5 shadow-premium-lg animate-fade-in">
+                <Sparkles size={13} /> Ask AI
+              </Link>
+              <Link
+                href="/apply-leave"
+                className="hidden h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 shadow-premium-sm transition-all hover:bg-neutral-50 md:flex"
+                aria-label="Apply for leave"
+              >
+                <CalendarPlus size={15} />
+              </Link>
+              <div className="relative">
+                <button
+                  className={`relative flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-premium-sm ${
+                    notificationOpen ? 'bg-neutral-50' : 'bg-white'
+                  }`}
+                  onClick={() => setNotificationOpen((open) => !open)}
+                  type="button"
+                  aria-label="Open notifications"
+                  aria-expanded={notificationOpen}
+                >
+                  <Bell size={16} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-semibold text-white shadow-2xs">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notificationOpen && (
+                  <div className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200/50 bg-white p-2.5 shadow-premium-lg animate-fade-in">
                   <div className="flex items-center justify-between border-b border-neutral-100/60 px-3 pb-2.5 mb-1.5">
                     <span className="font-semibold text-xs text-neutral-800">Notifications</span>
                     <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-100">
@@ -227,8 +245,9 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                       <div className="py-8 text-center text-xs text-neutral-400">No notifications yet.</div>
                     )}
                   </div>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -252,7 +271,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
         </header>
 
         {/* Content Body */}
-        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden animate-fade-in' : 'px-4 py-6 sm:px-8 max-w-7xl mx-auto overflow-y-auto animate-fade-in'}>
+        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden animate-fade-in' : 'px-4 py-6 sm:px-8 max-w-7xl mx-auto w-full overflow-y-auto animate-fade-in'}>
           {children}
         </main>
       </div>

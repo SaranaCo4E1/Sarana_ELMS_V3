@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AiChatLog;
 use App\Models\AiFaq;
+use App\Models\LeaveType;
+use App\Models\PublicHoliday;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -52,12 +54,17 @@ class AiHelpController extends Controller
             $answer = '';
             $emittedError = false;
             $buffer = '';
+            $intent = $this->classifyPromptIntent($data['prompt'], $apiKey);
+            $data['intent'] = $intent;
             $payload = $this->buildGeminiPayload($request, $data);
             $url = sprintf(
                 'https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse&key=%s',
                 rawurlencode(config('services.google_generative_ai.model')),
                 rawurlencode($apiKey),
             );
+
+            echo 'data: '.json_encode(['intent' => $intent])."\n\n";
+            flush();
 
             $curl = curl_init($url);
 
@@ -121,6 +128,7 @@ class AiHelpController extends Controller
                     'metadata' => [
                         'source' => 'gemini',
                         'model' => config('services.google_generative_ai.model'),
+                        'intent' => $intent,
                     ],
                 ]);
             }
@@ -135,11 +143,14 @@ class AiHelpController extends Controller
     }
 
     /**
-     * @param  array{prompt: string, messages?: array<int, array{role: string, content: string}>}  $data
+     * @param  array{prompt: string, intent?: string, messages?: array<int, array{role: string, content: string}>}  $data
      * @return array<string, mixed>
      */
     private function buildGeminiPayload(Request $request, array $data): array
     {
+        $user = $request->user()->loadMissing(['department', 'manager', 'leaveBalances.leaveType']);
+        $isLeaveDraft = ($data['intent'] ?? null) === 'leave_draft';
+        $now = now();
         $faqs = AiFaq::query()
             ->where('is_active', true)
             ->latest()
@@ -147,6 +158,8 @@ class AiHelpController extends Controller
             ->get(['question', 'answer'])
             ->map(fn (AiFaq $faq) => "Q: {$faq->question}\nA: {$faq->answer}")
             ->implode("\n\n");
+        $balanceContext = $this->buildLeaveBalanceContext($request);
+        $leaveContext = $isLeaveDraft ? $this->buildLeaveDraftContext($request) : null;
 
         $messages = collect($data['messages'] ?? [])
             ->take(-18)
@@ -166,8 +179,14 @@ class AiHelpController extends Controller
             'systemInstruction' => [
                 'parts' => [[
                     'text' => implode("\n\n", array_filter([
-                        'You are the AI assistant for an Employee Leave Management System. Answer clearly and practically about leave balances, policies, approvals, holidays, profile details, and HR workflows. If the question needs an HR decision or private data you cannot verify, say what the employee should check or who should contact HR.',
-                        'Current user: '.$request->user()->name.' (role: '.$request->user()->role.', department: '.($request->user()->department?->name ?? 'No department').').',
+                        'You are the AI assistant for an Employee Leave Management System. Answer only questions that directly support employee leave, attendance-adjacent HR workflows, leave balances, policies, approvals, holidays, profile details, and leave request drafting. If the user asks for anything outside this scope, briefly refuse and redirect them to leave-management topics you can help with. If the question needs an HR decision or private data you cannot verify, say what the employee should check or who should contact HR.',
+                        $isLeaveDraft
+                            ? "The user is drafting a leave application. Use the leave-system context below to choose the closest active leave type, normalize dates, and prepare a useful application note.\n\nRespond in this exact structure:\nDraft request ready.\nLeave type: <one active leave type name or Review in form>\nStart date: <YYYY-MM-DD or Review in form>\nEnd date: <YYYY-MM-DD or Review in form>\nDuration: <full_day or half_day>\nApplication note:\n<2-4 professional sentences suitable for the leave request reason/handover field. Include coverage or handover context when the prompt implies it. Do not invent medical details, destinations, clients, or private facts.>\n\nKeep the response concise and do not add extra sections."
+                            : null,
+                        'Current user: '.$user->name.' (role: '.$user->role.', department: '.($user->department?->name ?? 'No department').', manager: '.($user->manager?->name ?? 'No assigned manager').').',
+                        'Current date and time: '.$now->format('Y-m-d H:i:s').' ('.$now->timezoneName.'). Use this as the anchor for relative dates like today, tomorrow, next week, or next Friday.',
+                        $balanceContext,
+                        $leaveContext,
                         $faqs ? "Active policy FAQ context:\n".$faqs : null,
                     ])),
                 ]],
@@ -179,5 +198,145 @@ class AiHelpController extends Controller
                 'maxOutputTokens' => 2048,
             ],
         ];
+    }
+
+    private function classifyPromptIntent(string $prompt, string $apiKey): string
+    {
+        $model = config('services.google_generative_ai.classifier_model', 'gemini-2.5-flash-lite');
+        $url = sprintf(
+            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',
+            rawurlencode($model),
+            rawurlencode($apiKey),
+        );
+        $payload = [
+            'systemInstruction' => [
+                'parts' => [[
+                    'text' => implode("\n", [
+                        'Classify the user prompt for an employee leave management assistant.',
+                        'Return exactly one label: leave_draft or general.',
+                        'Use leave_draft only when the user wants to create, draft, prepare, submit, book, or populate a leave/time-off application.',
+                        'Use general for questions about balances, allowance, policy, eligibility, approval process, holidays, or explanations, even if the prompt contains the word leave.',
+                        'Examples:',
+                        '"How much annual leave can I use this month?" => general',
+                        '"What happens after I submit a leave request?" => general',
+                        '"Draft annual leave for May 25 to May 28" => leave_draft',
+                        '"Apply for sick leave tomorrow" => leave_draft',
+                    ]),
+                ]],
+            ],
+            'contents' => [[
+                'role' => 'user',
+                'parts' => [['text' => $prompt]],
+            ]],
+            'generationConfig' => [
+                'temperature' => 0,
+                'topP' => 1,
+                'maxOutputTokens' => 8,
+            ],
+        ];
+        $curl = curl_init($url);
+
+        curl_setopt_array($curl, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_CONNECTTIMEOUT => 5,
+        ]);
+
+        $response = curl_exec($curl);
+        $status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        curl_close($curl);
+
+        if (! is_string($response) || $status >= 400) {
+            return 'general';
+        }
+
+        $decoded = json_decode($response, true);
+        $label = strtolower(trim((string) ($decoded['candidates'][0]['content']['parts'][0]['text'] ?? '')));
+
+        return str_contains($label, 'leave_draft') ? 'leave_draft' : 'general';
+    }
+
+    private function buildLeaveBalanceContext(Request $request): string
+    {
+        $user = $request->user()->loadMissing(['leaveBalances.leaveType']);
+        $balances = $user->leaveBalances
+            ->where('year', now()->year)
+            ->map(fn ($balance) => sprintf(
+                '- %s (%s): %s available, %s pending, %s used, %s allowance, %s carried forward, %s adjustment',
+                $balance->leaveType?->name ?? 'Unknown leave type',
+                $balance->leaveType?->code ?? 'N/A',
+                number_format((float) $balance->available_days, 1),
+                number_format((float) $balance->pending_days, 1),
+                number_format((float) $balance->used_days, 1),
+                number_format((float) $balance->allowance_days, 1),
+                number_format((float) $balance->carried_forward_days, 1),
+                number_format((float) $balance->adjustment_days, 1),
+            ))
+            ->implode("\n");
+
+        return "Current-year leave balances:\n".($balances ?: '- No leave balances are available for the current year.');
+    }
+
+    private function buildLeaveDraftContext(Request $request): string
+    {
+        $user = $request->user()->loadMissing(['department', 'manager', 'leaveBalances.leaveType']);
+        $leaveTypes = LeaveType::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (LeaveType $type) => sprintf(
+                '- %s (%s): default %s days, %s, %s, %s balance',
+                $type->name,
+                $type->code,
+                $type->default_allowance_days,
+                $type->paid ? 'paid' : 'unpaid',
+                $type->requires_attachment ? 'requires attachment' : 'no attachment required',
+                $type->deducts_balance ? 'deducts' : 'does not deduct',
+            ))
+            ->implode("\n");
+        $balances = $user->leaveBalances
+            ->where('year', now()->year)
+            ->map(fn ($balance) => sprintf(
+                '- %s: %s available, %s pending, %s used of %s allowance',
+                $balance->leaveType?->name ?? 'Unknown leave type',
+                number_format((float) $balance->available_days, 1),
+                number_format((float) $balance->pending_days, 1),
+                number_format((float) $balance->used_days, 1),
+                number_format((float) $balance->allowance_days, 1),
+            ))
+            ->implode("\n");
+        $holidays = PublicHoliday::query()
+            ->where('is_active', true)
+            ->whereDate('holiday_date', '>=', now()->toDateString())
+            ->orderBy('holiday_date')
+            ->limit(12)
+            ->get()
+            ->map(fn (PublicHoliday $holiday) => '- '.$holiday->holiday_date->toDateString().': '.$holiday->name)
+            ->implode("\n");
+        $recentRequests = $user->leaveRequests()
+            ->with('leaveType')
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn ($leaveRequest) => sprintf(
+                '- %s %s to %s, %s days, status %s',
+                $leaveRequest->leaveType?->name ?? 'Leave',
+                $leaveRequest->starts_at->toDateString(),
+                $leaveRequest->ends_at->toDateString(),
+                number_format((float) $leaveRequest->requested_days, 1),
+                $leaveRequest->status,
+            ))
+            ->implode("\n");
+
+        return implode("\n\n", array_filter([
+            "Leave draft context:",
+            "Active leave types:\n".($leaveTypes ?: '- None configured'),
+            "Current-year balances for {$user->name}:\n".($balances ?: '- No balances available'),
+            "Upcoming active public holidays:\n".($holidays ?: '- No upcoming holidays configured'),
+            "Recent leave requests:\n".($recentRequests ?: '- No recent requests'),
+        ]));
     }
 }

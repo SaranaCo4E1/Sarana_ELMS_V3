@@ -65,8 +65,8 @@ export default function Landing() {
       a: "Balances are calculated based on your contract type and hire date, with HR administrators capable of setting annual allowances and manually overriding balances for special carry-overs."
     },
     {
-      q: "Is there a multi-level approval workflow?",
-      a: "Yes. By default, leave requests are routed to your direct manager. HR admins can also establish complex routing rules, custom notifications, and multi-tier approval paths if required."
+      q: "How does manager approval work?",
+      a: "Submitted leave requests route to the employee's assigned manager. Managers can review dates, attachments, reason notes, and team coverage before approving or rejecting with a comment."
     }
   ];
 

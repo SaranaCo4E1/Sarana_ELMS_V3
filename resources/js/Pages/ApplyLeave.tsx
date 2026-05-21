@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Trash2, X, Search } from 'lucide-react';
+import { AlertCircle, Bot, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Search, Send, Sparkles, X } from 'lucide-react';
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, LeaveType, PageProps } from '../types';
@@ -35,6 +35,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
   });
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
+  const [aiDraftImported, setAiDraftImported] = useState(false);
 
   // Date states for react-datepicker
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -91,6 +92,33 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     }));
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('source') !== 'ai') return;
+
+    const leaveTypeHint = params.get('leave_type')?.toLowerCase() ?? '';
+    const matchedType = leaveTypes.find((type) => {
+      const name = type.name.toLowerCase();
+      const code = type.code.toLowerCase();
+      return leaveTypeHint && (name.includes(leaveTypeHint) || leaveTypeHint.includes(name) || code === leaveTypeHint);
+    });
+    const startsAt = params.get('starts_at') ?? '';
+    const endsAt = params.get('ends_at') ?? startsAt;
+    const duration = params.get('duration') === 'half_day' ? 'half_day' : 'full_day';
+
+    setForm((prev) => ({
+      ...prev,
+      leave_type_id: matchedType?.id ?? prev.leave_type_id,
+      starts_at: startsAt,
+      ends_at: duration === 'half_day' ? startsAt : endsAt,
+      duration,
+      reason: params.get('reason') ?? prev.reason,
+    }));
+    setStartDate(parseDateParam(startsAt));
+    setEndDate(parseDateParam(duration === 'half_day' ? startsAt : endsAt));
+    setAiDraftImported(true);
+  }, [leaveTypes]);
+
   const handleDurationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextDuration = e.target.value;
     setForm((prev) => {
@@ -140,6 +168,25 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         {/* Main section */}
         <section className="space-y-6 animate-fade-in">
+          {aiDraftImported && (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4.5 shadow-premium-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-700 shadow-premium-sm">
+                    <Bot size={16} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-emerald-950">AI draft imported</div>
+                    <div className="text-xs font-medium text-emerald-800/80">Review the leave type, dates, and handover notes before submitting.</div>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                  <Sparkles size={11} /> Autofill
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Apply Leave form */}
           <form onSubmit={submitLeave} className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100/60 pb-5 mb-5">
@@ -485,4 +532,10 @@ function Status({ status }: { status: string }) {
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
+}
+
+function parseDateParam(value: string) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.valueOf()) ? null : date;
 }
