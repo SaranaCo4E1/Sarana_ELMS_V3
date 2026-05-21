@@ -60,12 +60,22 @@ npm run build
 php artisan serve
 ```
 
-Default seeded accounts all use password `password`:
+Default seeded accounts all use password `testing123`:
 
-- `staff@elms.test`
-- `manager@elms.test`
-- `hr@elms.test`
-- `admin@elms.test`
+- `ceo@niy.ai`
+- `admin@niy.ai`
+- `hr@niy.ai`
+- `it@niy.ai`
+- `sales@niy.ai`
+- `hr.staff@niy.ai`
+- `it.engineer@niy.ai`
+- `it.support@niy.ai`
+- `sales.rep@niy.ai`
+- `sales.ops@niy.ai`
+
+The seeder creates three active departments: `IT`, `Sales`, and `HR`. Seeded employee profiles use `Phnom Penh` as their work location. Leave types are seeded with annual leave `18` days, sick leave `5` days, and unpaid leave `30` days per year. It also creates sample leave requests, leave balances, and system notifications for submitted and decided leave requests.
+
+Public holidays are imported from JSON fixtures in `database/data/holidays/*.json`. Add or update a `{year}.json` file there before running `php artisan migrate --seed` or `php artisan db:seed`.
 
 ## Docker
 

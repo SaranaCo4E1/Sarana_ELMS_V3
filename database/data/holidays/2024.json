@@ -1,0 +1,227 @@
+{
+  "country": "Cambodia",
+  "countryCode": "KH",
+  "year": 2024,
+  "holidays": [
+    {
+      "holiday_id": 8293,
+      "name": "New Year",
+      "date": "2024-01-01",
+      "description": null,
+      "occasion_id": 1003,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8294,
+      "name": "Victory over Genocide Day",
+      "date": "2024-01-07",
+      "description": null,
+      "occasion_id": 1004,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8295,
+      "name": "International Women Day",
+      "date": "2024-03-08",
+      "description": null,
+      "occasion_id": 1005,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8297,
+      "name": "Khmer New Year Day (Day 1)",
+      "date": "2024-04-13",
+      "description": null,
+      "occasion_id": 1007,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8298,
+      "name": "Khmer New Year Day (Day 2)",
+      "date": "2024-04-14",
+      "description": null,
+      "occasion_id": 1008,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8299,
+      "name": "Khmer New Year Day (Day 3)",
+      "date": "2024-04-15",
+      "description": null,
+      "occasion_id": 1009,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8301,
+      "name": "Labour Day",
+      "date": "2024-05-01",
+      "description": null,
+      "occasion_id": 1010,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8302,
+      "name": "King's Birthday",
+      "date": "2024-05-14",
+      "description": null,
+      "occasion_id": 1013,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8303,
+      "name": "Visak Bochea Day",
+      "date": "2024-05-22",
+      "description": null,
+      "occasion_id": 1011,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8304,
+      "name": "Royal Plowing Ceremony",
+      "date": "2024-05-26",
+      "description": null,
+      "occasion_id": 1012,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8308,
+      "name": "Constitutional Day",
+      "date": "2024-09-24",
+      "description": null,
+      "occasion_id": 1017,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8309,
+      "name": "Pchum Ben Festival",
+      "date": "2024-10-01",
+      "description": null,
+      "occasion_id": 1018,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8310,
+      "name": "Pchum Ben Festival",
+      "date": "2024-10-02",
+      "description": null,
+      "occasion_id": 1018,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8311,
+      "name": "Pchum Ben Festival",
+      "date": "2024-10-03",
+      "description": null,
+      "occasion_id": 1018,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8312,
+      "name": "Commemoration Day of King's Father",
+      "date": "2024-10-15",
+      "description": null,
+      "occasion_id": 1021,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8313,
+      "name": "King's Coronation Day",
+      "date": "2024-10-29",
+      "description": null,
+      "occasion_id": 1022,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8314,
+      "name": "Independence Day",
+      "date": "2024-11-09",
+      "description": null,
+      "occasion_id": 1023,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8315,
+      "name": "Water Festival Ceremony (Day 1)",
+      "date": "2024-11-14",
+      "description": null,
+      "occasion_id": 1024,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8316,
+      "name": "Water Festival Ceremony (Day 2)",
+      "date": "2024-11-15",
+      "description": null,
+      "occasion_id": 1025,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    },
+    {
+      "holiday_id": 8317,
+      "name": "Water Festival Ceremony (Day 3)",
+      "date": "2024-11-16",
+      "description": null,
+      "occasion_id": 1026,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2024-01-05 09:39:42",
+      "updated_at": null
+    }
+  ]
+}

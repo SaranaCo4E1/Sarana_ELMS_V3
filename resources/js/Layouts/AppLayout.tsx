@@ -1,127 +1,261 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, IdCard, LogOut, Settings, Users } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, IdCard, LogOut, Menu, Settings, Users, X } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { auth, flash, notifications } = usePage<PageProps>().props;
+  const { url } = usePage();
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [flashVisible, setFlashVisible] = useState(true);
+
   const user = auth.user;
   const canApprove = ['manager', 'hr', 'admin'].includes(user.role);
   const canAdmin = ['hr', 'admin'].includes(user.role);
   const unreadCount = notifications?.unread_count ?? 0;
   const notificationItems = notifications?.items ?? [];
 
-  return (
-    <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white px-4 py-5 lg:block">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-700 text-white">
-            <CalendarCheck size={21} />
+  // Reset flash visibility when flash changes
+  useEffect(() => {
+    if (flash.success || flash.error) {
+      setFlashVisible(true);
+    }
+  }, [flash]);
+
+  // Close mobile menu on navigate
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [url]);
+
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return url === '/' || url === '';
+    }
+    return url.startsWith(path);
+  };
+
+  const navItemClass = (path: string) => {
+    const active = isActive(path);
+    return `flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 rounded-xl mx-2 border ${
+      active
+        ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800 font-semibold shadow-premium-sm'
+        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/50'
+    }`;
+  };
+
+  const NavContent = () => (
+    <div className="flex h-full flex-col justify-between py-6 bg-white">
+      <div>
+        <div className="flex items-center gap-3 px-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/10">
+            <CalendarCheck size={16} />
           </div>
           <div>
-            <div className="font-semibold text-slate-950">ELMS</div>
-            <div className="text-xs text-slate-500">Staff operations</div>
+            <div className="font-bold tracking-tight text-neutral-950 text-sm">Sarana ELMS</div>
+            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Workspace</div>
           </div>
         </div>
-        <nav className="mt-8 space-y-1 text-sm">
-          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/">
-            <Bell size={17} /> Dashboard
+
+        <nav className="mt-8 space-y-1">
+          <Link className={navItemClass('/')} href="/">
+            <CalendarCheck size={16} className="shrink-0" /> Dashboard
           </Link>
-          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/calendar">
-            <CalendarDays size={17} /> Calendar
+          <Link className={navItemClass('/calendar')} href="/calendar">
+            <CalendarDays size={16} className="shrink-0" /> Calendar
           </Link>
-          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/apply-leave">
-            <CalendarPlus size={17} /> Apply Leave
+          <Link className={navItemClass('/apply-leave')} href="/apply-leave">
+            <CalendarPlus size={16} className="shrink-0" /> Apply Leave
           </Link>
-          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/ai-assistant">
-            <Bot size={17} /> AI Chatbot
+          <Link className={navItemClass('/ai-assistant')} href="/ai-assistant">
+            <Bot size={16} className="shrink-0" /> AI Chatbot
           </Link>
-          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/profile">
-            <IdCard size={17} /> My Profile
+          <Link className={navItemClass('/profile')} href="/profile">
+            <IdCard size={16} className="shrink-0" /> My Profile
           </Link>
+          
+          {(canApprove || canAdmin) && (
+            <div className="my-4 border-t border-neutral-100 px-6 pt-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Management</span>
+            </div>
+          )}
+
           {canApprove && (
-            <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/team">
-              <Users size={17} /> Team Center
+            <Link className={navItemClass('/team')} href="/team">
+              <Users size={16} className="shrink-0" /> Team Center
             </Link>
           )}
           {canApprove && (
-            <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/approvals">
-              <ClipboardCheck size={17} /> Approvals
+            <Link className={navItemClass('/approvals')} href="/approvals">
+              <ClipboardCheck size={16} className="shrink-0" /> Approvals
             </Link>
           )}
           {canAdmin && (
-            <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/admin">
-              <Settings size={17} /> HR Admin
+            <Link className={navItemClass('/admin')} href="/admin">
+              <Settings size={16} className="shrink-0" /> HR Admin
             </Link>
           )}
         </nav>
+      </div>
+
+      <div className="px-4">
+        {/* User Mini Profile Card */}
+        <div className="mb-4 flex items-center gap-3 border border-neutral-200 bg-neutral-50/40 rounded-2xl p-3 shadow-premium-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 font-bold text-neutral-900 text-xs shadow-inner shrink-0">
+            {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xs font-bold text-neutral-900">{user.name}</div>
+            <div className="truncate text-xs font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{user.role}</div>
+          </div>
+        </div>
+
         <button
-          className="absolute bottom-5 left-4 right-4 flex items-center justify-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-50 hover:text-neutral-900 shadow-premium-sm active:scale-98"
           onClick={() => router.post('/logout')}
         >
-          <LogOut size={17} /> Sign out
+          <LogOut size={14} /> Sign out
         </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#fafbfa]">
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-neutral-950/20 transition-opacity duration-300 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile Drawer Menu */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white border-r border-neutral-200 transition-transform duration-200 ease-in-out lg:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <button
+          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        >
+          <X size={14} />
+        </button>
+        <NavContent />
       </aside>
-      <main className="lg:pl-64">
-        <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold text-slate-950">Employee Leave Management System</h1>
-              <p className="text-sm text-slate-500">{user.name} · {user.department?.name ?? 'No department'} · {user.role}</p>
+
+      {/* Desktop Permanent Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-neutral-200 bg-white lg:block">
+        <NavContent />
+      </aside>
+
+      {/* Main Container */}
+      <div className="lg:pl-64">
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-20 border-b border-neutral-200/50 bg-white/80 backdrop-blur-md px-4 py-3 sm:px-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 lg:hidden"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu size={16} />
+              </button>
+              <div>
+                <h1 className="text-sm font-bold tracking-tight text-neutral-950">Leave Portal</h1>
+                <p className="hidden text-xs font-semibold text-neutral-500 sm:block">
+                  {user.department?.name ?? 'General Staff'} · {user.employee_code ?? 'EMP'}
+                </p>
+              </div>
             </div>
+
+            {/* Right Action Menu: Notifications */}
             <div className="relative">
               <button
-                className="relative flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                className={`relative flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-premium-sm ${
+                  notificationOpen ? 'bg-neutral-50' : 'bg-white'
+                }`}
                 onClick={() => setNotificationOpen((open) => !open)}
                 type="button"
                 aria-label="Open notifications"
                 aria-expanded={notificationOpen}
               >
-                <Bell size={18} />
+                <Bell size={16} />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-xs font-semibold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-xs font-bold text-white shadow-2xs">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
+              
               {notificationOpen && (
-                <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-md border border-slate-200 bg-white shadow-xl">
-                  <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                    <div className="font-semibold text-slate-950">Notifications</div>
-                    <div className="text-xs text-slate-500">{unreadCount} unread</div>
+                <div className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200/50 bg-white p-2.5 shadow-premium-lg animate-fade-in">
+                  <div className="flex items-center justify-between border-b border-neutral-100/60 px-3 pb-2.5 mb-1.5">
+                    <span className="font-bold text-xs text-neutral-950">Notifications</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100">
+                      {unreadCount} unread
+                    </span>
                   </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notificationItems.length > 0 ? notificationItems.map((item) => (
-                      <Link
-                        key={item.id}
-                        className={`block w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50 ${item.read_at ? '' : 'bg-sky-50/70'}`}
-                        href={`/notifications/${item.id}/read`}
-                        method="patch"
-                        as="button"
-                        onClick={() => setNotificationOpen(false)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="text-sm font-medium text-slate-950">{item.title}</div>
-                          {!item.read_at && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-600" />}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-600">{item.body}</div>
-                        <div className="mt-2 text-xs text-slate-400">{formatRelativeDate(item.created_at)}</div>
-                      </Link>
-                    )) : (
-                      <div className="px-4 py-8 text-center text-sm text-slate-500">No notifications yet.</div>
+                  <div className="max-h-80 overflow-y-auto mt-1 space-y-1">
+                    {notificationItems.length > 0 ? (
+                      notificationItems.map((item) => (
+                        <Link
+                          key={item.id}
+                          className={`block w-full px-3 py-2.5 text-left rounded-xl transition-all hover:bg-neutral-50 ${
+                            item.read_at ? '' : 'bg-neutral-50/40'
+                          }`}
+                          href={`/notifications/${item.id}/read`}
+                          method="patch"
+                          as="button"
+                          onClick={() => setNotificationOpen(false)}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="text-xs font-bold text-neutral-800">{item.title}</div>
+                            {!item.read_at && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" />}
+                          </div>
+                          <div className="mt-0.5 text-xs text-neutral-500 line-clamp-2">{item.body}</div>
+                          <div className="mt-1.5 text-xs font-medium text-neutral-400">
+                            {formatRelativeDate(item.created_at)}
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-xs text-neutral-400">No notifications yet.</div>
                     )}
                   </div>
                 </div>
               )}
             </div>
           </div>
-          {flash.success && <div className="mt-3 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-900">{flash.success}</div>}
-          {flash.error && <div className="mt-3 rounded-md bg-red-100 px-3 py-2 text-sm text-red-900">{flash.error}</div>}
+
+          {/* Flash Messages */}
+          {flashVisible && flash.success && (
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/70 backdrop-blur-xs px-4.5 py-3 text-xs text-emerald-800 font-semibold shadow-premium-sm animate-fade-in">
+              <span className="font-semibold">{flash.success}</span>
+              <button onClick={() => setFlashVisible(false)} className="text-emerald-500 hover:text-emerald-700">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          {flashVisible && flash.error && (
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50/70 backdrop-blur-xs px-4.5 py-3 text-xs text-rose-800 font-semibold shadow-premium-sm animate-fade-in">
+              <span className="font-semibold">{flash.error}</span>
+              <button onClick={() => setFlashVisible(false)} className="text-rose-500 hover:text-rose-700">
+                <X size={14} />
+              </button>
+            </div>
+          )}
         </header>
-        <div className="px-4 py-6 sm:px-8">{children}</div>
-      </main>
+
+        {/* Content Body */}
+        <main className="px-4 py-6 sm:px-8 max-w-7xl mx-auto animate-fade-in">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

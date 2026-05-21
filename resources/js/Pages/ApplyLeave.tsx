@@ -1,9 +1,11 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send } from 'lucide-react';
+import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Trash2, X, Search } from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
+import DatePicker from 'react-datepicker';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, LeaveType, PageProps } from '../types';
+import { formatDays, formatShortDate } from '../utils';
 
 type Holiday = { id: number; name: string; holiday_date: string };
 type Props = {
@@ -14,18 +16,29 @@ type Props = {
   holidays: Holiday[];
 };
 
-const statusStyles: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-800',
-  approved: 'bg-emerald-100 text-emerald-800',
-  rejected: 'bg-red-100 text-red-700',
-  cancelled: 'bg-slate-100 text-slate-600',
+const statusStyles: Record<string, { bg: string; border: string; text: string }> = {
+  pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800' },
+  approved: { bg: 'bg-emerald-50/60', border: 'border-emerald-100/70', text: 'text-emerald-800' },
+  rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800' },
+  cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' },
 };
 
 export default function ApplyLeave({ leaveTypes, balances, requests, requestStats, holidays }: Props) {
   const { errors } = usePage<PageProps>().props;
-  const [form, setForm] = useState({ leave_type_id: leaveTypes[0]?.id ?? '', starts_at: '', ends_at: '', duration: 'full_day', reason: '', attachments: [] as File[] });
+  const [form, setForm] = useState({
+    leave_type_id: leaveTypes[0]?.id ?? '',
+    starts_at: '',
+    ends_at: '',
+    duration: 'full_day',
+    reason: '',
+    attachments: [] as File[]
+  });
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
+
+  // Date states for react-datepicker
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   const selectedType = leaveTypes.find((type) => type.id === Number(form.leave_type_id));
   const filteredRequests = requests.filter((request) => {
@@ -39,6 +52,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     const start = new Date(`${form.starts_at}T00:00:00`);
     const end = new Date(`${form.ends_at}T00:00:00`);
     if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf()) || end < start) return 0;
+    
     const holidaySet = new Set(holidays.map((holiday) => holiday.holiday_date.slice(0, 10)));
     let days = 0;
     for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
@@ -49,6 +63,56 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     return form.duration === 'half_day' && form.starts_at === form.ends_at && days === 1 ? 0.5 : days;
   }, [form.duration, form.starts_at, form.ends_at, holidays]);
 
+  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
+    const [start, end] = dates;
+    setStartDate(start);
+    setEndDate(end);
+
+    const startStr = start ? start.toLocaleDateString('sv').slice(0, 10) : '';
+    const endStr = end ? end.toLocaleDateString('sv').slice(0, 10) : '';
+
+    setForm((prev) => ({
+      ...prev,
+      starts_at: startStr,
+      ends_at: startStr && endStr ? endStr : startStr,
+    }));
+  };
+
+  const handleSingleDateChange = (date: Date | null) => {
+    setStartDate(date);
+    setEndDate(date);
+
+    const dateStr = date ? date.toLocaleDateString('sv').slice(0, 10) : '';
+
+    setForm((prev) => ({
+      ...prev,
+      starts_at: dateStr,
+      ends_at: dateStr,
+    }));
+  };
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextDuration = e.target.value;
+    setForm((prev) => {
+      const isHalf = nextDuration === 'half_day';
+      return {
+        ...prev,
+        duration: nextDuration,
+        ends_at: isHalf ? prev.starts_at : prev.ends_at
+      };
+    });
+    if (nextDuration === 'half_day') {
+      setEndDate(startDate);
+    }
+  };
+
+  function removeAttachment(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index),
+    }));
+  }
+
   function submitLeave(e: React.FormEvent) {
     e.preventDefault();
     const data = new FormData();
@@ -58,62 +122,176 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     data.append('duration', form.duration);
     data.append('reason', form.reason);
     form.attachments.forEach((file) => data.append('attachments[]', file));
-    router.post('/leave-requests', data, { forceFormData: true, preserveScroll: true });
+    
+    router.post('/leave-requests', data, {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        // Reset form on success
+        setForm((prev) => ({ ...prev, starts_at: '', ends_at: '', reason: '', attachments: [] }));
+        setStartDate(null);
+        setEndDate(null);
+      }
+    });
   }
 
   return (
     <AppLayout>
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <section className="space-y-6">
-          <form onSubmit={submitLeave} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CalendarPlus size={20} className="text-emerald-700" />
-                <h2 className="font-semibold text-slate-950">Apply Leave</h2>
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        {/* Main section */}
+        <section className="space-y-6 animate-fade-in">
+          {/* Apply Leave form */}
+          <form onSubmit={submitLeave} className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100/60 pb-5 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 text-neutral-600 bg-neutral-50 shadow-premium-sm">
+                  <CalendarPlus size={15} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-neutral-900">Request Time Off</h2>
+                  <p className="text-xs font-semibold text-neutral-500">Submit a leave request for approvals</p>
+                </div>
               </div>
-              <span className="rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-600">{projectedDays} working day(s)</span>
+              <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 shadow-premium-sm">
+                {formatDays(projectedDays)} working day(s) calculated
+              </span>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-4">
-              <label className="text-sm">Leave type
-                <select className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" value={form.leave_type_id} onChange={(e) => setForm({ ...form, leave_type_id: Number(e.target.value) })}>
-                  {leaveTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Leave Type
+                <select
+                  className="mt-1.5 w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  value={form.leave_type_id}
+                  onChange={(e) => setForm({ ...form, leave_type_id: Number(e.target.value) })}
+                >
+                  {leaveTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
                 </select>
               </label>
-              <label className="text-sm">Duration
-                <select className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value, ends_at: e.target.value === 'half_day' ? form.starts_at : form.ends_at })}>
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Duration
+                <select
+                  className="mt-1.5 w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  value={form.duration}
+                  onChange={handleDurationChange}
+                >
                   <option value="full_day">Full day</option>
                   <option value="half_day">Half day</option>
                 </select>
               </label>
-              <label className="text-sm">Start date
-                <input type="date" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value, ends_at: form.duration === 'half_day' ? e.target.value : form.ends_at })} />
-              </label>
-              <label className="text-sm">End date
-                <input type="date" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" value={form.ends_at} disabled={form.duration === 'half_day'} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
-              </label>
-            </div>
-            {selectedType?.requires_attachment && <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">This leave type requires an attachment.</p>}
-            <textarea className="mt-4 min-h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Reason and handover notes" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  <Paperclip size={16} /> Attach files
-                  <input className="hidden" type="file" multiple onChange={(e) => setForm({ ...form, attachments: Array.from(e.target.files ?? []) })} />
-                </label>
-                {form.attachments.map((file) => <span key={file.name} className="rounded-md bg-slate-100 px-2 py-1 text-xs">{file.name}</span>)}
+
+              <div className="sm:col-span-2 block text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Date Selection
+                <div className="mt-1.5 relative">
+                  {form.duration === 'half_day' ? (
+                    <DatePicker
+                      selected={startDate}
+                      onChange={handleSingleDateChange}
+                      className="w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                      placeholderText="Select date"
+                      dateFormat="yyyy-MM-dd"
+                    />
+                  ) : (
+                    <DatePicker
+                      selectsRange
+                      startDate={startDate}
+                      endDate={endDate}
+                      onChange={handleDateRangeChange}
+                      className="w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                      placeholderText="Select start and end date"
+                      dateFormat="yyyy-MM-dd"
+                    />
+                  )}
+                </div>
               </div>
-              <button className="flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"><Send size={16} /> Submit</button>
             </div>
-            {Object.values(errors).length > 0 && <p className="mt-3 text-sm text-red-600">{Object.values(errors)[0]}</p>}
+
+            {selectedType?.requires_attachment && (
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-3 text-xs text-amber-900 font-medium animate-fade-in">
+                <AlertCircle size={14} className="shrink-0 text-amber-600" />
+                <span>An official attachment is required for this leave type (e.g. medical certificate).</span>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Reason & Handover Notes
+                <textarea
+                  className="mt-1.5 min-h-[90px] w-full rounded-xl border border-neutral-200/70 p-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none resize-y"
+                  placeholder="Details for coverage, client handover, or reason for time off request..."
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-neutral-100/60">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-neutral-200 px-3.5 py-2 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-50 hover:text-neutral-800 bg-white shadow-premium-sm active:scale-98">
+                  <Paperclip size={12} /> Attach Files
+                  <input
+                    className="hidden"
+                    type="file"
+                    multiple
+                    onChange={(e) => setForm({ ...form, attachments: [...form.attachments, ...Array.from(e.target.files ?? [])] })}
+                  />
+                </label>
+
+                {form.attachments.map((file, index) => (
+                  <span key={index} className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-bold text-neutral-600 animate-fade-in">
+                    <span className="truncate max-w-28">{file.name}</span>
+                    <button type="button" onClick={() => removeAttachment(index)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <button
+                className="flex items-center gap-2 rounded-xl bg-neutral-950 px-4.5 py-2.5 text-sm font-bold text-white hover:bg-neutral-800 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-neutral-950/10 transition-all duration-200"
+                type="submit"
+              >
+                <Send size={12} /> Submit Request
+              </button>
+            </div>
+
+            {Object.values(errors).length > 0 && (
+              <p className="mt-3 text-xs font-semibold text-rose-600">{Object.values(errors)[0]}</p>
+            )}
           </form>
 
-          <div className="rounded-md border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-              <div className="font-semibold">Request History</div>
-              <div className="flex flex-wrap gap-2">
-                <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Search requests" value={query} onChange={(e) => setQuery(e.target.value)} />
-                <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  {['all', 'pending', 'approved', 'rejected', 'cancelled'].map((status) => <option key={status} value={status}>{status}</option>)}
+          {/* Request History */}
+          <div className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100/60 px-5 py-4 bg-neutral-50/20">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-900">Request History</h2>
+                <p className="text-xs font-semibold text-neutral-500">View all previous leave applications</p>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 text-neutral-400" size={13} />
+                  <input
+                    className="w-44 rounded-xl border border-neutral-200/70 bg-white py-1.5 pl-8 pr-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                    placeholder="Search requests..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="rounded-xl border border-neutral-200/70 px-3 py-1.5 text-sm bg-white font-bold text-neutral-600 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  {['all', 'pending', 'approved', 'rejected', 'cancelled'].map((status) => (
+                    <option key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -121,15 +299,31 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
           </div>
         </section>
 
-        <aside className="space-y-4">
-          <Metric icon={<Clock3 size={18} />} label="Pending" value={requestStats.pending} />
-          <Metric icon={<CheckCircle2 size={18} />} label="Approved" value={requestStats.approved} />
-          <Metric icon={<AlertCircle size={18} />} label="Rejected" value={requestStats.rejected} />
-          <Metric icon={<CalendarClock size={18} />} label="Scheduled days" value={requestStats.scheduled_days} />
-          <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-3 font-semibold">Balances</div>
-            <div className="space-y-3">
-              {balances.map((balance) => <div key={balance.id} className="flex items-center justify-between gap-3 text-sm"><span>{balance.leave_type.name}</span><span className="rounded-md bg-emerald-50 px-2 py-1 text-xs text-emerald-700">{balance.available_days} left</span></div>)}
+        {/* Sidebar section */}
+        <aside className="space-y-6">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
+            <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
+            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="emerald" />
+            <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
+            <Metric icon={<CalendarClock size={15} />} label="Scheduled days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200/50 bg-white p-4 shadow-premium-sm">
+            <div className="mb-3 text-xs font-bold uppercase tracking-wider text-neutral-400">
+              My Balances
+            </div>
+            <div className="space-y-2.5">
+              {balances.map((balance) => (
+                <div key={balance.id} className="flex items-center justify-between gap-3 text-sm border-b border-neutral-100 pb-2.5 last:border-0 last:pb-0">
+                  <div>
+                    <div className="font-bold text-neutral-700">{balance.leave_type.name}</div>
+                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mt-0.5">{balance.leave_type.code}</div>
+                  </div>
+                  <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+                    {formatDays(balance.available_days)} left
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </aside>
@@ -139,17 +333,156 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 }
 
 function RequestTable({ requests }: { requests: LeaveRequest[] }) {
-  return <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-5 py-3">Type</th><th>Dates</th><th>Days</th><th>Status</th><th>Approver</th><th>Comment</th><th></th></tr></thead><tbody>{requests.map((request) => <tr key={request.id} className="border-t border-slate-100"><td className="px-5 py-3 font-medium">{request.leave_type.name}</td><td>{formatDate(request.starts_at)} to {formatDate(request.ends_at)}</td><td>{request.requested_days}</td><td><Status status={request.status} /></td><td>{request.approver?.name ?? '-'}</td><td className="max-w-64 truncate">{request.manager_comment ?? '-'}</td><td>{request.status === 'pending' && <button className="text-red-600" onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}>Cancel</button>}</td></tr>)}{requests.length === 0 && <tr><td colSpan={7} className="px-5 py-6 text-slate-500">No matching requests.</td></tr>}</tbody></table></div>;
+  return (
+    <div>
+      {/* Mobile Card List View */}
+      <div className="divide-y divide-neutral-100 sm:hidden">
+        {requests.map((request) => (
+          <div key={request.id} className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-bold text-neutral-900 text-sm">{request.leave_type.name}</span>
+              <Status status={request.status} />
+            </div>
+            
+            <div className="flex justify-between text-xs text-neutral-500 font-medium">
+              <span>{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
+              <span className="font-bold text-neutral-700">{formatDays(request.requested_days)} day(s)</span>
+            </div>
+
+            {(request.manager_comment || request.approver) && (
+              <div className="bg-neutral-50/50 rounded-xl p-3 border border-neutral-100 text-xs text-neutral-500 space-y-1.5">
+                {request.approver && (
+                  <div>
+                    <span className="font-bold text-neutral-600">Approver:</span> {request.approver.name}
+                  </div>
+                )}
+                {request.manager_comment && (
+                  <div>
+                    <span className="font-bold text-neutral-600">Comment:</span> {request.manager_comment}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {request.status === 'pending' && (
+              <div className="flex justify-end pt-1">
+                <button
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 transition-all active:scale-95"
+                  onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
+                >
+                  Cancel Request
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {requests.length === 0 && (
+          <div className="p-8 text-center text-xs text-neutral-400 font-medium">
+            No leave requests found.
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-neutral-50/50 text-xs font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100/60">
+            <tr>
+              <th className="px-6 py-4">Type</th>
+              <th className="px-4 py-4">Dates</th>
+              <th className="px-4 py-4">Days</th>
+              <th className="px-4 py-4">Status</th>
+              <th className="px-4 py-4">Approver</th>
+              <th className="px-4 py-4">Comment</th>
+              <th className="px-6 py-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100/60">
+            {requests.map((request) => (
+              <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
+                <td className="px-6 py-4 font-bold text-neutral-900">{request.leave_type.name}</td>
+                <td className="px-4 py-4 text-neutral-500 font-medium whitespace-nowrap">
+                  {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
+                </td>
+                <td className="px-4 py-4 font-bold text-neutral-700">{formatDays(request.requested_days)}</td>
+                <td className="px-4 py-4">
+                  <Status status={request.status} />
+                </td>
+                <td className="px-4 py-4 text-neutral-600 font-medium">{request.approver?.name ?? '–'}</td>
+                <td className="px-4 py-4 max-w-48 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
+                  {request.manager_comment ?? '–'}
+                </td>
+                <td className="px-6 py-4 text-right whitespace-nowrap">
+                  {request.status === 'pending' && (
+                    <button
+                      className="text-sm font-bold text-rose-600 hover:text-rose-700 transition-all active:scale-95"
+                      onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {requests.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-neutral-400 font-medium">
+                  No leave requests found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
-function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between text-sm text-slate-500">{label}{icon}</div><div className="mt-2 text-2xl font-semibold text-slate-950">{value}</div></div>;
+function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'emerald' | 'rose' | 'indigo' }) {
+  const themes = {
+    amber: {
+      border: 'border-amber-100/60',
+      bg: 'bg-gradient-to-br from-amber-500/5 to-amber-600/5',
+      iconBg: 'bg-amber-50 text-amber-600 border-amber-100/70',
+    },
+    emerald: {
+      border: 'border-emerald-100/60',
+      bg: 'bg-gradient-to-br from-emerald-500/5 to-emerald-600/5',
+      iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100/70',
+    },
+    rose: {
+      border: 'border-rose-100/60',
+      bg: 'bg-gradient-to-br from-rose-500/5 to-rose-600/5',
+      iconBg: 'bg-rose-50 text-rose-600 border-rose-100/70',
+    },
+    indigo: {
+      border: 'border-indigo-100/60',
+      bg: 'bg-gradient-to-br from-indigo-500/5 to-indigo-600/5',
+      iconBg: 'bg-indigo-50 text-indigo-600 border-indigo-100/70',
+    },
+  };
+
+  const theme = themes[variant];
+
+  return (
+    <div className={`rounded-2xl border ${theme.border} p-5 bg-white shadow-premium-sm hover:shadow-premium-md transition-all duration-300 relative overflow-hidden group`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${theme.bg} blur-2xl -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500`} />
+      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-neutral-400 relative z-10">
+        <span>{label}</span>
+        <div className={`flex h-7 w-7 items-center justify-center rounded-lg border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-4 text-2xl font-bold tracking-tight text-neutral-900 relative z-10">{value}</div>
+    </div>
+  );
 }
 
 function Status({ status }: { status: string }) {
-  return <span className={`rounded-md px-2 py-1 text-xs ${statusStyles[status] ?? 'bg-slate-100 text-slate-600'}`}>{status}</span>;
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const style = statusStyles[status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-600' };
+  return (
+    <span className={`inline-flex items-center rounded-full border ${style.border} ${style.bg} ${style.text} px-2.5 py-0.5 text-xs font-bold tracking-wide`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
 }

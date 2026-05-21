@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { BriefcaseBusiness, IdCard, KeyRound, LockKeyhole, Phone, Shield, UserRound } from 'lucide-react';
+import { BriefcaseBusiness, IdCard, KeyRound, LockKeyhole, Phone, Shield, UserRound, MapPin, Mail, Sparkles, ShieldCheck, ShieldAlert } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
@@ -40,81 +40,244 @@ export default function Profile({ profile }: { profile: User }) {
     });
   }
 
+  // Get initials for profile avatar
+  const initials = profile.name
+    ? profile.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+    : 'EM';
+
   return (
     <AppLayout>
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center gap-2">
-            <IdCard size={20} className="text-emerald-700" />
-            <h2 className="font-semibold text-slate-950">My Profile</h2>
-          </div>
-          <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
-            <Field label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-            <Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
-            <Field label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
-            <Field label="Work location" value={form.work_location} onChange={(value) => setForm({ ...form, work_location: value })} />
-            <Field label="Employment type" value={form.employment_type} onChange={(value) => setForm({ ...form, employment_type: value })} />
-            <Field label="Emergency contact" value={form.emergency_contact_name} onChange={(value) => setForm({ ...form, emergency_contact_name: value })} />
-            <Field label="Emergency phone" value={form.emergency_contact_phone} onChange={(value) => setForm({ ...form, emergency_contact_phone: value })} />
-            <label className="text-sm md:col-span-2">
-              Bio and handover notes
-              <textarea className="mt-1 min-h-28 w-full rounded-md border border-slate-300 px-3 py-2" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
-            </label>
-            {Object.values(errors).length > 0 && <p className="text-sm text-red-600 md:col-span-2">{Object.values(errors)[0]}</p>}
-            <div className="md:col-span-2">
-              <button className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">Save profile</button>
+      <div className="space-y-6">
+        {/* Premium Profile Banner Card */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-neutral-900 via-neutral-950 to-emerald-950 p-6 text-white shadow-premium-md">
+          {/* Subtle background decoration */}
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl"></div>
+          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-teal-500/10 blur-3xl"></div>
+
+          <div className="relative flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+            {/* Avatar Circle */}
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-neutral-950 font-bold text-2xl shadow-inner border border-emerald-300/20">
+              {initials}
             </div>
-          </form>
-        </section>
 
-        <aside className="space-y-4">
-          <Info icon={<UserRound size={18} />} label="Role" value={profile.role} />
-          <Info icon={<BriefcaseBusiness size={18} />} label="Department" value={profile.department?.name ?? 'Unassigned'} />
-          <Info icon={<UserRound size={18} />} label="Manager" value={profile.manager?.name ?? 'Unassigned'} />
-          <Info icon={<Shield size={18} />} label="Security" value={profile.two_factor_enabled ? 'Two-factor enabled' : 'Password only'} />
-          <Info icon={<Phone size={18} />} label="Employee code" value={profile.employee_code ?? 'Not set'} />
-        </aside>
-      </div>
+            {/* User Info */}
+            <div className="text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <h1 className="text-2xl font-bold tracking-tight text-white">{profile.name}</h1>
+                <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/20">
+                  Active Account
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-neutral-300 font-semibold">
+                {profile.role} · {profile.department?.name ?? 'Unassigned Department'}
+              </p>
+              
+              <div className="mt-3 flex flex-wrap justify-center gap-y-1 gap-x-4 text-xs text-neutral-400 sm:justify-start font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Mail size={13} className="text-neutral-500" />
+                  {profile.email}
+                </span>
+                {profile.employee_code && (
+                  <span className="flex items-center gap-1.5">
+                    <BriefcaseBusiness size={13} className="text-neutral-500" />
+                    ID: {profile.employee_code}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center gap-2">
-            <KeyRound size={20} className="text-emerald-700" />
-            <h2 className="font-semibold text-slate-950">Reset Password</h2>
-          </div>
-          <form onSubmit={updatePassword} className="grid gap-4">
-            <Field label="Current password" type="password" value={passwordForm.current_password} onChange={(value) => setPasswordForm({ ...passwordForm, current_password: value })} />
-            <Field label="New password" type="password" value={passwordForm.password} onChange={(value) => setPasswordForm({ ...passwordForm, password: value })} />
-            <Field label="Confirm new password" type="password" value={passwordForm.password_confirmation} onChange={(value) => setPasswordForm({ ...passwordForm, password_confirmation: value })} />
-            <button className="w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Update password</button>
-          </form>
-        </section>
+        {/* Profile Info and Form Grid */}
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          {/* Main Form */}
+          <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+            <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
+              <IdCard size={17} className="text-emerald-600 animate-pulse" />
+              <h2 className="text-sm font-bold text-neutral-900">Personal Information</h2>
+            </div>
+            
+            <form onSubmit={submit} className="grid gap-5 md:grid-cols-2">
+              <Field label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} error={errors.name} />
+              <Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} error={errors.email} />
+              <Field label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} error={errors.phone} />
+              <Field label="Work location" value={form.work_location} onChange={(value) => setForm({ ...form, work_location: value })} error={errors.work_location} />
+              <Field label="Employment type" value={form.employment_type} onChange={(value) => setForm({ ...form, employment_type: value })} error={errors.employment_type} />
+              <Field label="Emergency contact" value={form.emergency_contact_name} onChange={(value) => setForm({ ...form, emergency_contact_name: value })} error={errors.emergency_contact_name} />
+              <Field label="Emergency phone" value={form.emergency_contact_phone} onChange={(value) => setForm({ ...form, emergency_contact_phone: value })} error={errors.emergency_contact_phone} />
+              
+              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500 md:col-span-2">
+                Bio and Handover Notes
+                <textarea 
+                  className="mt-1.5 min-h-[7.5rem] w-full rounded-xl border border-neutral-200/70 p-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none resize-y font-medium" 
+                  value={form.bio} 
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                  placeholder="Tell us about yourself or specify your typical handover guidelines..."
+                />
+                {errors.bio && <span className="mt-1 block text-xs text-rose-500 font-semibold normal-case">{errors.bio}</span>}
+              </label>
 
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center gap-2">
-            <LockKeyhole size={20} className="text-emerald-700" />
-            <h2 className="font-semibold text-slate-950">Two-Factor Authentication</h2>
-          </div>
-          <div className="rounded-md bg-slate-50 p-4 text-sm text-slate-600">
-            {profile.two_factor_enabled ? 'Two-factor authentication is enabled. Sign-in will require a one-time email code.' : 'Add a one-time email code requirement to your next sign-in.'}
-          </div>
-          <div className="mt-4">
-            <Field label="Current password" type="password" value={twoFactorPassword} onChange={setTwoFactorPassword} />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {!profile.two_factor_enabled && <button className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800" onClick={() => toggleTwoFactor(true)} type="button">Enable 2FA</button>}
-            {profile.two_factor_enabled && <button className="rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50" onClick={() => toggleTwoFactor(false)} type="button">Disable 2FA</button>}
-          </div>
-        </section>
+              {/* General Error (if any fallback) */}
+              {Object.values(errors).length > 0 && !errors.name && !errors.email && !errors.phone && !errors.work_location && !errors.employment_type && !errors.emergency_contact_name && !errors.emergency_contact_phone && !errors.bio && (
+                <div className="rounded-xl bg-rose-50 border border-rose-100 p-3.5 text-xs font-semibold text-rose-600 md:col-span-2">
+                  {Object.values(errors)[0]}
+                </div>
+              )}
+
+              <div className="pt-2 md:col-span-2">
+                <button className="rounded-xl bg-neutral-950 px-6 py-3 text-sm font-bold tracking-wide uppercase text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 active:scale-98 transition-all cursor-pointer">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Quick Roster Stats Card */}
+          <aside className="space-y-4">
+            <Info icon={<UserRound size={15} />} label="Roster Role" value={profile.role} />
+            <Info icon={<BriefcaseBusiness size={15} />} label="Primary Department" value={profile.department?.name ?? 'Unassigned'} />
+            <Info icon={<UserRound size={15} />} label="Reporting Manager" value={profile.manager?.name ?? 'No Manager Assigned'} />
+            <Info 
+              icon={<Shield size={15} />} 
+              label="Account Protection" 
+              value={profile.two_factor_enabled ? 'Two-Factor (2FA) Secured' : 'Standard Password Protection'} 
+            />
+            <Info icon={<Phone size={15} />} label="Employee ID Code" value={profile.employee_code ?? 'Not Set'} />
+          </aside>
+        </div>
+
+        {/* Security Details Sections */}
+        <div className="grid gap-6 xl:grid-cols-2">
+          {/* Reset Password Form */}
+          <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+            <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
+              <KeyRound size={17} className="text-emerald-600" />
+              <h2 className="text-sm font-bold text-neutral-900">Change Password</h2>
+            </div>
+            
+            <form onSubmit={updatePassword} className="space-y-4">
+              <Field label="Current password" type="password" value={passwordForm.current_password} onChange={(value) => setPasswordForm({ ...passwordForm, current_password: value })} error={errors.current_password} />
+              <Field label="New password" type="password" value={passwordForm.password} onChange={(value) => setPasswordForm({ ...passwordForm, password: value })} error={errors.password} />
+              <Field label="Confirm new password" type="password" value={passwordForm.password_confirmation} onChange={(value) => setPasswordForm({ ...passwordForm, password_confirmation: value })} error={errors.password_confirmation} />
+              
+              <div className="pt-2">
+                <button className="rounded-xl bg-neutral-950 px-6 py-3 text-sm font-bold tracking-wide uppercase text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 active:scale-98 transition-all cursor-pointer">
+                  Update Password
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Two Factor Configuration */}
+          <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+            <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
+              <LockKeyhole size={17} className="text-emerald-600" />
+              <h2 className="text-sm font-bold text-neutral-900">Two-Factor Authentication</h2>
+            </div>
+
+            <div className="flex gap-4 items-start rounded-2xl bg-neutral-50/50 p-4 border border-neutral-200/60 shadow-premium-sm">
+              <div className="mt-0.5">
+                {profile.two_factor_enabled ? (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    <ShieldCheck size={16} />
+                  </div>
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100">
+                    <ShieldAlert size={16} />
+                  </div>
+                )}
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900">
+                  {profile.two_factor_enabled ? '2FA Protection Active' : 'Enable Extra Protection'}
+                </h4>
+                <p className="mt-1 text-sm text-neutral-500 leading-relaxed font-medium">
+                  {profile.two_factor_enabled 
+                    ? 'Two-factor authentication is active. Sign-in requests require verification using a secure one-time code sent directly to your email.'
+                    : 'Add an extra layer of protection. When signing in, you will be prompted for a verification code sent to your registered email.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <Field 
+                label="Confirm with Password" 
+                type="password" 
+                value={twoFactorPassword} 
+                onChange={setTwoFactorPassword} 
+                error={errors.current_password} 
+                placeholder="Enter current password to modify 2FA settings"
+              />
+              
+              <div className="flex flex-wrap gap-2 pt-2">
+                {!profile.two_factor_enabled ? (
+                  <button 
+                    className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
+                    onClick={() => toggleTwoFactor(true)} 
+                    type="button"
+                    disabled={!twoFactorPassword}
+                  >
+                    Enable 2FA Protection
+                  </button>
+                ) : (
+                  <button 
+                    className="rounded-xl border border-rose-200 bg-white px-6 py-3 text-sm font-bold tracking-wide uppercase text-rose-600 shadow-premium-sm hover:bg-rose-50 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
+                    onClick={() => toggleTwoFactor(false)} 
+                    type="button"
+                    disabled={!twoFactorPassword}
+                  >
+                    Disable 2FA Protection
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </AppLayout>
   );
 }
 
-function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
-  return <label className="text-sm">{label}<input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" type={type} value={value} onChange={(e) => onChange(e.target.value)} /></label>;
+function Field({ 
+  label, 
+  value, 
+  onChange, 
+  type = 'text', 
+  error, 
+  placeholder 
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (value: string) => void; 
+  type?: string; 
+  error?: string;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
+      {label}
+      <input 
+        className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" 
+        type={type} 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)} 
+        placeholder={placeholder}
+      />
+      {error && <span className="mt-1 block text-xs text-rose-500 font-semibold normal-case">{error}</span>}
+    </label>
+  );
 }
 
 function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center gap-2 text-xs uppercase text-slate-500">{icon}{label}</div><div className="mt-2 font-medium text-slate-950">{value}</div></div>;
+  return (
+    <div className="flex items-center gap-3.5 rounded-xl border border-neutral-200/50 bg-white p-4 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 border border-neutral-200 shadow-premium-sm">
+        <div className="text-neutral-400">{icon}</div>
+      </div>
+      <div>
+        <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">{label}</div>
+        <div className="mt-0.5 text-sm font-bold text-neutral-800">{value}</div>
+      </div>
+    </div>
+  );
 }

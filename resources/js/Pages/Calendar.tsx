@@ -3,6 +3,7 @@ import type React from 'react';
 import { useMemo, useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest } from '../types';
+import { formatDays, formatShortDate, formatDate } from '../utils';
 
 type Holiday = { id: number; name: string; holiday_date: string };
 type Props = {
@@ -11,113 +12,228 @@ type Props = {
   scopeLabel: string;
 };
 
-const statusStyles: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-800',
-  approved: 'bg-emerald-100 text-emerald-800',
+const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800', dot: 'bg-amber-500' },
+  approved: { bg: 'bg-emerald-50/60', border: 'border-emerald-100/70', text: 'text-emerald-800', dot: 'bg-emerald-500' },
+  rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800', dot: 'bg-rose-500' },
+  cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200', text: 'text-neutral-500', dot: 'bg-neutral-400' },
 };
 
 export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
   const todayKey = dateKey(new Date());
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState(todayKey);
+  
   const upcomingLeave = leaveEvents.filter((event) => parseDateKey(toDateKey(event.ends_at)) >= startOfToday()).slice(0, 12);
   const upcomingHolidays = holidays.filter((holiday) => parseDateKey(toDateKey(holiday.holiday_date)) >= startOfToday()).slice(0, 12);
-  const monthGroups = groupByMonth([...leaveEvents.map((event) => ({ kind: 'leave' as const, date: event.starts_at, event })), ...holidays.map((holiday) => ({ kind: 'holiday' as const, date: holiday.holiday_date, holiday }))]);
+  
+  const monthGroups = groupByMonth([
+    ...leaveEvents.map((event) => ({ kind: 'leave' as const, date: event.starts_at, event })),
+    ...holidays.map((holiday) => ({ kind: 'holiday' as const, date: holiday.holiday_date, holiday }))
+  ]);
+  
   const calendarDays = useMemo(() => buildCalendarDays(visibleMonth, leaveEvents, holidays), [visibleMonth, leaveEvents, holidays]);
   const selectedItems = calendarDays.find((day) => day.key === selectedDay)?.items ?? itemsForDate(selectedDay, leaveEvents, holidays);
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-6 animate-fade-in">
+        {/* Page title header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">Calendar</h2>
-            <p className="text-sm text-slate-500">{scopeLabel} for leave, holidays, and upcoming coverage.</p>
+            <h2 className="text-xl font-bold tracking-tight text-neutral-900">Coverage Calendar</h2>
+            <p className="text-xs font-semibold text-neutral-500">{scopeLabel} for leave schedules, holidays, and upcoming coverage</p>
           </div>
-          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <CalendarDays size={17} /> {leaveEvents.length} leave item(s) · {holidays.length} holiday(s)
+          <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600 shadow-premium-sm">
+            <CalendarDays size={15} className="text-neutral-400" /> 
+            <span>{leaveEvents.length} leave requests · {holidays.length} holidays</span>
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-6">
-            <section className="rounded-md border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div className="grid gap-8 lg:grid-cols-[1fr_310px]">
+          {/* Main sections */}
+          <div className="space-y-8">
+            {/* Grid Month calendar */}
+            <section className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 px-6 py-5 bg-neutral-50/20">
                 <div>
-                  <div className="font-semibold text-slate-950">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</div>
-                  <div className="text-sm text-slate-500">Leave, holidays, and day notes</div>
+                  <h3 className="font-bold text-neutral-950 text-base">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
+                  <p className="text-xs font-semibold text-neutral-500">Leave, holidays, and daily summaries</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-100" type="button" onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))} aria-label="Previous month">
-                    <ChevronLeft size={17} />
+                <div className="flex items-center gap-2.5">
+                  <button
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95"
+                    type="button"
+                    onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft size={16} />
                   </button>
-                  <button className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100" type="button" onClick={() => { const now = new Date(); setVisibleMonth(startOfMonth(now)); setSelectedDay(dateKey(now)); }}>
+                  <button
+                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95 shadow-premium-sm"
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      setVisibleMonth(startOfMonth(now));
+                      setSelectedDay(dateKey(now));
+                    }}
+                  >
                     Today
                   </button>
-                  <button className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-100" type="button" onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))} aria-label="Next month">
-                    <ChevronRight size={17} />
+                  <button
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95"
+                    type="button"
+                    onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
+                    aria-label="Next month"
+                  >
+                    <ChevronRight size={16} />
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold uppercase text-slate-500">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div key={day} className="px-2 py-3">{day}</div>)}
+              {/* Day headers */}
+              <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50/10 text-center text-xs font-bold uppercase tracking-wider text-neutral-500">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <div key={day} className="py-3 font-bold">
+                    {day}
+                  </div>
+                ))}
               </div>
 
-              <div className="grid grid-cols-7">
-                {calendarDays.map((day) => (
-                  <button
-                    key={day.key}
-                    className={`min-h-32 border-b border-r border-slate-100 p-2 text-left last:border-r-0 hover:bg-slate-50 ${day.isCurrentMonth ? 'bg-white' : 'bg-slate-50/70 text-slate-400'} ${day.key === selectedDay ? 'ring-2 ring-inset ring-sky-500' : ''}`}
-                    type="button"
-                    onClick={() => setSelectedDay(day.key)}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${day.key === todayKey ? 'bg-slate-950 text-white' : 'text-slate-700'}`}>
-                        {day.date.getDate()}
-                      </span>
-                      {day.items.length > 0 && <span className="text-xs text-slate-400">{day.items.length}</span>}
-                    </div>
-                    <div className="space-y-1">
-                      {day.items.slice(0, 3).map((item) => (
-                        <div key={item.id} className={`truncate rounded px-2 py-1 text-xs font-medium ${item.kind === 'holiday' ? 'bg-emerald-100 text-emerald-800' : item.status === 'approved' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {item.title}
-                        </div>
-                      ))}
-                      {day.items.length > 3 && <div className="text-xs text-slate-400">+{day.items.length - 3} more</div>}
-                    </div>
-                  </button>
-                ))}
+              {/* Calendar grid cells */}
+              <div className="grid grid-cols-7 bg-neutral-200 gap-[1px]">
+                {calendarDays.map((day) => {
+                  const isSelected = day.key === selectedDay;
+                  const isToday = day.key === todayKey;
+                  return (
+                    <button
+                      key={day.key}
+                      className={`min-h-[60px] sm:min-h-[110px] p-1.5 sm:p-2.5 text-left transition-all hover:bg-neutral-50/60 flex flex-col justify-between cursor-pointer outline-none relative ${
+                        day.isCurrentMonth ? 'bg-white' : 'bg-neutral-50/30 text-neutral-400'
+                      } ${isSelected ? 'ring-2 ring-inset ring-emerald-600 z-10' : ''}`}
+                      type="button"
+                      onClick={() => setSelectedDay(day.key)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span
+                          className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                            isToday
+                              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
+                              : 'text-neutral-700'
+                          }`}
+                        >
+                          {day.date.getDate()}
+                        </span>
+                        {day.items.length > 0 && (
+                          <span className="hidden sm:inline-block text-xs font-bold text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-md px-1.5 py-0.5">
+                            {day.items.length}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Desktop list view */}
+                      <div className="hidden sm:block mt-2.5 space-y-1 w-full flex-1 overflow-y-auto">
+                        {day.items.slice(0, 3).map((item) => {
+                          const isHoliday = item.kind === 'holiday';
+                          const statusStyle = !isHoliday ? statusStyles[item.status] : null;
+                          return (
+                            <div
+                              key={item.id}
+                              className={`truncate rounded-lg px-2 py-0.5 text-xs font-semibold border transition-colors ${
+                                isHoliday
+                                  ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800'
+                                  : `${statusStyle?.bg ?? 'bg-neutral-50'} ${statusStyle?.border ?? 'border-neutral-200'} ${statusStyle?.text ?? 'text-neutral-700'}`
+                              }`}
+                            >
+                              {item.title}
+                            </div>
+                          );
+                        })}
+                        {day.items.length > 3 && (
+                          <div className="text-xs font-semibold text-neutral-500 px-1 mt-0.5">
+                            +{day.items.length - 3} more
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mobile dot indicator view */}
+                      <div className="flex sm:hidden flex-wrap gap-0.5 justify-center mt-1.5 w-full">
+                        {day.items.slice(0, 3).map((item) => {
+                          const isHoliday = item.kind === 'holiday';
+                          const statusStyle = !isHoliday ? statusStyles[item.status] : null;
+                          return (
+                            <span
+                              key={item.id}
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                isHoliday ? 'bg-emerald-500' : statusStyle?.dot ?? 'bg-neutral-400'
+                              }`}
+                            />
+                          );
+                        })}
+                        {day.items.length > 3 && (
+                          <span className="text-[10px] font-bold text-neutral-500 leading-none">+</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
-            <section className="rounded-md border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 px-5 py-4 font-semibold">Monthly Timeline</div>
-              <div className="divide-y divide-slate-100">
+            {/* Timeline Row cards */}
+            <section className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+              <div className="border-b border-neutral-200 px-6 py-5 bg-neutral-50/20">
+                <h3 className="font-bold text-neutral-950 text-sm">Monthly Timeline</h3>
+                <p className="text-xs font-semibold text-neutral-500">Continuous view of team leave and corporate holidays</p>
+              </div>
+              <div className="divide-y divide-neutral-100">
                 {monthGroups.map((group) => (
-                  <div key={group.month} className="grid gap-4 px-5 py-5 md:grid-cols-[150px_1fr]">
-                    <div className="text-sm font-semibold text-slate-950">{group.month}</div>
-                    <div className="space-y-3">
-                      {group.items.map((item) => item.kind === 'leave' ? <LeaveRow key={`leave-${item.event.id}`} event={item.event} /> : <HolidayRow key={`holiday-${item.holiday.id}`} holiday={item.holiday} />)}
+                  <div key={group.month} className="grid gap-4 px-6 py-5 md:grid-cols-[160px_1fr]">
+                    <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 pt-1.5">
+                      {group.month}
+                    </div>
+                    <div className="space-y-3.5">
+                      {group.items.map((item) =>
+                        item.kind === 'leave' ? (
+                          <LeaveRow key={`leave-${item.event.id}`} event={item.event} />
+                        ) : (
+                          <HolidayRow key={`holiday-${item.holiday.id}`} holiday={item.holiday} />
+                        )
+                      )}
                     </div>
                   </div>
                 ))}
-                {monthGroups.length === 0 && <div className="px-5 py-8 text-sm text-slate-500">No calendar items yet.</div>}
+                {monthGroups.length === 0 && (
+                  <div className="px-6 py-12 text-center text-xs text-neutral-400 font-medium">
+                    No scheduled items for this period.
+                  </div>
+                )}
               </div>
             </section>
           </div>
 
-          <aside className="space-y-4">
-            <Panel icon={<StickyNote size={18} />} title={formatSelectedDay(selectedDay)} empty="No notes for this day.">
-              {selectedItems.map((item) => item.kind === 'leave'
-                ? <LeaveNote key={item.id} item={item} />
-                : <HolidayNote key={item.id} item={item} />)}
+          {/* Right sidebar */}
+          <aside className="space-y-6">
+            <Panel icon={<StickyNote size={15} />} title={formatSelectedDay(selectedDay)} empty="No notes for this day.">
+              {selectedItems.map((item) =>
+                item.kind === 'leave' ? (
+                  <LeaveNote key={item.id} item={item} />
+                ) : (
+                  <HolidayNote key={item.id} item={item} />
+                )
+              )}
             </Panel>
-            <Panel icon={<Umbrella size={18} />} title="Who's On Leave" empty="No upcoming leave.">
-              {upcomingLeave.map((event) => <LeaveRow key={event.id} event={event} compact />)}
+
+            <Panel icon={<Umbrella size={15} />} title="Who's On Leave" empty="No upcoming leave.">
+              {upcomingLeave.map((event) => (
+                <LeaveRow key={event.id} event={event} compact />
+              ))}
             </Panel>
-            <Panel icon={<CalendarClock size={18} />} title="Upcoming Holidays" empty="No upcoming holidays.">
-              {upcomingHolidays.map((holiday) => <HolidayRow key={holiday.id} holiday={holiday} compact />)}
+
+            <Panel icon={<CalendarClock size={15} />} title="Upcoming Holidays" empty="No upcoming holidays.">
+              {upcomingHolidays.map((holiday) => (
+                <HolidayRow key={holiday.id} holiday={holiday} compact />
+              ))}
             </Panel>
           </aside>
         </div>
@@ -138,45 +254,96 @@ type CalendarDay = {
 };
 
 function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: boolean }) {
+  const statusStyle = statusStyles[event.status] ?? { bg: 'bg-neutral-50 border-neutral-200', text: 'text-neutral-600', dot: 'bg-neutral-400' };
+  
   return (
-    <div className={`rounded-md border border-slate-200 bg-white ${compact ? 'p-3' : 'p-4'}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="font-medium text-slate-950">{event.user?.name ?? 'Employee'}</div>
-          <div className="text-sm text-slate-500">{event.leave_type.name} · {formatDate(event.starts_at)} to {formatDate(event.ends_at)}</div>
-          {event.user?.department?.name && <div className="mt-1 text-xs text-slate-400">{event.user.department.name}</div>}
+    <div className={`rounded-xl border border-neutral-100 bg-white ${compact ? 'p-3' : 'p-4'} shadow-premium-sm transition-all hover:shadow-premium-md`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-bold text-neutral-900">{event.user?.name ?? 'Staff Employee'}</div>
+          <div className="text-xs text-neutral-500 mt-1 font-medium">
+            <span className="font-bold text-neutral-700">{event.leave_type.name}</span>
+            <span> · {formatDays(event.requested_days)} day(s) · </span>
+            <span className="whitespace-nowrap font-medium">{formatShortDate(event.starts_at)} – {formatShortDate(event.ends_at)}</span>
+          </div>
+          {event.user?.department?.name && !compact && (
+            <div className="mt-1.5 text-xs font-bold uppercase tracking-wider text-neutral-400">
+              {event.user.department.name}
+            </div>
+          )}
         </div>
-        <span className={`rounded-md px-2 py-1 text-xs ${statusStyles[event.status] ?? 'bg-slate-100 text-slate-600'}`}>{event.status}</span>
+        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2 py-0.5 text-xs font-bold`}>
+          {event.status}
+        </span>
       </div>
     </div>
   );
 }
 
 function HolidayRow({ holiday, compact = false }: { holiday: Holiday; compact?: boolean }) {
-  return <div className={`rounded-md border border-emerald-100 bg-emerald-50 ${compact ? 'p-3' : 'p-4'}`}><div className="font-medium text-emerald-950">{holiday.name}</div><div className="text-sm text-emerald-700">{formatDate(holiday.holiday_date)}</div></div>;
+  return (
+    <div className={`rounded-xl border border-emerald-100 bg-emerald-50/40 ${compact ? 'p-3' : 'p-4'} shadow-premium-sm`}>
+      <div className="text-xs font-bold text-emerald-950">{holiday.name}</div>
+      <div className="text-xs text-emerald-700 mt-1 font-bold">
+        {formatDate(holiday.holiday_date)}
+      </div>
+    </div>
+  );
 }
 
 function Panel({ icon, title, empty, children }: { icon: React.ReactNode; title: string; empty: string; children: React.ReactNode[] }) {
-  return <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-3 flex items-center gap-2 font-semibold">{icon}{title}</div><div className="space-y-3">{children.length > 0 ? children : <p className="text-sm text-slate-500">{empty}</p>}</div></div>;
+  return (
+    <div className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+      <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-400">
+        <div className="text-neutral-400">{icon}</div>
+        <span>{title}</span>
+      </div>
+      <div className="space-y-3">
+        {children.length > 0 ? (
+          children
+        ) : (
+          <p className="py-3 text-center text-xs text-neutral-400 font-medium">{empty}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> }) {
+  const statusStyle = statusStyles[item.status] ?? { bg: 'bg-neutral-50 border-neutral-200', text: 'text-neutral-600', dot: 'bg-neutral-400' };
+  
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
+    <div className="rounded-xl border border-neutral-100 bg-white p-3 shadow-premium-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-medium text-slate-950">{item.event.user?.name ?? 'Employee'}</div>
-          <div className="text-sm text-slate-500">{item.event.leave_type.name} · {formatDate(item.event.starts_at)} to {formatDate(item.event.ends_at)}</div>
+          <div className="text-xs font-bold text-neutral-900">{item.event.user?.name ?? 'Employee'}</div>
+          <div className="text-xs text-neutral-500 mt-0.5 font-medium">
+            <span className="font-bold text-neutral-700">{item.event.leave_type.name}</span>
+            <span> · {formatDays(item.event.requested_days)} day(s)</span>
+          </div>
         </div>
-        <span className={`rounded-md px-2 py-1 text-xs ${statusStyles[item.status] ?? 'bg-slate-100 text-slate-600'}`}>{item.status}</span>
+        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2 py-0.5 text-xs font-bold`}>
+          {item.status}
+        </span>
       </div>
-      {item.event.reason && <div className="mt-2 text-sm text-slate-600">{item.event.reason}</div>}
+      {item.event.reason && (
+        <div className="mt-2 rounded-lg bg-neutral-50/50 p-2.5 text-xs text-neutral-600 leading-relaxed italic border border-neutral-100/60">
+          "{item.event.reason}"
+        </div>
+      )}
     </div>
   );
 }
 
 function HolidayNote({ item }: { item: Extract<CalendarItem, { kind: 'holiday' }> }) {
-  return <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3"><div className="font-medium text-emerald-950">{item.holiday.name}</div><div className="text-sm text-emerald-700">{formatDate(item.holiday.holiday_date)}</div></div>;
+  return (
+    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 shadow-premium-sm">
+      <div className="text-xs font-bold text-emerald-950">{item.holiday.name}</div>
+      <div className="text-xs text-emerald-700 mt-1 font-bold">
+        {formatDate(item.holiday.holiday_date)}
+      </div>
+    </div>
+  );
 }
 
 function buildCalendarDays(month: Date, leaveEvents: LeaveRequest[], holidays: Holiday[]): CalendarDay[] {
@@ -267,8 +434,4 @@ function toDateKey(value: string) {
 function parseDateKey(value: string) {
   const [year, month, day] = toDateKey(value).split('-').map(Number);
   return new Date(year, month - 1, day);
-}
-
-function formatDate(value: string) {
-  return parseDateKey(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
