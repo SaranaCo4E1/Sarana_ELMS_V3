@@ -38,11 +38,13 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user()?->load('department'),
+                'user' => $request->user()?->load(['department', 'manager']),
+                'must_change_password' => (bool) $request->user()?->must_change_password,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'default_password' => fn () => $request->session()->get('default_password'),
             ],
         ];
     }

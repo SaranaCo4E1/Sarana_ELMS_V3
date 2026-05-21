@@ -110,6 +110,71 @@ class AuthController extends Controller
             : back()->withErrors(['email' => __($status)]);
     }
 
+    public function forceChangePassword(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Current password is incorrect.']);
+        }
+
+        if (Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['password' => 'New password must be different from the current password.']);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($request->password),
+            'must_change_password' => false,
+        ])->save();
+
+        return back()->with('success', 'Password changed successfully.');
+    }
+
+    public function changePassword(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Current password is incorrect.']);
+        }
+
+        if (Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['password' => 'New password must be different from the current password.']);
+        }
+
+        $user->forceFill(['password' => Hash::make($request->password)])->save();
+
+        return back()->with('success', 'Password changed successfully.');
+    }
+
+    public function updateProfilePhoto(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'max:2048', 'mimes:jpg,jpeg,png,webp'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->profile_photo) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo);
+        }
+
+        $path = $request->file('photo')->store('profile-photos', 'public');
+        $user->update(['profile_photo' => $path]);
+
+        return back()->with('success', 'Profile photo updated.');
+    }
+
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();

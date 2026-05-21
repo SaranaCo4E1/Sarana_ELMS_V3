@@ -54,7 +54,8 @@ class ManagerApprovalController extends Controller
             'type' => 'leave_decided',
             'title' => 'Leave request '.$data['decision'],
             'body' => 'Your '.$leaveRequest->leaveType->name.' request was '.$data['decision'].'.',
-            'action_url' => route('dashboard'),
+            'action_url' => route('dashboard', ['tab' => 'leave-request', 'request' => $leaveRequest->id]),
+            'reference_id' => $leaveRequest->id,
         ]);
 
         Audit::record($request, 'leave.request.'.$data['decision'], $leaveRequest);

@@ -21,10 +21,16 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/', [DashboardController::class, 'dashboard'])->name('dashboard');
+    Route::get('/leave-requests', [DashboardController::class, 'leaveRequests'])->name('leave-requests.index');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/password/force-change', [AuthController::class, 'forceChangePassword'])->name('password.force-change');
+    Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.change');
+    Route::post('/profile/photo', [AuthController::class, 'updateProfilePhoto'])->name('profile.photo');
     Route::post('/leave-requests', [LeaveRequestController::class, 'store'])->name('leave-requests.store');
     Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
+    Route::get('/attachments/{attachment}', [LeaveRequestController::class, 'downloadAttachment'])->name('attachments.download');
+    Route::patch('/notifications/{notification}/read', [DashboardController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
 
     Route::middleware('role:manager,hr,admin')->group(function () {
@@ -34,11 +40,26 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:hr,admin')->group(function () {
         Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+
         Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
+        Route::put('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
+        Route::delete('/admin/departments/{department}', [AdminController::class, 'destroyDepartment'])->name('admin.departments.destroy');
+
         Route::post('/admin/leave-types', [AdminController::class, 'storeLeaveType'])->name('admin.leave-types.store');
+        Route::put('/admin/leave-types/{leaveType}', [AdminController::class, 'updateLeaveType'])->name('admin.leave-types.update');
+        Route::delete('/admin/leave-types/{leaveType}', [AdminController::class, 'destroyLeaveType'])->name('admin.leave-types.destroy');
+
         Route::post('/admin/holidays', [AdminController::class, 'storeHoliday'])->name('admin.holidays.store');
+        Route::put('/admin/holidays/{holiday}', [AdminController::class, 'updateHoliday'])->name('admin.holidays.update');
+        Route::delete('/admin/holidays/{holiday}', [AdminController::class, 'destroyHoliday'])->name('admin.holidays.destroy');
+
         Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
+        Route::put('/admin/users/{user}', [AdminController::class, 'updateUser'])->name('admin.users.update');
+        Route::delete('/admin/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
+
         Route::post('/admin/balances', [AdminController::class, 'overrideBalance'])->name('admin.balances.override');
+        Route::put('/admin/balances/{balance}', [AdminController::class, 'updateBalance'])->name('admin.balances.update');
+        Route::delete('/admin/balances/{balance}', [AdminController::class, 'destroyBalance'])->name('admin.balances.destroy');
         Route::get('/reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     });
 });
