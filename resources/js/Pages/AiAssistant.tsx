@@ -122,7 +122,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 text-xs font-bold capitalize tracking-wide transition-all duration-200 rounded-xl cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold capitalize tracking-wide transition-all duration-200 rounded-xl cursor-pointer ${
                 activeTab === tab
                   ? 'bg-white text-emerald-800 shadow-premium-sm border border-neutral-200'
                   : 'text-neutral-500 hover:text-neutral-800'
@@ -149,15 +149,15 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-900">AI Assistant</h2>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 mt-0.5">
+                  <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">AI Assistant</h2>
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 mt-0.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                    <span>Gemini Flash Lite · Ready</span>
+                    <span>Gemini 3.5 flash · Ready</span>
                   </div>
                 </div>
               </div>
               <button
-                className="group flex h-9 items-center gap-2 border border-neutral-200 bg-white px-3.5 text-xs font-bold tracking-wide text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 active:scale-98 transition-all duration-200 rounded-xl shadow-premium-sm cursor-pointer"
+                className="group flex h-9 items-center gap-2 border border-neutral-200 bg-white px-3.5 text-xs font-semibold tracking-wide text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 active:scale-98 transition-all duration-200 rounded-xl shadow-premium-sm cursor-pointer"
                 type="button"
                 onClick={startNewChat}
               >
@@ -169,15 +169,15 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             {/* Chat Scroll Area */}
             <div ref={transcriptRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-6 bg-neutral-50/10">
               {!hasMessages ? (
-                <div className="mx-auto flex h-full max-w-2xl flex-col justify-center py-8">
+                <div className="mx-auto flex h-full max-w-2xl flex-col justify-center py-10">
                   <div className="text-center">
                     <div className="inline-flex h-12 w-12 items-center justify-center border border-emerald-100 bg-emerald-50/50 text-emerald-600 mb-4 rounded-xl shadow-premium-sm">
                       <Sparkles size={18} />
                     </div>
-                    <h3 className="text-lg font-bold tracking-tight text-neutral-900">
+                    <h3 className="text-xl font-semibold tracking-tight text-neutral-850">
                       How can I assist you today?
                     </h3>
-                    <p className="mt-2 text-xs font-semibold text-neutral-400 max-w-sm mx-auto">
+                    <p className="mt-2 text-xs font-medium text-neutral-500 max-w-md mx-auto leading-relaxed">
                       Ask me questions about company leave policies, current leave balances, approval workflows, or upcoming public holidays.
                     </p>
                   </div>
@@ -186,11 +186,11 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     {suggestedPrompts.map((suggestion) => (
                       <button
                         key={suggestion}
-                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4 text-left text-xs font-semibold text-neutral-600 hover:border-emerald-400/50 hover:bg-emerald-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
+                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4 text-left text-xs font-medium text-neutral-500 hover:border-emerald-300 hover:bg-emerald-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
                         type="button"
                         onClick={() => setPrompt(suggestion)}
                       >
-                        <span className="pr-4 font-bold text-neutral-700 group-hover:text-emerald-950">{suggestion}</span>
+                        <span className="pr-4 font-semibold text-neutral-800 group-hover:text-emerald-950">{suggestion}</span>
                         <ArrowRight size={14} className="shrink-0 text-neutral-400 opacity-0 group-hover:opacity-100 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200" />
                       </button>
                     ))}
@@ -207,7 +207,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
             {/* Stream Error Banner */}
             {streamError && (
-              <div className="border-t border-rose-100 bg-rose-50 px-6 py-2.5 text-xs font-bold text-rose-800 flex items-center gap-2">
+              <div className="border-t border-rose-100 bg-rose-50 px-6 py-2.5 text-xs font-semibold text-rose-700 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-600 shrink-0"></span>
                 {streamError}
               </div>
@@ -217,7 +217,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             <form onSubmit={sendPrompt} className="border-t border-neutral-100 bg-white p-4">
               <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-200 rounded-2xl shadow-premium-sm">
                 <textarea
-                  className="max-h-32 min-h-[2.5rem] flex-1 resize-none border-0 bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
+                  className="max-h-32 min-h-10 focus:border-0! focus:ring-0! focus:shadow-none! flex-1 resize-none border-0 border-transparent! bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(e) => {
@@ -251,7 +251,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   )}
                 </div>
               </div>
-              <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-xs font-bold text-neutral-400">
+              <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
                 <span>Use Shift + Enter for new lines</span>
                 <span className="flex items-center gap-1">
                   <CornerDownLeft size={10} /> Enter to send
@@ -270,7 +270,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             }`}>
               <div className="mb-4 flex items-center gap-2 border-b border-neutral-200 pb-3">
                 <Clock3 size={15} className="text-neutral-400" />
-                <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Recent Chats</h2>
+                <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">Recent Chats</h2>
               </div>
               <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-1">
                 {recentChats.map((chat) => (
@@ -280,13 +280,13 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     type="button"
                     onClick={() => loadRecentChat(chat)}
                   >
-                    <div className="line-clamp-1 text-xs font-bold text-neutral-800 group-hover:text-emerald-800 transition-colors">
+                    <div className="line-clamp-1 text-xs font-semibold text-neutral-850 group-hover:text-emerald-800 transition-colors">
                       {chat.prompt}
                     </div>
-                    <div className="mt-1.5 line-clamp-2 text-xs text-neutral-500 font-semibold leading-relaxed">
+                    <div className="mt-1.5 line-clamp-2 text-xs text-neutral-500 font-medium leading-relaxed">
                       {chat.response}
                     </div>
-                    <div className="mt-3 text-xs font-bold text-neutral-400">
+                    <div className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
                       {formatDate(chat.created_at)}
                     </div>
                   </button>
@@ -305,12 +305,12 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             }`}>
               <div className="mb-4 flex items-center gap-2 border-b border-neutral-200 pb-3">
                 <HelpCircle size={15} className="text-neutral-400" />
-                <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Quick Policy FAQ</h2>
+                <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">Quick Policy FAQ</h2>
               </div>
               <div className="max-h-64 lg:max-h-none lg:overflow-y-auto space-y-2.5 pr-1">
                 {faqs.slice(0, 5).map((faq) => (
                   <details key={faq.id} className="group border border-neutral-200/60 p-3.5 text-xs bg-neutral-50/30 hover:bg-neutral-50/80 transition-all rounded-xl shadow-premium-sm cursor-pointer">
-                    <summary className="flex cursor-pointer items-center justify-between font-bold text-neutral-700 outline-none select-none">
+                    <summary className="flex cursor-pointer items-center justify-between font-semibold text-neutral-800 outline-none select-none">
                       <span className="pr-2">{faq.question}</span>
                       <span className="ml-2 text-neutral-400 group-open:rotate-180 transition-transform duration-200">
                         ▼
@@ -349,7 +349,7 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
           : 'bg-neutral-900 text-white border-neutral-900 rounded-2xl rounded-tr-sm shadow-premium-sm'
       }`}>
         {loading ? (
-          <span className="flex items-center gap-2 text-xs font-bold text-neutral-400">
+          <span className="flex items-center gap-2 text-xs font-medium text-neutral-400">
             <Loader2 size={13} className="animate-spin text-emerald-600" /> 
             Thinking...
           </span>

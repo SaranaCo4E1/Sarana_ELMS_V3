@@ -38,10 +38,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItemClass = (path: string) => {
     const active = isActive(path);
-    return `flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 rounded-xl mx-2 border ${
+    return `flex items-center gap-3.5 px-4.5 py-3 text-sm transition-all duration-200 rounded-xl mx-2 border ${
       active
-        ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800 font-semibold shadow-premium-sm'
-        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/50'
+        ? 'bg-emerald-55 bg-emerald-50/50 border-emerald-100/60 text-emerald-800 font-semibold shadow-premium-sm'
+        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/40 font-medium'
     }`;
   };
 
@@ -49,35 +49,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-full flex-col justify-between py-6 bg-white">
       <div>
         <div className="flex items-center gap-3 px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/10">
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/10">
             <CalendarCheck size={16} />
           </div>
           <div>
-            <div className="font-bold tracking-tight text-neutral-950 text-sm">Sarana ELMS</div>
-            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Workspace</div>
+            <div className="font-semibold tracking-tight text-neutral-900 text-sm">Sarana ELMS</div>
+            <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mt-0.5">Workspace</div>
           </div>
         </div>
 
         <nav className="mt-8 space-y-1">
           <Link className={navItemClass('/')} href="/">
-            <CalendarCheck size={16} className="shrink-0" /> Dashboard
+            <CalendarCheck size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Dashboard
           </Link>
           <Link className={navItemClass('/calendar')} href="/calendar">
-            <CalendarDays size={16} className="shrink-0" /> Calendar
+            <CalendarDays size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Calendar
           </Link>
           <Link className={navItemClass('/apply-leave')} href="/apply-leave">
-            <CalendarPlus size={16} className="shrink-0" /> Apply Leave
+            <CalendarPlus size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Apply Leave
           </Link>
           <Link className={navItemClass('/ai-assistant')} href="/ai-assistant">
-            <Bot size={16} className="shrink-0" /> AI Chatbot
+            <Bot size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> AI Chatbot
           </Link>
           <Link className={navItemClass('/profile')} href="/profile">
-            <IdCard size={16} className="shrink-0" /> My Profile
+            <IdCard size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> My Profile
           </Link>
           
           {(canApprove || canAdmin) && (
-            <div className="my-4 border-t border-neutral-100 px-6 pt-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Management</span>
+            <div className="my-4 border-t border-neutral-100 px-6 pt-4">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">Management</span>
             </div>
           )}
 
@@ -101,18 +101,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="px-4">
         {/* User Mini Profile Card */}
-        <div className="mb-4 flex items-center gap-3 border border-neutral-200 bg-neutral-50/40 rounded-2xl p-3 shadow-premium-sm">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 font-bold text-neutral-900 text-xs shadow-inner shrink-0">
+        <div className="mb-4 flex items-center gap-3.5 border border-neutral-150 bg-neutral-50/20 rounded-2xl p-3.5 shadow-premium-sm">
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 font-semibold text-neutral-900 text-xs shadow-inner shrink-0">
             {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-bold text-neutral-900">{user.name}</div>
-            <div className="truncate text-xs font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{user.role}</div>
+            <div className="truncate text-xs font-semibold text-neutral-800">{user.name}</div>
+            <div className="truncate text-[10px] font-semibold text-neutral-450 uppercase tracking-widest mt-1">{user.role}</div>
           </div>
         </div>
 
         <button
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-50 hover:text-neutral-900 shadow-premium-sm active:scale-98"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98"
           onClick={() => router.post('/logout')}
         >
           <LogOut size={14} /> Sign out
@@ -166,8 +166,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Menu size={16} />
               </button>
               <div>
-                <h1 className="text-sm font-bold tracking-tight text-neutral-950">Leave Portal</h1>
-                <p className="hidden text-xs font-semibold text-neutral-500 sm:block">
+                <h1 className="text-base font-semibold tracking-tight text-neutral-800">Leave Portal</h1>
+                <p className="hidden text-xs font-medium text-neutral-450 sm:block">
                   {user.department?.name ?? 'General Staff'} · {user.employee_code ?? 'EMP'}
                 </p>
               </div>
@@ -186,7 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <Bell size={16} />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-xs font-bold text-white shadow-2xs">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-semibold text-white shadow-2xs">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -195,8 +195,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {notificationOpen && (
                 <div className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200/50 bg-white p-2.5 shadow-premium-lg animate-fade-in">
                   <div className="flex items-center justify-between border-b border-neutral-100/60 px-3 pb-2.5 mb-1.5">
-                    <span className="font-bold text-xs text-neutral-950">Notifications</span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100">
+                    <span className="font-semibold text-xs text-neutral-800">Notifications</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-100">
                       {unreadCount} unread
                     </span>
                   </div>
@@ -214,7 +214,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           onClick={() => setNotificationOpen(false)}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="text-xs font-bold text-neutral-800">{item.title}</div>
+                            <div className="text-xs font-semibold text-neutral-750">{item.title}</div>
                             {!item.read_at && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" />}
                           </div>
                           <div className="mt-0.5 text-xs text-neutral-500 line-clamp-2">{item.body}</div>

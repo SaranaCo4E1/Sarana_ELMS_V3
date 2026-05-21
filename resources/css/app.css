@@ -32,8 +32,8 @@ code, pre, kbd, samp, .font-mono, [class*="font-mono"] {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display) !important;
-  letter-spacing: -0.02em;
-  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-weight: 600;
 }
 
 /* Custom Scrollbars */
@@ -62,8 +62,8 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: #059669 !important; /* emerald-600 */
-  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.08) !important;
+  border-color: #059669; /* emerald-600 */
+  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.08);
 }
 
 /* React Datepicker styling customizations */
