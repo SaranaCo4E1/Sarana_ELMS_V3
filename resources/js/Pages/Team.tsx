@@ -33,7 +33,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                 <p className="text-xs font-medium text-neutral-450 mt-1">List of colleagues and staff in your active department scope</p>
               </div>
               <Link
-                className="inline-flex items-center gap-1.5 rounded-xl bg-neutral-950 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 transition-all duration-200 active:scale-98"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 transition-all duration-200 active:scale-98"
                 href="/approvals"
               >
                 Review approvals
@@ -50,20 +50,20 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                     </div>
                     <div>
                       <div className="font-semibold text-neutral-850 text-xs">{member.name}</div>
-                      <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450 mt-1">{member.employee_code ?? 'NO CODE'}</div>
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-400 mt-1">{member.employee_code ?? 'NO CODE'}</div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-xs text-neutral-600 font-medium">
                     <div>
                       <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-400">Role</div>
-                      <div className="font-semibold text-neutral-700 mt-0.5">{member.job_title ?? member.role}</div>
+                      <div className="font-medium text-neutral-600 mt-0.5">{member.job_title ?? member.role}</div>
                     </div>
                     <div>
                       <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-400">Department</div>
                       <div className="mt-0.5">
                         {member.department?.name ? (
-                          <span className="inline-flex items-center rounded-full bg-neutral-50 border border-neutral-200/50 px-2 py-0.5 text-xs font-semibold text-neutral-650">
+                          <span className="inline-flex items-center rounded-full bg-neutral-50 border border-neutral-200/50 px-2 py-0.5 text-xs font-medium text-neutral-600">
                             {member.department.name}
                           </span>
                         ) : (
@@ -73,17 +73,17 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                     </div>
                     <div>
                       <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-400">Manager</div>
-                      <div className="font-medium text-neutral-700 mt-0.5">{member.manager?.name ?? '—'}</div>
+                      <div className="font-medium text-neutral-600 mt-0.5">{member.manager?.name ?? '—'}</div>
                     </div>
                     <div>
                       <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-400">Contact</div>
-                      <div className="font-medium text-neutral-650 mt-0.5 truncate" title={member.email}>{member.email}</div>
+                      <div className="font-normal text-neutral-500 mt-0.5 truncate" title={member.email}>{member.email}</div>
                     </div>
                   </div>
 
-                  <div className="pt-3.5 border-t border-neutral-100 flex items-center justify-between text-xs font-semibold text-neutral-500">
+                  <div className="pt-3.5 border-t border-neutral-100 flex items-center justify-between text-xs font-medium text-neutral-500">
                     <span>Leave Summary:</span>
-                    <div className="font-semibold">
+                    <div className="font-medium">
                       <span className="text-amber-700">{member.pending_leave_requests_count ?? 0} pending</span>
                       <span className="mx-1.5 text-neutral-300">·</span>
                       <span className="text-emerald-700">{member.approved_leave_requests_count ?? 0} approved</span>
@@ -121,33 +121,33 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                           </div>
                           <div>
                             <div className="font-semibold text-neutral-850">{member.name}</div>
-                            <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450 mt-1">{member.employee_code ?? 'NO CODE'}</div>
+                            <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-400 mt-1">{member.employee_code ?? 'NO CODE'}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4.5 text-neutral-650 font-semibold">
+                      <td className="px-4 py-4.5 text-neutral-600 font-medium">
                         {member.job_title ?? member.role}
                       </td>
                       <td className="px-4 py-4.5">
                         {member.department?.name ? (
-                          <span className="inline-flex items-center rounded-full bg-neutral-50 border border-neutral-200 px-2.5 py-0.5 text-xs font-semibold text-neutral-650">
+                          <span className="inline-flex items-center rounded-full bg-neutral-50 border border-neutral-200 px-2.5 py-0.5 text-xs font-medium text-neutral-600">
                             {member.department.name}
                           </span>
                         ) : (
-                          <span className="text-neutral-400 font-semibold">—</span>
+                          <span className="text-neutral-400 font-medium">—</span>
                         )}
                       </td>
                       <td className="px-4 py-4.5 text-neutral-550 font-medium">
                         {member.manager?.name ?? '—'}
                       </td>
-                      <td className="px-4 py-4.5 whitespace-nowrap text-neutral-650 font-semibold">
-                        <span className="text-amber-750">{member.pending_leave_requests_count ?? 0} pending</span>
+                      <td className="px-4 py-4.5 whitespace-nowrap text-neutral-600 font-medium">
+                        <span className="text-amber-700 font-semibold">{member.pending_leave_requests_count ?? 0} pending</span>
                         <span className="mx-1.5 text-neutral-300">·</span>
-                        <span className="text-emerald-750">{member.approved_leave_requests_count ?? 0} approved</span>
+                        <span className="text-emerald-700 font-semibold">{member.approved_leave_requests_count ?? 0} approved</span>
                       </td>
                       <td className="px-6 py-4.5">
-                        <div className="text-neutral-750 font-semibold">{member.email}</div>
-                        {member.phone && <div className="text-xs text-neutral-450 font-medium mt-1">{member.phone}</div>}
+                        <div className="text-neutral-700 font-normal">{member.email}</div>
+                        {member.phone && <div className="text-xs text-neutral-400 font-normal mt-1">{member.phone}</div>}
                       </td>
                     </tr>
                   ))}

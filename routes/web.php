@@ -26,8 +26,23 @@ Route::middleware('guest')->group(function () {
     Route::post('/two-factor', [AuthController::class, 'verifyTwoFactor'])->name('two-factor.verify');
 });
 
+Route::get('/', function () {
+    return inertia('Landing');
+})->name('landing');
+
+Route::get('/terms', function () {
+    return inertia('Terms');
+})->name('terms');
+
+Route::get('/privacy', function () {
+    return inertia('Privacy');
+})->name('privacy');
+
+Route::get('/support', [\App\Http\Controllers\SupportController::class, 'index'])->name('support.index');
+Route::post('/support', [\App\Http\Controllers\SupportController::class, 'store'])->name('support.store');
+
 Route::middleware('auth')->group(function () {
-    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/calendar', CalendarController::class)->name('calendar.index');
     Route::get('/apply-leave', ApplyLeaveController::class)->name('apply-leave.index');

@@ -127,7 +127,7 @@ export default function Dashboard({ balances, requests, requestStats, pendingApp
         {/* Right sidebar */}
         <aside className="space-y-6">
           <Link
-            className="flex items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 py-3.5 text-xs font-semibold text-white hover:bg-neutral-800 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-neutral-950/10 transition-all duration-200"
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-xs font-semibold text-white hover:bg-emerald-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-emerald-600/10 transition-all duration-200"
             href="/apply-leave"
           >
             <CalendarPlus size={14} /> Apply for leave

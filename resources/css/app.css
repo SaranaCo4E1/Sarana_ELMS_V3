@@ -5,6 +5,30 @@
 @theme {
   --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Figtree', var(--font-sans);
+
+  --color-emerald-50: #fff7ed;
+  --color-emerald-100: #ffedd5;
+  --color-emerald-200: #fed7aa;
+  --color-emerald-300: #fdba74;
+  --color-emerald-400: #fb923c;
+  --color-emerald-500: #ff750f; /* Core NiyAI brand orange */
+  --color-emerald-600: #ea580c;
+  --color-emerald-700: #c2410c;
+  --color-emerald-800: #9a3412;
+  --color-emerald-900: #7c2d12;
+  --color-emerald-950: #431407;
+
+  --color-teal-50: #fefce8;
+  --color-teal-100: #fef9c3;
+  --color-teal-200: #fef08a;
+  --color-teal-300: #fde047;
+  --color-teal-400: #facc15;
+  --color-teal-500: #eab308;
+  --color-teal-600: #d97706;
+  --color-teal-700: #b45309;
+  --color-teal-800: #78350f;
+  --color-teal-900: #451a03;
+  --color-teal-950: #291001;
 }
 
 html {
@@ -62,8 +86,8 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: #059669; /* emerald-600 */
-  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.08);
+  border-color: #ff750f; /* NiyAI Brand orange */
+  box-shadow: 0 0 0 4px rgba(255, 117, 15, 0.08);
 }
 
 /* React Datepicker styling customizations */
@@ -115,22 +139,22 @@ input:focus, select:focus, textarea:focus {
 }
 
 .react-datepicker__day:hover {
-  background-color: rgba(5, 150, 105, 0.06) !important;
-  color: #059669 !important;
+  background-color: rgba(255, 117, 15, 0.06) !important;
+  color: #ff750f !important;
 }
 
 .react-datepicker__day--selected,
 .react-datepicker__day--in-selecting-range,
 .react-datepicker__day--in-range {
-  background: linear-gradient(135deg, #059669, #0d9488) !important;
+  background: linear-gradient(135deg, #ff750f, #d97706) !important;
   color: #ffffff !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(255, 117, 15, 0.2) !important;
 }
 
 .react-datepicker__day--keyboard-selected {
-  background-color: rgba(5, 150, 105, 0.06) !important;
-  color: #059669 !important;
+  background-color: rgba(255, 117, 15, 0.06) !important;
+  color: #ff750f !important;
 }
 
 .react-datepicker__day--disabled {
@@ -189,7 +213,7 @@ input:focus, select:focus, textarea:focus {
   padding: 0.2rem 0.4rem;
   border-radius: 6px;
   font-weight: 600;
-  color: #059669;
+  color: #ff750f;
 }
 
 .markdown-prose pre {
@@ -213,20 +237,20 @@ input:focus, select:focus, textarea:focus {
 }
 
 .markdown-prose a {
-  color: #059669;
+  color: #ff750f;
   text-decoration: none;
-  border-bottom: 1.5px solid rgba(5, 150, 105, 0.2);
+  border-bottom: 1.5px solid rgba(255, 117, 15, 0.2);
   transition: all 0.15s ease;
   font-weight: 600;
 }
 
 .markdown-prose a:hover {
-  border-bottom-color: #059669;
-  background-color: rgba(5, 150, 105, 0.04);
+  border-bottom-color: #ff750f;
+  background-color: rgba(255, 117, 15, 0.04);
 }
 
 .markdown-prose blockquote {
-  border-left: 3px solid #059669;
+  border-left: 3px solid #ff750f;
   padding-left: 1rem;
   margin: 1rem 0;
   color: #64748b;

@@ -114,8 +114,8 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
   const hasMessages = messages.length > 0;
 
   return (
-    <AppLayout>
-      <div className="flex flex-col h-full">
+    <AppLayout fullHeight>
+      <div className="flex flex-col h-full px-4 py-4 sm:px-6">
         {/* Mobile Tab Bar (iOS style Segmented Control) */}
         <div className="flex bg-neutral-100/80 p-1 lg:hidden mb-4 rounded-2xl border border-neutral-200/40 shadow-premium-sm">
           {(['chat', 'history', 'faq'] as const).map((tab) => (
@@ -133,10 +133,10 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
           ))}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_22rem] lg:h-[calc(100vh-9.5rem)] lg:min-h-[620px] flex-1 min-h-0">
+        <div className="grid gap-4 lg:grid-cols-[1fr_22rem] flex-1 min-h-0">
           {/* Main Chat Interface */}
           <section className={`min-h-0 flex-col overflow-hidden border border-neutral-200/50 bg-white rounded-2xl shadow-premium-sm ${
-            activeTab === 'chat' ? 'flex h-[calc(100vh-14.5rem)]' : 'hidden'
+            activeTab === 'chat' ? 'flex h-[calc(100svh-14rem)]' : 'hidden'
           } lg:flex lg:h-full`}>
             {/* Chat Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50/20 px-6 py-4">
@@ -149,7 +149,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">AI Assistant</h2>
+                  <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">ELMS Copilot</h2>
                   <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 mt-0.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                     <span>Gemini 3.5 flash · Ready</span>
@@ -241,7 +241,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     </button>
                   ) : (
                     <button
-                      className="flex h-9 w-9 shrink-0 items-center justify-center bg-neutral-950 text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
                       type="submit"
                       aria-label="Send message"
                       disabled={!prompt.trim()}
@@ -261,8 +261,8 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
           </section>
 
           {/* Sidebar panels */}
-          <aside className={`min-h-0 flex-col gap-6 lg:flex ${
-            activeTab !== 'chat' ? 'flex h-[calc(100vh-14.5rem)]' : 'hidden'
+          <aside className={`min-h-0 flex-col gap-4 lg:flex ${
+            activeTab !== 'chat' ? 'flex h-[calc(100svh-14rem)]' : 'hidden'
           }`}>
             {/* History Panel */}
             <section className={`min-h-0 flex-1 flex-col border border-neutral-200/50 bg-white p-5 rounded-2xl shadow-premium-sm ${
@@ -346,7 +346,7 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
       <div className={`max-w-[80%] border p-4 text-sm leading-relaxed ${
         isAssistant 
           ? 'bg-emerald-50/20 text-neutral-800 border-emerald-100/60 rounded-2xl rounded-tl-sm shadow-premium-sm' 
-          : 'bg-neutral-900 text-white border-neutral-900 rounded-2xl rounded-tr-sm shadow-premium-sm'
+          : 'bg-emerald-600 text-white border-emerald-600 rounded-2xl rounded-tr-sm shadow-premium-sm'
       }`}>
         {loading ? (
           <span className="flex items-center gap-2 text-xs font-medium text-neutral-400">

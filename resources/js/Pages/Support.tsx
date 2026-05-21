@@ -1,0 +1,248 @@
+import { ArrowLeft, Send, CheckCircle2, MessageSquare, AlertCircle, Loader2 } from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+
+type PageProps = {
+  auth?: {
+    user?: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  };
+  flash?: {
+    success?: string;
+  };
+};
+
+export default function Support() {
+  const { auth, flash } = usePage<any>().props;
+  const user = auth?.user;
+  
+  const [submittedSuccessfully, setSubmittedSuccessfully] = useState(false);
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    name: user?.name ?? '',
+    email: user?.email ?? '',
+    subject: '',
+    message: '',
+  });
+
+  // Pre-fill if auth status changes
+  useEffect(() => {
+    if (user) {
+      setData((current) => ({
+        ...current,
+        name: user.name,
+        email: user.email,
+      }));
+    }
+  }, [user]);
+
+  // Monitor flash messages to trigger the success screen
+  useEffect(() => {
+    if (flash?.success) {
+      setSubmittedSuccessfully(true);
+      reset('subject', 'message');
+    }
+  }, [flash]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    post('/support', {
+      preserveScroll: true,
+      onSuccess: () => {
+        setSubmittedSuccessfully(true);
+      },
+    });
+  }
+
+  return (
+    <div className="relative min-h-screen bg-slate-50/40 text-neutral-800 antialiased selection:bg-emerald-500 selection:text-white">
+      {/* Dynamic Background Glow elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-emerald-400/8 to-teal-500/8 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 -translate-x-1/3 translate-y-1/3 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-emerald-400/5 to-teal-500/5 blur-3xl"></div>
+      </div>
+
+      <div className="relative z-10 max-w-2xl mx-auto px-6 py-12 sm:py-20">
+        {/* Navigation Header */}
+        <div className="mb-10 flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-bold text-neutral-500 hover:text-neutral-900 transition-colors uppercase tracking-wider group"
+          >
+            <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+            Back to Portal
+          </Link>
+          <div className="flex items-center gap-2 text-xs font-bold text-neutral-450 uppercase tracking-widest bg-neutral-200/50 px-3.5 py-1.5 rounded-xl border border-neutral-250/20">
+            <MessageSquare size={12} className="text-emerald-500" />
+            Help Desk
+          </div>
+        </div>
+
+        {/* Header Intro */}
+        {!submittedSuccessfully && (
+          <div className="mb-12 text-center sm:text-left">
+            <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 sm:text-4xl">
+              NiyAI Help Desk
+            </h1>
+            <p className="mt-4 text-sm font-semibold text-neutral-500 max-w-lg leading-relaxed">
+              Locked out? Encountering leave calculation discrepancies? Or need a quick admin manual? Send an inquiry and our team will check it out.
+            </p>
+          </div>
+        )}
+
+        {/* Content Box */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-10 shadow-premium-lg">
+          {submittedSuccessfully ? (
+            <div className="text-center py-6 space-y-6 animate-fade-in">
+              <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-premium-sm">
+                <CheckCircle2 size={28} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold text-neutral-900">Inquiry Logged Successfully</h2>
+                <p className="text-xs font-semibold text-neutral-500 max-w-md mx-auto leading-relaxed">
+                  {flash?.success ?? "Thank you! We have received your inquiry and our support team will contact you shortly."}
+                </p>
+              </div>
+              <div className="pt-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => setSubmittedSuccessfully(false)}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-neutral-200 hover:border-neutral-300 text-xs font-bold text-neutral-600 transition-all select-none"
+                >
+                  Submit Another Ticket
+                </button>
+                <Link
+                  href="/"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition-all text-center select-none shadow-md shadow-emerald-600/10"
+                >
+                  Return to Home
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Form Grid */}
+              <div className="grid gap-6 sm:grid-cols-2">
+                {/* Name */}
+                <div className="space-y-2">
+                  <label htmlFor="name" className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
+                    Full Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    required
+                    disabled={!!user}
+                    placeholder="Jane Doe"
+                    value={data.name}
+                    onChange={(e) => setData('name', e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:bg-white focus:border-emerald-500 outline-none disabled:bg-neutral-100/70 disabled:text-neutral-450"
+                  />
+                  {errors.name && (
+                    <div className="text-[11px] font-semibold text-rose-600 flex items-center gap-1.5 mt-1">
+                      <AlertCircle size={12} />
+                      {errors.name}
+                    </div>
+                  )}
+                </div>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
+                    Corporate Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    disabled={!!user}
+                    placeholder="jane.doe@company.com"
+                    value={data.email}
+                    onChange={(e) => setData('email', e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:bg-white focus:border-emerald-500 outline-none disabled:bg-neutral-100/70 disabled:text-neutral-450"
+                  />
+                  {errors.email && (
+                    <div className="text-[11px] font-semibold text-rose-600 flex items-center gap-1.5 mt-1">
+                      <AlertCircle size={12} />
+                      {errors.email}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Subject */}
+              <div className="space-y-2">
+                <label htmlFor="subject" className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
+                  Subject
+                </label>
+                <input
+                  id="subject"
+                  type="text"
+                  required
+                  placeholder="e.g. Multi-Factor code not received"
+                  value={data.subject}
+                  onChange={(e) => setData('subject', e.target.value)}
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:bg-white focus:border-emerald-500 outline-none"
+                />
+                {errors.subject && (
+                  <div className="text-[11px] font-semibold text-rose-600 flex items-center gap-1.5 mt-1">
+                    <AlertCircle size={12} />
+                    {errors.subject}
+                  </div>
+                )}
+              </div>
+
+              {/* Message */}
+              <div className="space-y-2">
+                <label htmlFor="message" className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
+                  Detailed Message
+                </label>
+                <textarea
+                  id="message"
+                  required
+                  rows={5}
+                  placeholder="Explain your technical issue or balance inquiry as clearly as possible..."
+                  value={data.message}
+                  onChange={(e) => setData('message', e.target.value)}
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:bg-white focus:border-emerald-500 outline-none resize-y"
+                />
+                {errors.message && (
+                  <div className="text-[11px] font-semibold text-rose-600 flex items-center gap-1.5 mt-1">
+                    <AlertCircle size={12} />
+                    {errors.message}
+                  </div>
+                )}
+              </div>
+
+              {/* Submit CTA */}
+              <button
+                type="submit"
+                disabled={processing}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-200 disabled:text-neutral-400 py-3.5 text-xs font-bold text-white transition-all shadow-md shadow-emerald-600/10 active:scale-98 select-none"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-neutral-400" />
+                    Submitting Inquiry...
+                  </>
+                ) : (
+                  <>
+                    Submit Ticket <Send size={12} />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {/* Footer Disclaimer */}
+        <div className="mt-12 text-center text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+          &copy; {new Date().getFullYear()} NiyAI Data Co., Ltd. All rights reserved.
+        </div>
+      </div>
+    </div>
+  );
+}

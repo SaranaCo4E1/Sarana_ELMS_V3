@@ -497,7 +497,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     return (
                       <a
                         key={month}
-                        className="inline-flex items-center gap-2 rounded-xl bg-neutral-950 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 transition-all cursor-pointer active:scale-98"
+                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 transition-all cursor-pointer active:scale-98"
                         href={`/reports/monthly?month=${month}`}
                       >
                         <Download size={14} className="text-neutral-350" /> {month} CSV Report
@@ -556,7 +556,7 @@ function Metric({ label, value, variant }: { label: string; value: number; varia
 
 function Submit({ label }: { label: string }) {
   return (
-    <button className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-950 py-3 text-xs font-semibold uppercase tracking-wide text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 active:scale-98 transition-all duration-200 cursor-pointer">
+    <button className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-semibold uppercase tracking-wide text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all duration-200 cursor-pointer">
       <Plus size={14} className="text-neutral-350" /> {label}
     </button>
   );

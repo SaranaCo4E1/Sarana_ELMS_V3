@@ -222,7 +222,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-455">
                 Reason & Handover Notes
                 <textarea
-                  className="mt-1.5 min-h-[90px] w-full rounded-xl border border-neutral-200/70 p-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none resize-y"
+                  className="mt-1.5 min-h-[90px] w-full rounded-xl border border-neutral-200/70 p-3 text-sm font-normal text-neutral-700 placeholder:text-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none resize-y"
                   placeholder="Details for coverage, client handover, or reason for time off request..."
                   value={form.reason}
                   onChange={(e) => setForm({ ...form, reason: e.target.value })}
@@ -253,7 +253,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               </div>
 
               <button
-                className="flex items-center gap-2 rounded-xl bg-neutral-950 px-4.5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-neutral-950/10 transition-all duration-200"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4.5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-emerald-600/10 transition-all duration-200"
                 type="submit"
               >
                 <Send size={12} /> Submit Request

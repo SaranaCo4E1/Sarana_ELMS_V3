@@ -4,7 +4,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children, fullHeight }: { children: React.ReactNode; fullHeight?: boolean }) {
   const { auth, flash, notifications } = usePage<PageProps>().props;
   const { url } = usePage();
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -30,8 +30,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [url]);
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return url === '/' || url === '';
+    if (path === '/dashboard') {
+      return url === '/dashboard';
     }
     return url.startsWith(path);
   };
@@ -53,13 +53,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <CalendarCheck size={16} />
           </div>
           <div>
-            <div className="font-semibold tracking-tight text-neutral-900 text-sm">Sarana ELMS</div>
+            <div className="font-semibold tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
             <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mt-0.5">Workspace</div>
           </div>
         </div>
 
         <nav className="mt-8 space-y-1">
-          <Link className={navItemClass('/')} href="/">
+          <Link className={navItemClass('/dashboard')} href="/dashboard">
             <CalendarCheck size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Dashboard
           </Link>
           <Link className={navItemClass('/calendar')} href="/calendar">
@@ -101,7 +101,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="px-4">
         {/* User Mini Profile Card */}
-        <div className="mb-4 flex items-center gap-3.5 border border-neutral-150 bg-neutral-50/20 rounded-2xl p-3.5 shadow-premium-sm">
+        <div className="mb-4 flex items-center gap-3.5 border border-neutral-200 bg-neutral-50/20 rounded-2xl p-3.5 shadow-premium-sm">
           <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 font-semibold text-neutral-900 text-xs shadow-inner shrink-0">
             {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
           </div>
@@ -122,11 +122,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#fafbfa]">
+    <div className="flex flex-col min-h-screen bg-[#fafbfa]">
       {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-neutral-950/20 transition-opacity duration-300 lg:hidden"
+          className="fixed inset-0 z-40 bg-neutral-800/15 transition-opacity duration-300 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -153,7 +153,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Container */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 flex flex-col h-screen">
         {/* Top Navbar */}
         <header className="sticky top-0 z-20 border-b border-neutral-200/50 bg-white/80 backdrop-blur-md px-4 py-3 sm:px-8">
           <div className="flex items-center justify-between gap-4">
@@ -252,7 +252,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Content Body */}
-        <main className="px-4 py-6 sm:px-8 max-w-7xl mx-auto animate-fade-in">
+        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden animate-fade-in' : 'px-4 py-6 sm:px-8 max-w-7xl mx-auto overflow-y-auto animate-fade-in'}>
           {children}
         </main>
       </div>

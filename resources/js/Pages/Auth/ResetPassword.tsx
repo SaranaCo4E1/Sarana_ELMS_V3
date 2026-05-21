@@ -17,8 +17,8 @@ export default function ResetPassword({ token, email }: { token: string; email: 
         <div className="rounded-2xl border border-neutral-200/50 bg-white p-8 shadow-premium-md">
           {/* Header & Logo */}
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-950 text-white shadow-md mb-4">
-              <Bot size={22} className="text-emerald-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/10 mb-4">
+              <Bot size={22} className="text-white" />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-neutral-850">Set New Password</h1>
             <p className="mt-1.5 text-xs font-medium text-neutral-500 leading-relaxed">
@@ -95,7 +95,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
             {/* Submit Button */}
             <button 
               type="submit"
-              className="w-full rounded-xl bg-neutral-950 py-3.5 text-xs font-semibold tracking-wide uppercase text-white shadow-md hover:bg-neutral-900 active:scale-98 transition-all cursor-pointer"
+              className="w-full rounded-xl bg-emerald-600 py-3.5 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all cursor-pointer"
             >
               Reset Password
             </button>

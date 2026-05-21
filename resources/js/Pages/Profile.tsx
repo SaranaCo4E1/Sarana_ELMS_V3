@@ -49,7 +49,7 @@ export default function Profile({ profile }: { profile: User }) {
     <AppLayout>
       <div className="space-y-6">
         {/* Premium Profile Banner Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-neutral-900 via-neutral-950 to-emerald-950 p-6 text-white shadow-premium-md animate-fade-in">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-650 to-teal-700 p-6 text-white shadow-premium-md animate-fade-in">
           {/* Subtle background decoration */}
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl"></div>
           <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-teal-500/10 blur-3xl"></div>
@@ -125,7 +125,7 @@ export default function Profile({ profile }: { profile: User }) {
               )}
 
               <div className="pt-2 md:col-span-2">
-                <button className="rounded-xl bg-neutral-950 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 active:scale-98 transition-all cursor-pointer">
+                <button className="rounded-xl bg-emerald-600 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all cursor-pointer">
                   Save Changes
                 </button>
               </div>
@@ -161,7 +161,7 @@ export default function Profile({ profile }: { profile: User }) {
               <Field label="Confirm new password" type="password" value={passwordForm.password_confirmation} onChange={(value) => setPasswordForm({ ...passwordForm, password_confirmation: value })} error={errors.password_confirmation} />
               
               <div className="pt-2">
-                <button className="rounded-xl bg-neutral-950 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-neutral-950/10 hover:bg-neutral-800 active:scale-98 transition-all cursor-pointer">
+                <button className="rounded-xl bg-emerald-600 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all cursor-pointer">
                   Update Password
                 </button>
               </div>
