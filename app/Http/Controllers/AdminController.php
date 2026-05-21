@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\AuditLog;
 use App\Models\LeaveBalance;
+use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\PublicHoliday;
 use App\Models\User;
@@ -19,10 +21,25 @@ class AdminController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin', [
-            'departments' => Department::with('manager')->orderBy('name')->get(),
-            'leaveTypes' => LeaveType::orderBy('name')->get(),
+            'departments' => Department::with('manager')->withCount('users')->orderBy('name')->get(),
+            'leaveTypes' => LeaveType::withCount('balances')->orderBy('name')->get(),
             'holidays' => PublicHoliday::orderByDesc('holiday_date')->get(),
-            'users' => User::with(['department', 'manager'])->orderBy('name')->get(),
+            'users' => User::with(['department', 'manager'])
+                ->withCount([
+                    'leaveRequests as pending_leave_requests_count' => fn ($query) => $query->where('status', 'pending'),
+                    'leaveRequests as approved_leave_requests_count' => fn ($query) => $query->where('status', 'approved')->whereYear('starts_at', now()->year),
+                ])
+                ->orderBy('name')
+                ->get(),
+            'auditLogs' => AuditLog::query()->latest()->limit(25)->get(),
+            'stats' => [
+                'active_users' => User::query()->where('is_active', true)->count(),
+                'inactive_users' => User::query()->where('is_active', false)->count(),
+                'pending_requests' => LeaveRequest::query()->where('status', 'pending')->count(),
+                'approved_this_month' => LeaveRequest::query()->where('status', 'approved')->whereMonth('decided_at', now()->month)->whereYear('decided_at', now()->year)->count(),
+                'departments' => Department::query()->where('is_active', true)->count(),
+                'leave_types' => LeaveType::query()->where('is_active', true)->count(),
+            ],
         ]);
     }
 
@@ -103,5 +120,43 @@ class AdminController extends Controller
         Audit::record($request, 'admin.balance.overridden', $balance);
 
         return back()->with('success', 'Leave balance updated.');
+    }
+
+    public function updateUserStatus(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        abort_if($request->user()->is($user) && ! $data['is_active'], 422, 'You cannot deactivate your own account.');
+
+        $user->update($data);
+        Audit::record($request, $data['is_active'] ? 'admin.user.activated' : 'admin.user.deactivated', $user);
+
+        return back()->with('success', 'User status updated.');
+    }
+
+    public function updateLeaveTypeStatus(Request $request, LeaveType $leaveType): RedirectResponse
+    {
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $leaveType->update($data);
+        Audit::record($request, $data['is_active'] ? 'admin.leave_type.activated' : 'admin.leave_type.deactivated', $leaveType);
+
+        return back()->with('success', 'Leave type status updated.');
+    }
+
+    public function updateDepartmentStatus(Request $request, Department $department): RedirectResponse
+    {
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $department->update($data);
+        Audit::record($request, $data['is_active'] ? 'admin.department.activated' : 'admin.department.deactivated', $department);
+
+        return back()->with('success', 'Department status updated.');
+    }
+
+    public function updateHolidayStatus(Request $request, PublicHoliday $holiday): RedirectResponse
+    {
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $holiday->update($data);
+        Audit::record($request, $data['is_active'] ? 'admin.holiday.activated' : 'admin.holiday.deactivated', $holiday);
+
+        return back()->with('success', 'Holiday status updated.');
     }
 }

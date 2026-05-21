@@ -1,0 +1,81 @@
+name: elms-prod
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/prod/app.Dockerfile
+    container_name: elms-prod-app
+    env_file:
+      - ../.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-elms_leave}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-change-me}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/prod/nginx.Dockerfile
+    container_name: elms-prod-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - app-storage:/var/www/html/storage:ro
+    depends_on:
+      - app
+
+  queue:
+    build:
+      context: ..
+      dockerfile: docker/prod/app.Dockerfile
+    container_name: elms-prod-queue
+    command: php artisan queue:work --tries=3 --timeout=90
+    env_file:
+      - ../.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-elms_leave}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: elms-prod-postgres
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-elms_leave}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-elms_leave}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app-storage:
+  postgres-data:

@@ -3,7 +3,15 @@ export type User = {
   name: string;
   email: string;
   role: 'staff' | 'manager' | 'hr' | 'admin';
+  employee_code?: string | null;
+  job_title?: string | null;
+  hire_date?: string | null;
+  is_active?: boolean;
+  two_factor_enabled?: boolean;
   department?: { id: number; name: string } | null;
+  manager?: { id: number; name: string } | null;
+  pending_leave_requests_count?: number;
+  approved_leave_requests_count?: number;
 };
 
 export type LeaveType = {
@@ -11,7 +19,11 @@ export type LeaveType = {
   name: string;
   code: string;
   default_allowance_days: string;
+  paid: boolean;
   requires_attachment: boolean;
+  deducts_balance: boolean;
+  is_active: boolean;
+  balances_count?: number;
 };
 
 export type LeaveBalance = {
@@ -31,7 +43,10 @@ export type LeaveRequest = {
   status: string;
   reason: string;
   manager_comment?: string | null;
+  submitted_at?: string | null;
+  decided_at?: string | null;
   user?: User;
+  approver?: User;
   leave_type: LeaveType;
   attachments?: { id: number; original_name: string }[];
 };

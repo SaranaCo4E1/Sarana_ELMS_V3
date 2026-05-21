@@ -1,0 +1,11 @@
+vendor
+node_modules
+.git
+.env
+.phpunit.result.cache
+npm-debug.log
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+public/build

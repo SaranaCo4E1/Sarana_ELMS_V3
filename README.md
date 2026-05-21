@@ -65,6 +65,32 @@ Default seeded accounts all use password `password`:
 - `hr@elms.test`
 - `admin@elms.test`
 
+## Docker
+
+Docker files live under `docker/` and are split by runtime flavor.
+
+For local development with Laravel and Vite hot reload:
+
+```bash
+docker compose -f docker/compose.dev.yml up --build
+```
+
+The app is available at `http://localhost:8000` and Vite runs on `http://localhost:5173`. The dev flavor bind-mounts the project, installs Composer and npm dependencies into Docker volumes, and points Laravel at the bundled PostgreSQL service.
+
+Run migrations and seed data after the containers are up:
+
+```bash
+docker compose -f docker/compose.dev.yml exec app php artisan migrate --seed
+```
+
+For a production-style build with compiled frontend assets, PHP-FPM, Nginx, a queue worker, and PostgreSQL:
+
+```bash
+docker compose -f docker/compose.prod.yml up --build -d
+```
+
+The production-style Nginx entrypoint is available at `http://localhost:8080`. Set production values in `.env` before deployment, especially `APP_KEY`, `APP_URL`, and a non-empty `DB_PASSWORD`. To run migrations on startup, set `RUN_MIGRATIONS=true`.
+
 ## Production Notes
 
 Use a queue worker for reliable notifications:

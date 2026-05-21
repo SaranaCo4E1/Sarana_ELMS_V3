@@ -1,0 +1,69 @@
+name: elms-dev
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/dev/Dockerfile
+    container_name: elms-dev-app
+    working_dir: /var/www/html
+    environment:
+      APP_NAME: Employee Leave Management System
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: elms_leave
+      DB_USERNAME: postgres
+      DB_PASSWORD: ""
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: file
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/var/www/html
+      - composer-vendor:/var/www/html/vendor
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  npm:
+    image: node:22-alpine
+    container_name: elms-dev-npm
+    working_dir: /var/www/html
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      VITE_HOST: 0.0.0.0
+      VITE_HMR_HOST: localhost
+      VITE_APP_NAME: Employee Leave Management System
+    ports:
+      - "5173:5173"
+    volumes:
+      - ..:/var/www/html
+      - npm-modules:/var/www/html/node_modules
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: elms-dev-postgres
+    environment:
+      POSTGRES_DB: elms_leave
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d elms_leave"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  composer-vendor:
+  npm-modules:
+  postgres-data:

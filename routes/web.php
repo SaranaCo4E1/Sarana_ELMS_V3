@@ -38,6 +38,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/leave-types', [AdminController::class, 'storeLeaveType'])->name('admin.leave-types.store');
         Route::post('/admin/holidays', [AdminController::class, 'storeHoliday'])->name('admin.holidays.store');
         Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
+        Route::patch('/admin/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
+        Route::patch('/admin/leave-types/{leaveType}/status', [AdminController::class, 'updateLeaveTypeStatus'])->name('admin.leave-types.status');
+        Route::patch('/admin/departments/{department}/status', [AdminController::class, 'updateDepartmentStatus'])->name('admin.departments.status');
+        Route::patch('/admin/holidays/{holiday}/status', [AdminController::class, 'updateHolidayStatus'])->name('admin.holidays.status');
         Route::post('/admin/balances', [AdminController::class, 'overrideBalance'])->name('admin.balances.override');
         Route::get('/reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     });
