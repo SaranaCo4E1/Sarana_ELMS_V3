@@ -7,6 +7,8 @@ Laravel + Inertia + React + TypeScript implementation for employee leave operati
 - Role-based access for staff, managers, HR, and admins.
 - Email login, password reset, and optional email 2FA.
 - Staff leave request submission with attachments.
+- Employee self-service profile module with emergency contact and work details.
+- Manager/HR Team Center for roster, coverage, pending decisions, and upcoming leave.
 - Working-day calculation excluding weekends and configured public holidays.
 - Real-time balances for allowance, used, pending, adjustments, and available days.
 - Manager approval and rejection with comments.

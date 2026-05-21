@@ -1,12 +1,18 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AiHelpController;
+use App\Http\Controllers\ApplyLeaveController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\ManagerApprovalController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -23,13 +29,22 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/calendar', CalendarController::class)->name('calendar.index');
+    Route::get('/apply-leave', ApplyLeaveController::class)->name('apply-leave.index');
+    Route::get('/ai-assistant', AiAssistantController::class)->name('ai-assistant.index');
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::patch('/profile/two-factor', [ProfileController::class, 'updateTwoFactor'])->name('profile.two-factor');
     Route::post('/leave-requests', [LeaveRequestController::class, 'store'])->name('leave-requests.store');
     Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
 
     Route::middleware('role:manager,hr,admin')->group(function () {
         Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
         Route::patch('/approvals/{leaveRequest}', [ManagerApprovalController::class, 'update'])->name('approvals.update');
+        Route::get('/team', [TeamController::class, 'index'])->name('team.index');
     });
 
     Route::middleware('role:hr,admin')->group(function () {

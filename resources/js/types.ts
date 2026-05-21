@@ -5,6 +5,12 @@ export type User = {
   role: 'staff' | 'manager' | 'hr' | 'admin';
   employee_code?: string | null;
   job_title?: string | null;
+  phone?: string | null;
+  work_location?: string | null;
+  employment_type?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  bio?: string | null;
   hire_date?: string | null;
   is_active?: boolean;
   two_factor_enabled?: boolean;
@@ -51,8 +57,22 @@ export type LeaveRequest = {
   attachments?: { id: number; original_name: string }[];
 };
 
+export type SystemNotification = {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  action_url?: string | null;
+  read_at?: string | null;
+  created_at: string;
+};
+
 export type PageProps = {
   auth: { user: User };
+  notifications: {
+    items: SystemNotification[];
+    unread_count: number;
+  };
   flash: { success?: string; error?: string };
   errors: Record<string, string>;
 };

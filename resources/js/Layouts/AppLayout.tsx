@@ -1,13 +1,17 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, CalendarCheck, ClipboardCheck, LogOut, Settings, Sparkles } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, IdCard, LogOut, Settings, Users } from 'lucide-react';
 import type React from 'react';
+import { useState } from 'react';
 import type { PageProps } from '../types';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { auth, flash } = usePage<PageProps>().props;
+  const { auth, flash, notifications } = usePage<PageProps>().props;
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const user = auth.user;
   const canApprove = ['manager', 'hr', 'admin'].includes(user.role);
   const canAdmin = ['hr', 'admin'].includes(user.role);
+  const unreadCount = notifications?.unread_count ?? 0;
+  const notificationItems = notifications?.items ?? [];
 
   return (
     <div className="min-h-screen">
@@ -25,6 +29,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/">
             <Bell size={17} /> Dashboard
           </Link>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/calendar">
+            <CalendarDays size={17} /> Calendar
+          </Link>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/apply-leave">
+            <CalendarPlus size={17} /> Apply Leave
+          </Link>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/ai-assistant">
+            <Bot size={17} /> AI Chatbot
+          </Link>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/profile">
+            <IdCard size={17} /> My Profile
+          </Link>
+          {canApprove && (
+            <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/team">
+              <Users size={17} /> Team Center
+            </Link>
+          )}
           {canApprove && (
             <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/approvals">
               <ClipboardCheck size={17} /> Approvals
@@ -50,8 +71,50 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <h1 className="text-xl font-semibold text-slate-950">Employee Leave Management System</h1>
               <p className="text-sm text-slate-500">{user.name} · {user.department?.name ?? 'No department'} · {user.role}</p>
             </div>
-            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              <Sparkles size={16} /> Policy FAQ module active
+            <div className="relative">
+              <button
+                className="relative flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                onClick={() => setNotificationOpen((open) => !open)}
+                type="button"
+                aria-label="Open notifications"
+                aria-expanded={notificationOpen}
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-xs font-semibold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notificationOpen && (
+                <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-md border border-slate-200 bg-white shadow-xl">
+                  <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                    <div className="font-semibold text-slate-950">Notifications</div>
+                    <div className="text-xs text-slate-500">{unreadCount} unread</div>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notificationItems.length > 0 ? notificationItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        className={`block w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50 ${item.read_at ? '' : 'bg-sky-50/70'}`}
+                        href={`/notifications/${item.id}/read`}
+                        method="patch"
+                        as="button"
+                        onClick={() => setNotificationOpen(false)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="text-sm font-medium text-slate-950">{item.title}</div>
+                          {!item.read_at && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-600" />}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-600">{item.body}</div>
+                        <div className="mt-2 text-xs text-slate-400">{formatRelativeDate(item.created_at)}</div>
+                      </Link>
+                    )) : (
+                      <div className="px-4 py-8 text-center text-sm text-slate-500">No notifications yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           {flash.success && <div className="mt-3 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-900">{flash.success}</div>}
@@ -61,4 +124,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
     </div>
   );
+}
+
+function formatRelativeDate(value: string) {
+  const date = new Date(value);
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }

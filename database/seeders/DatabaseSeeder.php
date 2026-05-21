@@ -70,5 +70,6 @@ class DatabaseSeeder extends Seeder
             ['question' => 'How are leave days calculated?'],
             ['answer' => 'The system counts working days between the selected dates, excluding weekends and configured public holidays.']
         );
+
     }
 }

@@ -47,6 +47,9 @@ class ManagerApprovalController extends Controller
         $actor = $request->user();
         abort_unless($actor->isHr() || $leaveRequest->user->manager_id === $actor->id, 403);
         abort_unless($leaveRequest->status === 'pending', 422, 'Only pending requests can be decided.');
+        if ($data['decision'] === 'approved' && $this->overlapsApprovedRequest($leaveRequest)) {
+            abort(422, 'This employee already has approved leave on one of these dates.');
+        }
 
         $leaveRequest->update([
             'status' => $data['decision'],
@@ -70,5 +73,16 @@ class ManagerApprovalController extends Controller
         Audit::record($request, 'leave.request.'.$data['decision'], $leaveRequest);
 
         return back()->with('success', 'Leave request '.$data['decision'].'.');
+    }
+
+    private function overlapsApprovedRequest(LeaveRequest $leaveRequest): bool
+    {
+        return LeaveRequest::query()
+            ->where('user_id', $leaveRequest->user_id)
+            ->whereKeyNot($leaveRequest->id)
+            ->where('status', 'approved')
+            ->whereDate('starts_at', '<=', $leaveRequest->ends_at)
+            ->whereDate('ends_at', '>=', $leaveRequest->starts_at)
+            ->exists();
     }
 }
