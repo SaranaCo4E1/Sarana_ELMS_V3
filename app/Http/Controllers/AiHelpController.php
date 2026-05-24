@@ -14,7 +14,10 @@ class AiHelpController extends Controller
 {
     public function ask(Request $request): JsonResponse
     {
-        $data = $request->validate(['prompt' => ['required', 'string', 'max:1000']]);
+        $data = $request->validate([
+            'prompt' => ['required', 'string', 'max:1000'],
+            'conversation_id' => ['nullable', 'uuid'],
+        ]);
 
         $faq = AiFaq::query()
             ->where('is_active', true)
@@ -27,6 +30,7 @@ class AiHelpController extends Controller
 
         AiChatLog::query()->create([
             'user_id' => $request->user()->id,
+            'conversation_id' => $data['conversation_id'] ?? null,
             'prompt' => $data['prompt'],
             'response' => $response,
             'metadata' => ['source' => $faq ? 'faq' : 'fallback'],
@@ -39,6 +43,7 @@ class AiHelpController extends Controller
     {
         $data = $request->validate([
             'prompt' => ['required', 'string', 'max:4000'],
+            'conversation_id' => ['nullable', 'uuid'],
             'messages' => ['sometimes', 'array', 'max:20'],
             'messages.*.role' => ['required_with:messages', 'in:user,assistant'],
             'messages.*.content' => ['required_with:messages', 'string', 'max:8000'],
@@ -123,6 +128,7 @@ class AiHelpController extends Controller
             if ($answer !== '') {
                 AiChatLog::query()->create([
                     'user_id' => $request->user()->id,
+                    'conversation_id' => $data['conversation_id'] ?? null,
                     'prompt' => $data['prompt'],
                     'response' => $answer,
                     'metadata' => [

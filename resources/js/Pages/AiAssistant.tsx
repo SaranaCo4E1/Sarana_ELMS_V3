@@ -6,7 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import AppLayout from '../Layouts/AppLayout';
 
 type Faq = { id: number; question: string; answer: string };
-type RecentChat = { id: number; prompt: string; response: string; created_at: string };
+type RecentChatMessage = { prompt: string; response: string; created_at: string };
+type RecentChat = { id: string; prompt: string; response: string; created_at: string; messages: RecentChatMessage[] };
 type Props = {
   faqs: Faq[];
   recentChats: RecentChat[];
@@ -25,8 +26,13 @@ type LeaveDraft = {
   reason: string;
 };
 
+const DEFAULT_MAX_CHAT_TURNS = 15;
+const MAX_CHAT_TURNS = parseChatTurnLimit(import.meta.env.VITE_AI_CHAT_THREAD_LIMIT);
+
 export default function AiAssistant({ faqs, recentChats }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatHistory, setChatHistory] = useState(recentChats);
+  const [conversationId, setConversationId] = useState<string>(() => makeConversationId());
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamError, setStreamError] = useState('');
@@ -39,14 +45,17 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
+  useEffect(() => setChatHistory(recentChats), [recentChats]);
+
   useEffect(() => () => abortRef.current?.abort(), []);
 
   async function sendPrompt(e?: React.FormEvent) {
     e?.preventDefault();
     const nextPrompt = prompt.trim();
 
-    if (!nextPrompt || loading) return;
+    if (!nextPrompt || loading || isThreadLimitReached) return;
 
+    const currentConversationId = conversationId;
     const userMessage = makeMessage('user', nextPrompt);
     const assistantMessage = makeMessage('assistant', '');
     const history = messages.slice(-18).map((message) => ({ role: message.role, content: message.content }));
@@ -70,7 +79,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
         },
-        body: JSON.stringify({ prompt: nextPrompt, messages: history }),
+        body: JSON.stringify({ prompt: nextPrompt, conversation_id: currentConversationId, messages: history }),
         signal: controller.signal,
       });
 
@@ -114,9 +123,31 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
       if (responseIntent === 'leave_draft' && assistantText.trim()) {
         setLeaveDraft(parseLeaveDraftResponse(assistantText));
       }
+      if (assistantText.trim() && !controller.signal.aborted) {
+        updateRecentChat(currentConversationId, {
+          prompt: nextPrompt,
+          response: assistantText,
+          created_at: new Date().toISOString(),
+        });
+      }
       abortRef.current = null;
       setLoading(false);
     }
+  }
+
+  function updateRecentChat(id: string, message: RecentChatMessage) {
+    setChatHistory((current) => {
+      const existing = current.find((chat) => chat.id === id);
+      const nextChat: RecentChat = {
+        id,
+        prompt: message.prompt,
+        response: message.response,
+        created_at: message.created_at,
+        messages: existing ? [...existing.messages, message] : [message],
+      };
+
+      return [nextChat, ...current.filter((chat) => chat.id !== id)].slice(0, 8);
+    });
   }
 
   function stopStreaming() {
@@ -127,6 +158,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
   function startNewChat() {
     stopStreaming();
+    setConversationId(makeConversationId());
     setMessages([]);
     setPrompt('');
     setStreamError('');
@@ -135,13 +167,16 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
   function loadRecentChat(chat: RecentChat) {
     stopStreaming();
-    setMessages(chatsToMessages([chat]));
+    setConversationId(isUuid(chat.id) ? chat.id : makeConversationId());
+    setMessages(chatsToMessages(chat.messages));
     setPrompt('');
     setStreamError('');
     setActiveTab('chat');
   }
 
   const hasMessages = messages.length > 0;
+  const chatTurnCount = messages.filter((message) => message.role === 'user').length;
+  const isThreadLimitReached = chatTurnCount >= MAX_CHAT_TURNS;
 
   return (
     <AppLayout fullHeight>
@@ -244,50 +279,68 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             )}
 
             {/* Input Form */}
-            <form onSubmit={sendPrompt} className="border-t border-neutral-100 bg-white p-4">
-              <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-200 rounded-2xl shadow-premium-sm">
-                <textarea
-                  className="max-h-32 min-h-10 focus:border-0! focus:ring-0! focus:shadow-none! flex-1 resize-none border-0 border-transparent! bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      void sendPrompt();
-                    }
-                  }}
-                  placeholder="Ask ELMS assistant anything..."
-                  rows={1}
-                />
-                <div className="flex items-center gap-2 pr-1 pb-1">
-                  {loading ? (
-                    <button
-                      className="flex h-9 w-9 shrink-0 items-center justify-center bg-rose-600 text-white hover:bg-rose-700 transition-colors rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
-                      type="button"
-                      aria-label="Stop streaming"
-                      onClick={stopStreaming}
-                    >
-                      <Square size={12} fill="white" />
-                    </button>
-                  ) : (
-                    <button
-                      className="flex h-9 w-9 shrink-0 items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
-                      type="submit"
-                      aria-label="Send message"
-                      disabled={!prompt.trim()}
-                    >
-                      <Send size={13} />
-                    </button>
-                  )}
+            {isThreadLimitReached && !loading ? (
+              <div className="border-t border-neutral-100 bg-white p-4">
+                <div className="mx-auto flex max-w-3xl flex-col gap-3 border-t border-neutral-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-medium leading-relaxed text-neutral-600">
+                    This conversation has reached its {MAX_CHAT_TURNS}-question limit. Start a new conversation to keep responses focused and easier to follow.
+                  </p>
+                  <button
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-premium-sm transition-all hover:bg-emerald-700 active:scale-98 cursor-pointer"
+                    type="button"
+                    onClick={startNewChat}
+                  >
+                    <MessageSquarePlus size={14} />
+                    Start New Conversation
+                  </button>
                 </div>
               </div>
-              <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-                <span>Use Shift + Enter for new lines</span>
-                <span className="flex items-center gap-1">
-                  <CornerDownLeft size={10} /> Enter to send
-                </span>
-              </div>
-            </form>
+            ) : (
+              <form onSubmit={sendPrompt} className="border-t border-neutral-100 bg-white p-4">
+                <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-200 rounded-2xl shadow-premium-sm">
+                  <textarea
+                    className="max-h-32 min-h-10 focus:border-0! focus:ring-0! focus:shadow-none! flex-1 resize-none border-0 border-transparent! bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void sendPrompt();
+                      }
+                    }}
+                    placeholder="Ask ELMS assistant anything..."
+                    rows={1}
+                  />
+                  <div className="flex items-center gap-2 pr-1 pb-1">
+                    {loading ? (
+                      <button
+                        className="flex h-9 w-9 shrink-0 items-center justify-center bg-rose-600 text-white hover:bg-rose-700 transition-colors rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+                        type="button"
+                        aria-label="Stop streaming"
+                        onClick={stopStreaming}
+                      >
+                        <Square size={12} fill="white" />
+                      </button>
+                    ) : (
+                      <button
+                        className="flex h-9 w-9 shrink-0 items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+                        type="submit"
+                        aria-label="Send message"
+                        disabled={!prompt.trim()}
+                      >
+                        <Send size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                  <span>Use Shift + Enter for new lines</span>
+                  <span className="flex items-center gap-1">
+                    <CornerDownLeft size={10} /> Enter to send
+                  </span>
+                </div>
+              </form>
+            )}
           </section>
 
           {/* Sidebar panels */}
@@ -341,7 +394,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                 <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">Recent Chats</h2>
               </div>
               <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-1">
-                {recentChats.map((chat) => (
+                {chatHistory.map((chat) => (
                   <button
                     key={chat.id}
                     className="group block w-full border border-neutral-200/70 bg-neutral-50/20 p-3.5 text-left hover:border-emerald-300 hover:bg-emerald-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
@@ -359,7 +412,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     </div>
                   </button>
                 ))}
-                {recentChats.length === 0 && (
+                {chatHistory.length === 0 && (
                   <div className="flex h-32 flex-col items-center justify-center text-center">
                     <p className="text-xs text-neutral-400 font-semibold">No saved chats yet.</p>
                   </div>
@@ -571,7 +624,7 @@ function sleep(ms: number, signal: AbortSignal) {
 }
 
 // Map chats to messages utility
-function chatsToMessages(chats: RecentChat[]): ChatMessage[] {
+function chatsToMessages(chats: RecentChatMessage[]): ChatMessage[] {
   return chats.flatMap((chat) => [
     makeMessage('user', chat.prompt, chat.created_at),
     makeMessage('assistant', chat.response, chat.created_at),
@@ -585,6 +638,20 @@ function makeMessage(role: ChatMessage['role'], content: string, createdAt = new
     content,
     createdAt,
   };
+}
+
+function makeConversationId() {
+  return crypto.randomUUID();
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function parseChatTurnLimit(value: string | undefined) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_CHAT_TURNS;
 }
 
 function formatDate(value: string) {

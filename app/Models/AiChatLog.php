@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AiChatLog extends Model
 {
-    protected $fillable = ['user_id', 'prompt', 'response', 'metadata'];
+    protected $fillable = ['user_id', 'conversation_id', 'prompt', 'response', 'metadata'];
 
     protected function casts(): array
     {
