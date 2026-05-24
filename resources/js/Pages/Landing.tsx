@@ -167,18 +167,18 @@ export default function Landing() {
             </a>
           </div>
 
-          <div className="mt-12 flex items-center gap-8 border-t border-neutral-200/60 pt-8">
-            <div>
+          <div className="mt-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8 border-t border-neutral-200/60 pt-8">
+            <div className="flex-1">
               <div className="text-2xl font-bold text-neutral-900">100%</div>
               <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 mt-0.5">Automated Audits</div>
             </div>
-            <div className="h-8 w-px bg-neutral-200"></div>
-            <div>
+            <div className="hidden sm:block h-8 w-px bg-neutral-200"></div>
+            <div className="flex-1">
               <div className="text-2xl font-bold text-neutral-900">&lt; 30 min</div>
               <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 mt-0.5">Average Approval</div>
             </div>
-            <div className="h-8 w-px bg-neutral-200"></div>
-            <div>
+            <div className="hidden sm:block h-8 w-px bg-neutral-200"></div>
+            <div className="flex-1">
               <div className="text-2xl font-bold text-neutral-900">Active</div>
               <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 mt-0.5">AI Policy Assistant</div>
             </div>
@@ -204,7 +204,7 @@ export default function Landing() {
             {/* Mock Interface Content */}
             <div className="p-5 space-y-4">
               {/* Balances widgets */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 shadow-premium-sm">
                   <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-800">Annual Leave</div>
                   <div className="mt-1.5 flex items-baseline gap-1">
@@ -287,7 +287,7 @@ export default function Landing() {
                     <CheckCircle2 size={10} /> Active Plan
                   </span>
                 </div>
-                <div className="flex items-center justify-between border-t border-neutral-100 pt-2 text-xs">
+                <div className="flex flex-row items-center justify-between gap-2 flex-wrap border-t border-neutral-100 pt-2 text-xs">
                   <div className="flex items-center gap-2">
                     <CalendarDays size={13} className="text-neutral-400" />
                     <div>
@@ -373,30 +373,30 @@ export default function Landing() {
           <div className="mx-auto max-w-4xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-premium-lg relative overflow-hidden">
             {/* View Selector Tabs */}
             <div className="flex border-b border-neutral-200 pb-4 justify-between items-center flex-wrap gap-4">
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center">
                 <button
                   onClick={() => setActiveTab('staff')}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-center sm:justify-start gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'staff'
                       ? 'bg-emerald-600 text-white shadow-premium-sm'
                       : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <Users size={14} /> Staff View (Dara)
+                  <Users size={14} /> <span className="truncate">Staff View (Dara)</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('manager')}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-center sm:justify-start gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'manager'
                       ? 'bg-emerald-600 text-white shadow-premium-sm'
                       : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <ClipboardCheck size={14} /> Manager View (Sokha)
+                  <ClipboardCheck size={14} /> <span className="truncate">Manager View (Sokha)</span>
                 </button>
               </div>
 
-              <div className="text-[10px] text-neutral-450 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <div className="text-[10px] text-neutral-450 font-semibold uppercase tracking-wider flex items-center gap-1.5 w-full sm:w-auto justify-center sm:justify-start">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
                 Live simulator
               </div>
@@ -443,7 +443,7 @@ export default function Landing() {
 
                   {/* Active Request Simulation */}
                   <div className="rounded-xl border border-neutral-200/60 bg-white p-4.5 shadow-premium-sm">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3">
+                    <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 border-b border-neutral-100 pb-3 mb-3">
                       <span className="text-xs font-bold text-neutral-800">Recent Leave Request Submission</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border transition-colors ${
                         mockRequestApproved 
@@ -474,12 +474,12 @@ export default function Landing() {
                 </div>
               ) : (
                 <div className="space-y-6 animate-fade-in">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3">
                     <div>
                       <h4 className="text-sm font-bold text-neutral-850">Sokha's Approval Desk</h4>
                       <p className="text-[11px] font-semibold text-neutral-400 mt-0.5">Manager Dashboard · Engineering Lead</p>
                     </div>
-                    <span className="rounded-xl border border-neutral-200 bg-neutral-50/50 px-3 py-1.5 text-xs font-semibold text-neutral-700">
+                    <span className="rounded-xl border border-neutral-200 bg-neutral-50/50 px-3 py-1.5 text-xs font-semibold text-neutral-700 self-start xs:self-center">
                       Active Queue: {mockRequestApproved ? '0' : '1'} request
                     </span>
                   </div>
@@ -505,7 +505,7 @@ export default function Landing() {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-neutral-200 bg-neutral-50/30 p-4.5 space-y-3.5 animate-fade-in">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <div className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-emerald-100 font-bold text-emerald-800 text-[10px]">
                             CD
@@ -515,7 +515,7 @@ export default function Landing() {
                             <div className="text-[10px] font-semibold text-neutral-400">Software Engineer</div>
                           </div>
                         </div>
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-100">
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-100 self-start xs:self-center">
                           Needs Decision
                         </span>
                       </div>
@@ -630,7 +630,7 @@ export default function Landing() {
             <div>
               &copy; {new Date().getFullYear()} NiyAI Data Co., Ltd. All rights reserved.
             </div>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 md:justify-end">
               <Link href="/privacy" className="hover:text-emerald-700 transition-colors">Privacy Policy</Link>
               <Link href="/terms" className="hover:text-emerald-700 transition-colors">Terms of Service</Link>
               <Link href="/support" className="hover:text-emerald-700 transition-colors">Support Desk</Link>
