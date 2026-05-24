@@ -26,6 +26,7 @@ export default function Landing() {
   const [activeTab, setActiveTab] = useState<'staff' | 'manager'>('staff');
   const [mockRequestApproved, setMockRequestApproved] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
+  const [chatStep, setChatStep] = useState<'initial' | 'draft' | 'submitted'>('initial');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   // Auto-typing simulator for policy search
@@ -53,8 +54,8 @@ export default function Landing() {
 
   const faqs = [
     {
-      q: "How does the AI Leave Assistant draft requests?",
-      a: "The integrated AI assistant uses natural language processing. Simply chat with it to check your balances, explain leave policies, or request a leave draft. Once ready, it generates a pre-filled submission form ready for your approval."
+      q: "How does ELMS Copilot draft requests?",
+      a: "ELMS Copilot uses natural language processing. Simply chat with it to check your balances, explain leave policies, or request a leave draft. Once ready, it generates a pre-filled submission form ready for your approval."
     },
     {
       q: "Can managers see team coverage before approving leave?",
@@ -180,7 +181,7 @@ export default function Landing() {
             <div className="hidden sm:block h-8 w-px bg-neutral-200"></div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-neutral-900">Active</div>
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 mt-0.5">AI Policy Assistant</div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 mt-0.5">ELMS Copilot</div>
             </div>
           </div>
         </div>
@@ -245,36 +246,97 @@ export default function Landing() {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
                 
-                <div className="mt-2.5 space-y-2 text-[11px] leading-relaxed">
+                <div className="mt-2.5 space-y-2.5 text-[11px] leading-relaxed">
+                  {/* Step 1: Initial Question */}
                   <div className="flex justify-end">
                     <div className="max-w-[85%] rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100/40 px-3 py-1.5 font-semibold">
-                      {searchText}
+                      {searchText || "How many annual leave days do I have left?"}
                     </div>
                   </div>
 
                   {showAiDraft && (
-                    <div className="flex justify-start animate-fade-in">
-                      <div className="max-w-[90%] space-y-2">
-                        <div className="rounded-xl bg-neutral-50/60 border border-neutral-200/50 px-3 py-2 text-neutral-600 font-medium">
-                          🤖 Based on NiyAI handbook, you have <strong className="font-bold text-neutral-900">14.5 days</strong> of Annual Leave remaining. Would you like me to draft a request for you?
-                        </div>
-                        
-                        <div className="flex items-center gap-1.5">
-                          <button 
-                            className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-[9px] font-bold text-white transition-all cursor-pointer shadow-premium-sm"
-                            onClick={() => {
-                              setActiveTab('manager');
-                              document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth' });
-                            }}
-                          >
-                            Yes, draft it
-                          </button>
-                          <button className="rounded-lg bg-white border border-neutral-200/80 hover:bg-neutral-50 px-2 py-1 text-[9px] font-semibold text-neutral-600 transition-all cursor-pointer shadow-premium-sm">
-                            No, thank you
-                          </button>
+                    <>
+                      {/* AI Initial Response */}
+                      <div className="flex justify-start animate-fade-in">
+                        <div className="max-w-[90%] space-y-2">
+                          <div className="rounded-xl bg-neutral-50/60 border border-neutral-200/50 px-3 py-2 text-neutral-600 font-medium">
+                            🤖 Based on NiyAI handbook, you have <strong className="font-bold text-neutral-900">14.5 days</strong> of Annual Leave remaining. Would you like me to draft a request for you?
+                          </div>
+                          
+                          {chatStep === 'initial' && (
+                            <div className="flex items-center gap-1.5">
+                              <button 
+                                className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-[9px] font-bold text-white transition-all cursor-pointer shadow-premium-sm"
+                                onClick={() => setChatStep('draft')}
+                              >
+                                Yes, draft it
+                              </button>
+                              <button className="rounded-lg bg-white border border-neutral-200/80 hover:bg-neutral-50 px-2 py-1 text-[9px] font-semibold text-neutral-600 transition-all cursor-pointer shadow-premium-sm">
+                                No, thank you
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+
+                      {/* Step 2: User responds Yes, draft it */}
+                      {chatStep !== 'initial' && (
+                        <div className="flex justify-end animate-fade-in">
+                          <div className="max-w-[85%] rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100/40 px-3 py-1.5 font-semibold">
+                            Yes, draft it
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AI Response: Draft Card & submission flow */}
+                      {chatStep !== 'initial' && (
+                        <div className="flex justify-start animate-fade-in">
+                          <div className="max-w-[95%] space-y-2">
+                            <div className="rounded-xl bg-neutral-50/60 border border-neutral-200/50 p-4 text-neutral-600 font-medium space-y-3.5 text-left shadow-premium-sm">
+                              <div className="flex items-center gap-2 border-b border-neutral-100 pb-2">
+                                <Bot size={14} className="text-emerald-600" />
+                                <span className="font-bold text-neutral-800 text-[10px] uppercase tracking-wider">Leave Draft Ready</span>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="rounded-xl border border-neutral-200 bg-white p-2.5">
+                                  <div className="text-[8px] font-bold uppercase tracking-wider text-neutral-400">Type</div>
+                                  <div className="mt-1 font-bold text-[10px] text-neutral-800">Annual</div>
+                                </div>
+                                <div className="rounded-xl border border-neutral-200 bg-white p-2.5">
+                                  <div className="text-[8px] font-bold uppercase tracking-wider text-neutral-400">Start</div>
+                                  <div className="mt-1 font-bold text-[10px] text-neutral-800">Jun 15</div>
+                                </div>
+                                <div className="rounded-xl border border-neutral-200 bg-white p-2.5">
+                                  <div className="text-[8px] font-bold uppercase tracking-wider text-neutral-400">End</div>
+                                  <div className="mt-1 font-bold text-[10px] text-neutral-800">Jun 19</div>
+                                </div>
+                              </div>
+
+                              <div className="rounded-xl border border-neutral-200 bg-white p-2.5">
+                                <div className="text-[8px] font-bold uppercase tracking-wider text-neutral-400">Application Note</div>
+                                <div className="mt-1 text-[9.5px] font-medium leading-relaxed text-neutral-600">
+                                  Family trip and summer vacation.
+                                </div>
+                              </div>
+
+                              {chatStep === 'draft' ? (
+                                <button
+                                  onClick={() => setChatStep('submitted')}
+                                  className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-[10px] font-bold text-white transition-all cursor-pointer shadow-premium-sm flex items-center justify-center gap-1.5"
+                                >
+                                  Submit Request
+                                </button>
+                              ) : (
+                                <div className="text-center py-2 text-[10px] font-bold text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-center gap-1.5 animate-fade-in">
+                                  <CheckCircle2 size={12} className="text-emerald-600" /> Submitted Successfully!
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -287,7 +349,24 @@ export default function Landing() {
                     <CheckCircle2 size={10} /> Active Plan
                   </span>
                 </div>
-                <div className="flex flex-row items-center justify-between gap-2 flex-wrap border-t border-neutral-100 pt-2 text-xs">
+                
+                {/* Live simulated draft request appearing in schedule after submission */}
+                {chatStep === 'submitted' && (
+                  <div className="flex flex-row items-center justify-between gap-2 flex-wrap border-t border-neutral-100 py-2.5 text-xs animate-fade-in">
+                    <div className="flex items-center gap-2">
+                       <CalendarDays size={13} className="text-neutral-400" />
+                       <div>
+                         <div className="font-semibold text-neutral-850">Summer Vacation</div>
+                         <div className="text-[10px] font-medium text-neutral-450">Jun 15 - Jun 19 (5 days)</div>
+                       </div>
+                    </div>
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-100">
+                      Pending Approval
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex flex-row items-center justify-between gap-2 flex-wrap border-t border-neutral-100 pt-2.5 text-xs">
                   <div className="flex items-center gap-2">
                     <CalendarDays size={13} className="text-neutral-400" />
                     <div>
@@ -324,7 +403,7 @@ export default function Landing() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-500/10 group-hover:scale-105 transition-all">
                 <Bot size={20} />
               </div>
-              <h3 className="mt-5 text-sm font-bold text-neutral-900">AI Assistant Integration</h3>
+              <h3 className="mt-5 text-sm font-bold text-neutral-900">ELMS Copilot Integration</h3>
               <p className="mt-2.5 text-xs font-medium leading-relaxed text-neutral-500">
                 Verify complex company policy rules, calculate prorated allowances, and construct drafts through conversational prompts.
               </p>
@@ -458,7 +537,7 @@ export default function Landing() {
                       <div className="space-y-1">
                         <div className="font-bold text-neutral-800">Sick Leave (Medical recovery)</div>
                         <div>Schedule: May 25 – May 28 (3.0 requested days)</div>
-                        <div className="text-[10px] text-neutral-400">Submitted: Today · Handled via NiyAI Engine</div>
+                        <div className="text-[10px] text-neutral-400">Submitted: Today · Handled via ELMS Copilot</div>
                       </div>
 
                       {!mockRequestApproved && (
@@ -497,6 +576,7 @@ export default function Landing() {
                         onClick={() => {
                           setMockRequestApproved(false);
                           setActiveTab('staff');
+                          setChatStep('initial');
                         }}
                         className="mt-4 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[10px] font-bold text-neutral-600 hover:bg-neutral-50 transition-colors shadow-xs"
                       >

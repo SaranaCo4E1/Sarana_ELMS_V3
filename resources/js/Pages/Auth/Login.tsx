@@ -53,6 +53,8 @@ export default function Login() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="name@company.com"
                   required
+                  tabIndex={1}
+                  autoFocus
                 />
               </div>
               {errors.email && <p className="mt-1 text-xs font-medium text-rose-500">{errors.email}</p>}
@@ -67,6 +69,7 @@ export default function Login() {
                 <Link
                   className="text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors"
                   href="/forgot-password"
+                  tabIndex={4}
                 >
                   Forgot password?
                 </Link>
@@ -82,6 +85,7 @@ export default function Login() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="••••••••"
                   required
+                  tabIndex={2}
                 />
               </div>
             </div>
@@ -94,6 +98,7 @@ export default function Login() {
                 className="h-4 w-4 rounded-md border-neutral-300 text-emerald-600 focus:ring-emerald-500"
                 checked={form.remember}
                 onChange={(e) => setForm({ ...form, remember: e.target.checked })}
+                tabIndex={5}
               />
               <label htmlFor="remember_me" className="ml-2 block text-xs font-medium text-neutral-600 select-none">
                 Remember this device
@@ -104,6 +109,7 @@ export default function Login() {
             <button
               type="submit"
               className="w-full rounded-xl bg-emerald-600 py-3.5 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all cursor-pointer"
+              tabIndex={3}
             >
               Sign In
             </button>

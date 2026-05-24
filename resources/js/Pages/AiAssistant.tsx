@@ -33,7 +33,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatHistory, setChatHistory] = useState(recentChats);
   const [conversationId, setConversationId] = useState<string>(() => makeConversationId());
-  const [prompt, setPrompt] = useState('');
+  const [externalPrompt, setExternalPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamError, setStreamError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
@@ -49,9 +49,8 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  async function sendPrompt(e?: React.FormEvent) {
-    e?.preventDefault();
-    const nextPrompt = prompt.trim();
+  async function sendPrompt(text: string) {
+    const nextPrompt = text.trim();
 
     if (!nextPrompt || loading || isThreadLimitReached) return;
 
@@ -64,7 +63,6 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     let fakeStreamQueue = Promise.resolve();
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
-    setPrompt('');
     setStreamError('');
     setLoading(true);
     setLeaveDraft(null);
@@ -160,7 +158,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     stopStreaming();
     setConversationId(makeConversationId());
     setMessages([]);
-    setPrompt('');
+    setExternalPrompt('');
     setStreamError('');
     setLeaveDraft(null);
   }
@@ -169,7 +167,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     stopStreaming();
     setConversationId(isUuid(chat.id) ? chat.id : makeConversationId());
     setMessages(chatsToMessages(chat.messages));
-    setPrompt('');
+    setExternalPrompt('');
     setStreamError('');
     setActiveTab('chat');
   }
@@ -253,7 +251,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                         key={suggestion}
                         className="group flex items-center justify-between border border-neutral-200 bg-white p-4 text-left text-xs font-medium text-neutral-500 hover:border-emerald-300 hover:bg-emerald-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
                         type="button"
-                        onClick={() => setPrompt(suggestion)}
+                        onClick={() => setExternalPrompt(suggestion)}
                       >
                         <span className="pr-4 font-semibold text-neutral-800 group-hover:text-emerald-950">{suggestion}</span>
                         <ArrowRight size={14} className="shrink-0 text-neutral-400 opacity-0 group-hover:opacity-100 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200" />
@@ -296,50 +294,13 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                 </div>
               </div>
             ) : (
-              <form onSubmit={sendPrompt} className="border-t border-neutral-100 bg-white p-4">
-                <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-200 rounded-2xl shadow-premium-sm">
-                  <textarea
-                    className="max-h-32 min-h-10 focus:border-0! focus:ring-0! focus:shadow-none! flex-1 resize-none border-0 border-transparent! bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        void sendPrompt();
-                      }
-                    }}
-                    placeholder="Ask ELMS assistant anything..."
-                    rows={1}
-                  />
-                  <div className="flex items-center gap-2 pr-1 pb-1">
-                    {loading ? (
-                      <button
-                        className="flex h-9 w-9 shrink-0 items-center justify-center bg-rose-600 text-white hover:bg-rose-700 transition-colors rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
-                        type="button"
-                        aria-label="Stop streaming"
-                        onClick={stopStreaming}
-                      >
-                        <Square size={12} fill="white" />
-                      </button>
-                    ) : (
-                      <button
-                        className="flex h-9 w-9 shrink-0 items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
-                        type="submit"
-                        aria-label="Send message"
-                        disabled={!prompt.trim()}
-                      >
-                        <Send size={13} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-                  <span>Use Shift + Enter for new lines</span>
-                  <span className="flex items-center gap-1">
-                    <CornerDownLeft size={10} /> Enter to send
-                  </span>
-                </div>
-              </form>
+              <ChatInput
+                onSubmit={sendPrompt}
+                loading={loading}
+                onStop={stopStreaming}
+                externalPrompt={externalPrompt}
+                onExternalPromptConsumed={() => setExternalPrompt('')}
+              />
             )}
           </section>
 
@@ -459,19 +420,14 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
   const draft = isAssistant && !loading ? draftFromAssistantMessage(message.content) : null;
 
   return (
-    <div className={`flex gap-3.5 ${isAssistant ? '' : 'justify-end'} animate-fade-in`}>
-      {isAssistant && (
-        <div className="mt-0.5 flex h-8.5 w-8.5 shrink-0 items-center justify-center border border-emerald-100 bg-emerald-50 text-emerald-700 rounded-xl shadow-premium-sm">
-          <Bot size={15} />
-        </div>
-      )}
-      <div className={`max-w-[80%] border p-4 text-sm leading-relaxed ${
+    <div className={`flex ${isAssistant ? 'justify-start' : 'justify-end'} animate-fade-in`}>
+      <div className={`max-w-[85%] border px-4 py-2.5 text-sm leading-relaxed ${
         isAssistant 
-          ? 'bg-emerald-50/20 text-neutral-800 border-emerald-100/60 rounded-2xl rounded-tl-sm shadow-premium-sm' 
-          : 'bg-emerald-600 text-white border-emerald-600 rounded-2xl rounded-tr-sm shadow-premium-sm'
+          ? 'bg-neutral-50/60 text-neutral-600 border-neutral-200/50 rounded-xl font-medium shadow-premium-sm' 
+          : 'bg-emerald-50 text-emerald-800 border-emerald-100/40 rounded-xl font-semibold shadow-premium-sm'
       }`}>
         {loading ? (
-          <span className="flex items-center gap-2 text-xs font-medium text-neutral-400">
+          <span className="flex items-center gap-2 text-xs font-medium text-neutral-450">
             <Loader2 size={13} className="animate-spin text-emerald-600" /> 
             Thinking...
           </span>
@@ -483,12 +439,80 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
           </div>
         )}
       </div>
-      {!isAssistant && (
-        <div className="mt-0.5 flex h-8.5 w-8.5 shrink-0 items-center justify-center border border-neutral-200 bg-neutral-50 text-neutral-700 rounded-xl shadow-premium-sm">
-          <UserRound size={15} />
-        </div>
-      )}
     </div>
+  );
+}
+
+interface ChatInputProps {
+  onSubmit: (text: string) => void;
+  loading: boolean;
+  onStop: () => void;
+  externalPrompt: string;
+  onExternalPromptConsumed: () => void;
+}
+
+function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPromptConsumed }: ChatInputProps) {
+  const [value, setValue] = useState('');
+
+  useEffect(() => {
+    if (externalPrompt) {
+      setValue(externalPrompt);
+      onExternalPromptConsumed();
+    }
+  }, [externalPrompt, onExternalPromptConsumed]);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!value.trim() || loading) return;
+    onSubmit(value.trim());
+    setValue('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="border-t border-neutral-100 bg-white p-4">
+      <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-200 rounded-2xl shadow-premium-sm">
+        <textarea
+          className="max-h-32 min-h-10 focus:border-0! focus:ring-0! focus:shadow-none! flex-1 resize-none border-0 border-transparent! bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          placeholder="Ask ELMS Copilot anything..."
+          rows={1}
+        />
+        <div className="flex items-center gap-2 pr-1 pb-1">
+          {loading ? (
+            <button
+              className="flex h-9 w-9 shrink-0 items-center justify-center bg-rose-600 text-white hover:bg-rose-700 transition-colors rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+              type="button"
+              aria-label="Stop streaming"
+              onClick={onStop}
+            >
+              <Square size={12} fill="white" />
+            </button>
+          ) : (
+            <button
+              className="flex h-9 w-9 shrink-0 items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-450 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+              type="submit"
+              aria-label="Send message"
+              disabled={!value.trim()}
+            >
+              <Send size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+        <span>Use Shift + Enter for new lines</span>
+        <span className="flex items-center gap-1">
+          <CornerDownLeft size={10} /> Enter to send
+        </span>
+      </div>
+    </form>
   );
 }
 

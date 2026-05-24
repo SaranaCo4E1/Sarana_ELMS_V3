@@ -69,7 +69,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
             <CalendarPlus size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Apply Leave
           </Link>
           <Link className={navItemClass('/ai-assistant')} href="/ai-assistant">
-            <Bot size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> AI Chatbot
+            <Bot size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> ELMS Copilot
           </Link>
           <Link className={navItemClass('/profile')} href="/profile">
             <IdCard size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> My Profile
@@ -183,7 +183,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                 href="/ai-assistant"
                 className="hidden items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-premium-sm transition-all hover:bg-emerald-50 sm:inline-flex"
               >
-                <Sparkles size={13} /> Ask AI
+                <Sparkles size={13} /> Ask Copilot
               </Link>
               <Link
                 href="/apply-leave"
