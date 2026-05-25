@@ -16,7 +16,7 @@ type Props = {
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  approved: { bg: 'bg-green-500/[0.04]', border: 'border-green-500/10', text: 'text-green-700/90', dot: 'bg-green-500' },
   rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
   cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
 };
@@ -26,7 +26,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState(todayKey);
   const [isMobilePopupOpen, setIsMobilePopupOpen] = useState(false);
-  const [isTimelineCompact, setIsTimelineCompact] = useState(false);
+  const [isTimelineCompact, setIsTimelineCompact] = useState(true);
   
   const upcomingLeave = leaveEvents
     .filter((event) => event.status === 'approved' && parseDateKey(toDateKey(event.ends_at)) >= startOfToday())
@@ -44,6 +44,9 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
     const nextMonth = addMonths(visibleMonth, 1);
     
     const leavesInMonth = leaveEvents.filter((event) => {
+      if (event.status === 'rejected' || event.status === 'cancelled') {
+        return false;
+      }
       const starts = parseDateKey(toDateKey(event.starts_at));
       const ends = parseDateKey(toDateKey(event.ends_at));
       return starts < nextMonth && ends >= visibleMonth;
@@ -173,7 +176,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                               key={item.id}
                               className={`truncate rounded-md px-2 py-1 text-xs font-medium border transition-colors ${
                                 isHoliday
-                                  ? 'bg-indigo-50/60 border-indigo-100 text-indigo-800'
+                                  ? 'bg-rose-50/60 border-rose-100 text-rose-800'
                                   : `${statusStyle?.bg ?? 'bg-neutral-50'} ${statusStyle?.border ?? 'border-neutral-200'} ${statusStyle?.text ?? 'text-neutral-700'}`
                                 }`}
                             >
@@ -197,7 +200,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                             <span
                               key={item.id}
                               className={`h-1.5 w-1.5 rounded-full ${
-                                isHoliday ? 'bg-indigo-500' : statusStyle?.dot ?? 'bg-neutral-400'
+                                isHoliday ? 'bg-red-500' : statusStyle?.dot ?? 'bg-neutral-400'
                               }`}
                             />
                           );
@@ -214,7 +217,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               {/* Calendar color legend */}
               <div className="flex flex-wrap gap-x-6 gap-y-2.5 bg-neutral-50/30 border-t border-neutral-200/80 px-6 py-4 text-xs text-neutral-500 font-medium">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-orange-500 shadow-xs" />
+                  <span className="h-2 w-2 rounded-full bg-green-500 shadow-xs" />
                   <span>Approved Leave</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -222,16 +225,8 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                   <span>Pending Leave</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-xs" />
+                  <span className="h-2 w-2 rounded-full bg-red-500 shadow-xs" />
                   <span>Holiday</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-rose-500 shadow-xs" />
-                  <span>Rejected Leave</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-neutral-400 shadow-xs" />
-                  <span>Cancelled Leave</span>
                 </div>
               </div>
             </section>
@@ -268,7 +263,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                       Compact
                     </button>
                   </div>
-                  <div className="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md px-2.5 py-1.5">
+                  <div className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-md px-2.5 py-1.5">
                     {visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                   </div>
                 </div>
@@ -431,9 +426,9 @@ function CompactLeaveRow({ event }: { event: LeaveRequest }) {
 function CompactHolidayRow({ holiday }: { holiday: Holiday }) {
   return (
     <div className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0 border-b border-neutral-100 last:border-0">
-      {/* Indigo Calendar Accent Icon */}
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-650 border border-indigo-100/60">
-        <Umbrella size={14} className="text-indigo-600" />
+      {/* Red Calendar Accent Icon */}
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-650 border border-red-100/60">
+        <Umbrella size={14} className="text-red-600" />
       </div>
       
       {/* Details */}
@@ -482,9 +477,9 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
 
 function HolidayRow({ holiday, compact = false }: { holiday: Holiday; compact?: boolean }) {
   return (
-    <div className={`rounded-lg border border-indigo-100 bg-indigo-50/40 ${compact ? 'p-3' : 'p-5'} shadow-premium-sm`}>
-      <div className="text-sm font-medium text-indigo-900">{holiday.name}</div>
-      <div className="text-sm text-indigo-650 mt-1 font-medium">
+    <div className={`rounded-lg border border-red-100 bg-red-50/40 ${compact ? 'p-3' : 'p-5'} shadow-premium-sm`}>
+      <div className="text-sm font-medium text-red-900">{holiday.name}</div>
+      <div className="text-sm text-red-650 mt-1 font-medium">
         {formatDate(holiday.holiday_date)}
       </div>
     </div>
@@ -540,9 +535,9 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
 
 function HolidayNote({ item }: { item: Extract<CalendarItem, { kind: 'holiday' }> }) {
   return (
-    <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-4 shadow-premium-sm">
-      <div className="text-sm font-medium text-indigo-900">{item.holiday.name}</div>
-      <div className="text-sm text-indigo-600 mt-1.5 font-medium">
+    <div className="rounded-lg border border-red-100 bg-red-50/40 p-4 shadow-premium-sm">
+      <div className="text-sm font-medium text-red-900">{item.holiday.name}</div>
+      <div className="text-sm text-red-600 mt-1.5 font-medium">
         {formatDate(item.holiday.holiday_date)}
       </div>
     </div>
@@ -578,7 +573,12 @@ function itemsForDate(key: string, leaveEvents: LeaveRequest[], holidays: Holida
         holiday,
       })),
     ...leaveEvents
-      .filter((event) => key >= toDateKey(event.starts_at) && key <= toDateKey(event.ends_at))
+      .filter((event) => {
+        if (event.status === 'rejected' || event.status === 'cancelled') {
+          return false;
+        }
+        return key >= toDateKey(event.starts_at) && key <= toDateKey(event.ends_at);
+      })
       .map((event) => ({
         id: `leave-${event.id}`,
         kind: 'leave' as const,

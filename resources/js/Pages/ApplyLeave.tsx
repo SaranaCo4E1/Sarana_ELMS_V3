@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, Bot, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Search, Send, Sparkles, X } from 'lucide-react';
+import { AlertCircle, Bot, Calendar, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Sparkles, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
@@ -19,7 +19,7 @@ type Props = {
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  approved: { bg: 'bg-green-500/[0.04]', border: 'border-green-500/10', text: 'text-green-700/90', dot: 'bg-green-500' },
   rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
   cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-555/90', dot: 'bg-neutral-400' },
 };
@@ -37,8 +37,8 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     attachments: [] as File[]
   });
   const [statusFilter, setStatusFilter] = useState('all');
-  const [query, setQuery] = useState('');
   const [aiDraftImported, setAiDraftImported] = useState(false);
+  const [dateSelectionError, setDateSelectionError] = useState<string | null>(null);
 
   // Date states for react-datepicker
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -46,9 +46,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 
   const selectedType = leaveTypes.find((type) => type.id === Number(form.leave_type_id));
   const filteredRequests = requests.filter((request) => {
-    const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-    const haystack = `${request.leave_type.name} ${request.reason} ${request.manager_comment ?? ''}`.toLowerCase();
-    return matchesStatus && haystack.includes(query.toLowerCase());
+    return statusFilter === 'all' || request.status === statusFilter;
   });
 
   const projectedDays = useMemo(() => {
@@ -67,32 +65,32 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     return form.duration === 'half_day' && form.starts_at === form.ends_at && days === 1 ? 0.5 : days;
   }, [form.duration, form.starts_at, form.ends_at, holidays]);
 
-  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
+  const handleSingleDateChange = (date: Date | null) => {
+    setStartDate(date);
+    setEndDate(date);
+    const dateStr = date ? date.toLocaleDateString('sv').slice(0, 10) : '';
+    setForm((prev) => ({ ...prev, starts_at: dateStr, ends_at: dateStr }));
+    setDateSelectionError(null);
+  };
+
+  const handleRangeDateChange = (dates: [Date | null, Date | null] | null) => {
+    if (!dates) {
+      setStartDate(null);
+      setEndDate(null);
+      setForm((prev) => ({ ...prev, starts_at: '', ends_at: '' }));
+      return;
+    }
     const [start, end] = dates;
     setStartDate(start);
     setEndDate(end);
-
     const startStr = start ? start.toLocaleDateString('sv').slice(0, 10) : '';
     const endStr = end ? end.toLocaleDateString('sv').slice(0, 10) : '';
-
     setForm((prev) => ({
       ...prev,
       starts_at: startStr,
       ends_at: startStr && endStr ? endStr : startStr,
     }));
-  };
-
-  const handleSingleDateChange = (date: Date | null) => {
-    setStartDate(date);
-    setEndDate(date);
-
-    const dateStr = date ? date.toLocaleDateString('sv').slice(0, 10) : '';
-
-    setForm((prev) => ({
-      ...prev,
-      starts_at: dateStr,
-      ends_at: dateStr,
-    }));
+    setDateSelectionError(null);
   };
 
   useEffect(() => {
@@ -135,6 +133,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     if (nextDuration === 'half_day') {
       setEndDate(startDate);
     }
+    setDateSelectionError(null);
   };
 
   function removeAttachment(index: number) {
@@ -146,6 +145,12 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 
   function submitLeave(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.starts_at || !form.ends_at) {
+      setDateSelectionError('Please select the leave date before submitting.');
+
+      return;
+    }
+
     const data = new FormData();
     data.append('leave_type_id', String(form.leave_type_id));
     data.append('starts_at', form.starts_at);
@@ -202,7 +207,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                   <p className="text-sm font-normal text-neutral-500 mt-1.5">Submit a leave request for approvals</p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-md border border-orange-100 bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-700 shadow-sm">
+              <span className="inline-flex items-center rounded-md border border-orange-500/10 bg-orange-500/[0.04] px-2.5 py-0.5 text-xs font-semibold text-orange-700">
                 {formatDays(projectedDays)} working day(s) calculated
               </span>
             </div>
@@ -238,26 +243,38 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               <div className="sm:col-span-2 block text-xs font-medium uppercase tracking-wider text-neutral-500">
                 Date Selection
                 <div className="mt-1.5 relative">
+                  <div className="pointer-events-none absolute left-3.5 top-3.5 text-neutral-400 z-10">
+                    <Calendar size={14} />
+                  </div>
                   {form.duration === 'half_day' ? (
                     <DatePicker
                       selected={startDate}
                       onChange={handleSingleDateChange}
-                      className="w-full rounded-lg border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-normal text-neutral-700 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                      dateFormat="MMMM d, yyyy"
+                      onKeyDown={(e) => e.preventDefault()}
+                      className={`w-full rounded-lg border pl-9.5 pr-3.5 py-2.5 text-sm bg-white font-medium text-neutral-800 placeholder:text-neutral-400 placeholder:font-normal focus:ring-4 focus:ring-orange-500/5 transition-all outline-none cursor-pointer select-none caret-transparent ${dateSelectionError ? 'border-rose-300 focus:border-rose-500' : 'border-neutral-200/70 focus:border-orange-500'}`}
                       placeholderText="Select date"
-                      dateFormat="yyyy-MM-dd"
+                      autoComplete="off"
                     />
                   ) : (
                     <DatePicker
-                      selectsRange
-                      startDate={startDate}
-                      endDate={endDate}
-                      onChange={handleDateRangeChange}
-                      className="w-full rounded-lg border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-normal text-neutral-700 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                      selectsRange={true}
+                      startDate={startDate ?? undefined}
+                      endDate={endDate ?? undefined}
+                      onChange={handleRangeDateChange}
+                      dateFormat="MMMM d, yyyy"
+                      onKeyDown={(e) => e.preventDefault()}
+                      className={`w-full rounded-lg border pl-9.5 pr-3.5 py-2.5 text-sm bg-white font-medium text-neutral-800 placeholder:text-neutral-400 placeholder:font-normal focus:ring-4 focus:ring-orange-500/5 transition-all outline-none cursor-pointer select-none caret-transparent ${dateSelectionError ? 'border-rose-300 focus:border-rose-500' : 'border-neutral-200/70 focus:border-orange-500'}`}
                       placeholderText="Select start and end date"
-                      dateFormat="yyyy-MM-dd"
+                      autoComplete="off"
                     />
                   )}
                 </div>
+                {dateSelectionError && (
+                  <p className="mt-2 text-xs font-medium normal-case tracking-normal text-rose-600">
+                    {dateSelectionError}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -270,7 +287,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 
             <div className="mt-4.5">
               <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
-                Reason & Handover Notes
+                Reason & Handover Notes (Optional)
                 <textarea
                   className="mt-1.5 min-h-[90px] w-full rounded-lg border border-neutral-200/70 p-3 text-sm font-normal text-neutral-700 placeholder:text-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none resize-y"
                   placeholder="Details for coverage, client handover, or reason for time off request..."
@@ -323,15 +340,6 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 <p className="text-sm font-normal text-neutral-500 mt-1.5">View all previous leave applications</p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
-                  <input
-                    className="w-52 rounded-lg border border-neutral-200/70 bg-white py-2.5 pl-9 pr-3.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
-                    placeholder="Search requests..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
                 <select
                   className="rounded-lg border border-neutral-200/70 px-3.5 py-2.5 text-sm bg-white font-normal text-neutral-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                   value={statusFilter}
@@ -351,12 +359,6 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 
         {/* Sidebar section */}
         <aside className="space-y-6">
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
-            <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
-            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="orange" />
-            <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
-            <Metric icon={<CalendarClock size={15} />} label="Scheduled days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
-          </div>
 
           <div className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
             <div className="mb-4 text-xs font-medium uppercase tracking-wider text-neutral-500">
@@ -402,6 +404,13 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 );
               })}
             </div>
+          </div>
+
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
+            <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
+            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="green" />
+            <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
+            <Metric icon={<CalendarClock size={15} />} label="Scheduled days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
           </div>
         </aside>
       </div>
@@ -517,7 +526,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
   );
 }
 
-function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' }) {
+function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' | 'green' }) {
   const themes = {
     amber: {
       border: 'border-amber-100/60',
@@ -528,6 +537,11 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
       border: 'border-orange-100/60',
       bg: 'bg-gradient-to-br from-orange-500/5 to-orange-600/5',
       iconBg: 'bg-orange-50 text-orange-600 border-orange-100/70',
+    },
+    green: {
+      border: 'border-green-100/60',
+      bg: 'bg-gradient-to-br from-green-500/5 to-green-600/5',
+      iconBg: 'bg-green-50 text-green-600 border-green-100/70',
     },
     rose: {
       border: 'border-rose-100/60',

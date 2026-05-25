@@ -374,7 +374,7 @@ export default function Landing() {
                       <div className="text-[10px] font-medium text-neutral-400">Jun 14 - Jun 18 (5 days)</div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[9px] font-medium text-orange-700 border border-orange-100">
+                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-[9px] font-medium text-green-700 border border-green-100">
                     Approved
                   </span>
                 </div>
@@ -505,9 +505,9 @@ export default function Landing() {
                       <div className="text-[10px] font-medium text-neutral-400 mt-1">Fiscal Year 2026</div>
                     </div>
                     <div className="rounded-lg border border-neutral-100 bg-[#fafbfa]/80 p-4">
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-orange-800">Approved Leave</div>
-                      <div className="text-xl font-medium text-orange-700 mt-1">10.5 days</div>
-                      <div className="text-[10px] font-medium text-orange-500 mt-1">Calculated instantly</div>
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-green-800">Approved Leave</div>
+                      <div className="text-xl font-medium text-green-700 mt-1">10.5 days</div>
+                      <div className="text-[10px] font-medium text-green-500 mt-1">Calculated instantly</div>
                     </div>
                     <div className="rounded-lg border border-neutral-100 bg-[#fafbfa]/80 p-4">
                       <div className="text-[10px] font-medium uppercase tracking-wider text-amber-800">Pending Approval</div>
@@ -526,7 +526,7 @@ export default function Landing() {
                       <span className="text-xs font-medium text-neutral-800">Recent Leave Request Submission</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium border transition-colors ${
                         mockRequestApproved 
-                          ? 'bg-orange-50 text-orange-700 border-orange-100'
+                          ? 'bg-green-50 text-green-700 border-green-100'
                           : 'bg-amber-50 text-amber-700 border-amber-100'
                       }`}>
                         {mockRequestApproved ? 'Approved' : 'Pending Approval'}

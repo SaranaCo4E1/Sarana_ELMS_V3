@@ -39,11 +39,11 @@ class DatabaseSeeder extends Seeder
             'department_id' => $departments['HR']->id,
             'manager_id' => null,
             'job_title' => 'Chief Executive Officer',
-            'phone' => '+66 80 000 1001',
+            'phone' => '012 234 501',
             'work_location' => 'Phnom Penh',
             'employment_type' => 'Full-time',
             'emergency_contact_name' => 'Davy Sok',
-            'emergency_contact_phone' => '+66 80 000 1999',
+            'emergency_contact_phone' => '092 234 901',
             'bio' => 'Company-wide executive sponsor for people operations and growth.',
             'hire_date' => $today->copy()->subYears(5)->toDateString(),
             'is_active' => true,
@@ -56,12 +56,12 @@ class DatabaseSeeder extends Seeder
             'department_id' => $departments['HR']->id,
             'manager_id' => $ceo->id,
             'job_title' => 'System Administrator',
-            'phone' => '+66 80 000 1002',
+            'phone' => '096 234 5502',
             'work_location' => 'Phnom Penh',
             'employment_type' => 'Full-time',
             'emergency_contact_name' => 'Sophal Keo',
-            'emergency_contact_phone' => '+66 80 000 1998',
-            'bio' => 'System administration account for seeded demo and QA workflows.',
+            'emergency_contact_phone' => '093 234 902',
+            'bio' => 'System administration account for demo and QA workflows.',
             'hire_date' => $today->copy()->subYears(3)->toDateString(),
             'is_active' => true,
         ], ['admin@elms.test']);
@@ -71,11 +71,13 @@ class DatabaseSeeder extends Seeder
             'hr_manager' => [
                 'name' => 'Sreymom Chan',
                 'email' => 'hr@niy.ai',
-                'role' => 'hr',
+                'role' => 'hr admin',
                 'department' => 'HR',
                 'manager' => $ceo,
                 'employee_code' => 'HR-001',
                 'job_title' => 'HR Manager',
+                'phone' => '011 234 503',
+                'emergency_contact_phone' => '097 234 5903',
                 'hire_date' => $today->copy()->subYears(3)->subMonths(2),
                 'legacy_emails' => ['hr@elms.test'],
             ],
@@ -87,6 +89,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => $ceo,
                 'employee_code' => 'IT-001',
                 'job_title' => 'IT Manager',
+                'phone' => '017 234 504',
+                'emergency_contact_phone' => '010 234 904',
                 'hire_date' => $today->copy()->subYears(2)->subMonths(8),
                 'legacy_emails' => ['manager@elms.test'],
             ],
@@ -98,6 +102,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => $ceo,
                 'employee_code' => 'SALES-001',
                 'job_title' => 'Sales Manager',
+                'phone' => '098 234 505',
+                'emergency_contact_phone' => '015 234 905',
                 'hire_date' => $today->copy()->subYears(2)->subMonths(4),
                 'legacy_emails' => [],
             ],
@@ -109,6 +115,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => null,
                 'employee_code' => 'HR-101',
                 'job_title' => 'People Operations Specialist',
+                'phone' => '016 234 506',
+                'emergency_contact_phone' => '099 234 906',
                 'hire_date' => $today->copy()->subYear()->subMonths(5),
                 'legacy_emails' => [],
             ],
@@ -120,6 +128,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => null,
                 'employee_code' => 'IT-101',
                 'job_title' => 'Backend Engineer',
+                'phone' => '069 234 507',
+                'emergency_contact_phone' => '078 234 907',
                 'hire_date' => $today->copy()->subYear()->subMonths(2),
                 'legacy_emails' => ['staff@elms.test'],
             ],
@@ -131,6 +141,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => null,
                 'employee_code' => 'IT-102',
                 'job_title' => 'IT Support Specialist',
+                'phone' => '070 234 508',
+                'emergency_contact_phone' => '085 234 908',
                 'hire_date' => $today->copy()->subMonths(10),
                 'legacy_emails' => [],
             ],
@@ -142,6 +154,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => null,
                 'employee_code' => 'SALES-101',
                 'job_title' => 'Account Executive',
+                'phone' => '081 234 509',
+                'emergency_contact_phone' => '088 234 5909',
                 'hire_date' => $today->copy()->subYear()->subMonths(8),
                 'legacy_emails' => [],
             ],
@@ -153,6 +167,8 @@ class DatabaseSeeder extends Seeder
                 'manager' => null,
                 'employee_code' => 'SALES-102',
                 'job_title' => 'Sales Operations Analyst',
+                'phone' => '087 234 510',
+                'emergency_contact_phone' => '095 234 910',
                 'hire_date' => $today->copy()->subMonths(9),
                 'legacy_emails' => [],
             ],
@@ -166,12 +182,12 @@ class DatabaseSeeder extends Seeder
                 'department_id' => $department->id,
                 'manager_id' => $user['manager']?->id,
                 'job_title' => $user['job_title'],
-                'phone' => '+66 80 000 '.substr($user['employee_code'], -3),
+                'phone' => $user['phone'],
                 'work_location' => 'Phnom Penh',
                 'employment_type' => 'Full-time',
                 'emergency_contact_name' => $user['name'].' Emergency',
-                'emergency_contact_phone' => '+66 80 999 '.substr($user['employee_code'], -3),
-                'bio' => 'Seeded employee profile for demo and QA workflows.',
+                'emergency_contact_phone' => $user['emergency_contact_phone'],
+                'bio' => 'Employee profile for demo and QA workflows.',
                 'hire_date' => $user['hire_date']->toDateString(),
                 'is_active' => true,
             ], $user['legacy_emails']);
@@ -189,10 +205,10 @@ class DatabaseSeeder extends Seeder
         $departments['IT']->update(['manager_id' => $users['it_manager']->id]);
         $departments['SALES']->update(['manager_id' => $users['sales_manager']->id]);
 
-        // Leave policy defaults are reflected in each seeded employee balance.
+        // Leave policy defaults are reflected in each demo employee balance.
         $types = collect([
             'annual' => ['name' => 'Annual Leave', 'code' => 'annual', 'default_allowance_days' => 18, 'paid' => true, 'requires_attachment' => false, 'deducts_balance' => true, 'is_active' => true],
-            'sick' => ['name' => 'Sick Leave', 'code' => 'sick', 'default_allowance_days' => 5, 'paid' => true, 'requires_attachment' => true, 'deducts_balance' => true, 'is_active' => true],
+            'sick' => ['name' => 'Sick Leave', 'code' => 'sick', 'default_allowance_days' => 7, 'paid' => true, 'requires_attachment' => true, 'deducts_balance' => true, 'is_active' => true],
             'unpaid' => ['name' => 'Unpaid Leave', 'code' => 'unpaid', 'default_allowance_days' => 30, 'paid' => false, 'requires_attachment' => false, 'deducts_balance' => true, 'is_active' => true],
         ])->mapWithKeys(fn (array $type, string $code) => [
             $code => LeaveType::query()->updateOrCreate(['code' => $code], $type),
@@ -203,7 +219,7 @@ class DatabaseSeeder extends Seeder
         $allUsers = collect([$ceo, $admin])->merge($users);
         $balanceService = app(LeaveBalanceService::class);
 
-        // Reset seeded balances before replaying seeded requests into used and pending totals.
+        // Reset demo balances before replaying demo requests into used and pending totals.
         $allUsers->each(function (User $user) use ($types, $year) {
             $types->each(function (LeaveType $type) use ($user, $year) {
                 LeaveBalance::query()->updateOrCreate(
@@ -220,8 +236,17 @@ class DatabaseSeeder extends Seeder
             });
         });
 
-        // Relative offsets keep demo requests clustered around the day the seeder runs.
+        // Relative offsets keep demo requests useful whenever the seeder runs.
         $requests = [
+            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Family ceremony in Kampong Cham.'],
+            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'Flu recovery and clinic visit.'],
+            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Short break after payroll rollout.'],
+            [$users['sales_ops'], 'unpaid', -161, -160, 'approved', $users['sales_manager'], 'Personal paperwork appointment.'],
+            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Travel to visit family in Siem Reap.'],
+            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Medical appointment and rest.'],
+            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Personal recharge after policy review.'],
+            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Planned vacation after release milestone.'],
+            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Clinic follow-up appointment.'],
             [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip planned before the sprint handoff.'],
             [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and clinic visit.'],
             [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Personal appointment and travel time.'],
@@ -234,7 +259,7 @@ class DatabaseSeeder extends Seeder
             [$ceo, 'annual', 20, 21, 'pending', null, 'Board travel buffer.'],
         ];
 
-        // Create matching in-app notifications so seeded accounts show realistic unread state.
+        // Create matching in-app notifications so demo accounts show realistic unread state.
         foreach ($requests as [$user, $typeCode, $startOffset, $endOffset, $status, $approver, $reason]) {
             $startsAt = $this->businessDay($today->copy()->addDays($startOffset));
             $endsAt = $this->businessDay($today->copy()->addDays($endOffset));
@@ -263,14 +288,18 @@ class DatabaseSeeder extends Seeder
                     'status' => $status,
                     'reason' => $reason,
                     'manager_comment' => match ($status) {
-                        'approved' => 'Approved in seeded demo data.',
-                        'rejected' => 'Rejected in seeded demo data due to coverage needs.',
+                        'approved' => 'Approved after manager review.',
+                        'rejected' => 'Rejected due to coverage needs.',
                         default => null,
                     },
                     'submitted_at' => $submittedAt,
                     'decided_at' => $decidedAt,
                 ]
             );
+            $leaveRequest->forceFill([
+                'created_at' => $submittedAt,
+                'updated_at' => $decidedAt ?? $submittedAt,
+            ])->save();
 
             if ($status === 'pending' && $approver) {
                 $this->seedNotification(
@@ -294,7 +323,7 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        // Recalculate aggregate balance columns from the final seeded request set.
+        // Recalculate aggregate balance columns from the final demo request set.
         LeaveRequest::query()
             ->whereYear('starts_at', $year)
             ->whereIn('user_id', $allUsers->pluck('id'))

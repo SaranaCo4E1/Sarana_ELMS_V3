@@ -3,7 +3,7 @@ import { CalendarClock, ClipboardCheck, UserCheck, Users } from 'lucide-react';
 import type React from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest, User } from '../types';
-import { formatDays, formatShortDate } from '../utils';
+import { formatDays, formatRole, formatShortDate } from '../utils';
 import LeaveBadge from '../Components/LeaveBadge';
 
 type Props = {
@@ -22,7 +22,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
           <Metric icon={<Users size={15} />} label="Team Members" value={teamStats.members} variant="indigo" />
           <Metric icon={<ClipboardCheck size={15} />} label="Pending Decisions" value={teamStats.pending} variant="amber" />
           <Metric icon={<UserCheck size={15} />} label="On Leave Today" value={teamStats.on_leave_today} variant="orange" />
-          <Metric icon={<CalendarClock size={15} />} label="Approved This Year" value={teamStats.approved_this_year} variant="amber" />
+          <Metric icon={<CalendarClock size={15} />} label="Approved This Year" value={teamStats.approved_this_year} variant="green" />
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_310px]">
@@ -58,7 +58,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-600 font-medium">
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Role</div>
-                      <div className="font-medium text-neutral-600 mt-0.5">{member.job_title ?? member.role}</div>
+                      <div className="font-medium text-neutral-600 mt-0.5">{member.job_title ?? formatRole(member.role)}</div>
                     </div>
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Department</div>
@@ -87,7 +87,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                     <div className="font-medium">
                       <span className="text-amber-700">{member.pending_leave_requests_count ?? 0} pending</span>
                       <span className="mx-1.5 text-neutral-300">·</span>
-                      <span className="text-orange-700">{member.approved_leave_requests_count ?? 0} approved</span>
+                      <span className="text-green-700">{member.approved_leave_requests_count ?? 0} approved</span>
                     </div>
                   </div>
                 </div>
@@ -127,7 +127,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                         </div>
                       </td>
                       <td className="px-4 py-4.5 text-neutral-600 font-medium">
-                        {member.job_title ?? member.role}
+                        {member.job_title ?? formatRole(member.role)}
                       </td>
                       <td className="px-4 py-4.5">
                         {member.department?.name ? (
@@ -144,7 +144,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                       <td className="px-4 py-4.5 whitespace-nowrap text-neutral-600 font-medium">
                         <span className="text-amber-700 font-medium">{member.pending_leave_requests_count ?? 0} pending</span>
                         <span className="mx-1.5 text-neutral-300">·</span>
-                        <span className="text-orange-700 font-medium">{member.approved_leave_requests_count ?? 0} approved</span>
+                        <span className="text-green-700 font-medium">{member.approved_leave_requests_count ?? 0} approved</span>
                       </td>
                       <td className="px-6 py-4.5">
                         <div className="text-neutral-700 font-normal">{member.email}</div>
@@ -193,7 +193,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
   );
 }
 
-function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'indigo' }) {
+function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'indigo' | 'green' }) {
   const themes = {
     amber: {
       border: 'border-amber-100/60',
@@ -204,6 +204,11 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
       border: 'border-orange-100/60',
       bg: 'bg-gradient-to-br from-orange-500/5 to-orange-600/5',
       iconBg: 'bg-orange-50 text-orange-600 border-orange-100/70',
+    },
+    green: {
+      border: 'border-green-100/60',
+      bg: 'bg-gradient-to-br from-green-500/5 to-green-600/5',
+      iconBg: 'bg-green-50 text-green-600 border-green-100/70',
     },
     indigo: {
       border: 'border-indigo-100/60',
@@ -243,7 +248,7 @@ function Panel({ title, icon, children }: { title: string; icon: React.ReactNode
 function RequestLine({ request }: { request: LeaveRequest }) {
   const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
     pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
-    approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+    approved: { bg: 'bg-green-500/[0.04]', border: 'border-green-500/10', text: 'text-green-700/90', dot: 'bg-green-500' },
     rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
     cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
   };

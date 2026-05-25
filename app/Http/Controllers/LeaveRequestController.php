@@ -19,10 +19,10 @@ class LeaveRequestController extends Controller
     {
         $data = $request->validate([
             'leave_type_id' => ['required', 'exists:leave_types,id'],
-            'starts_at' => ['required', 'date', 'after_or_equal:today'],
+            'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
             'duration' => ['required', 'in:full_day,half_day'],
-            'reason' => ['required', 'string', 'max:2000'],
+            'reason' => ['nullable', 'string', 'max:2000'],
             'attachments.*' => ['file', 'max:5120', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx'],
         ]);
 
@@ -53,7 +53,7 @@ class LeaveRequestController extends Controller
                 'leave_type_id' => $data['leave_type_id'],
                 'starts_at' => $data['starts_at'],
                 'ends_at' => $data['ends_at'],
-                'reason' => $data['reason'],
+                'reason' => $data['reason'] ?? null,
                 'user_id' => $user->id,
                 'department_id' => $user->department_id,
                 'requested_days' => $days,

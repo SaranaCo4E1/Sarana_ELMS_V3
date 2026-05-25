@@ -3,6 +3,7 @@ import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, I
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
+import { canAdminRole, canApproveRole, formatRole } from '../utils';
 
 export default function AppLayout({ children, fullHeight }: { children: React.ReactNode; fullHeight?: boolean }) {
   const { auth, flash, notifications } = usePage<PageProps>().props;
@@ -12,8 +13,8 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   const [flashVisible, setFlashVisible] = useState(true);
 
   const user = auth.user;
-  const canApprove = ['manager', 'hr', 'admin'].includes(user.role);
-  const canAdmin = ['hr', 'admin'].includes(user.role);
+  const canApprove = canApproveRole(user.role);
+  const canAdmin = canAdminRole(user.role);
   const unreadCount = notifications?.unread_count ?? 0;
   const notificationItems = notifications?.items ?? [];
 
@@ -60,19 +61,19 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
 
         <nav className="mt-8 space-y-1">
           <Link className={navItemClass('/dashboard')} href="/dashboard">
-            <CalendarCheck size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Dashboard
+            <CalendarCheck size={16} className="shrink-0" /> Dashboard
           </Link>
           <Link className={navItemClass('/calendar')} href="/calendar">
-            <CalendarDays size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Calendar
+            <CalendarDays size={16} className="shrink-0" /> Calendar
           </Link>
           <Link className={navItemClass('/apply-leave')} href="/apply-leave">
-            <CalendarPlus size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> Apply Leave
+            <CalendarPlus size={16} className="shrink-0" /> Apply Leave
           </Link>
           <Link className={navItemClass('/ai-assistant')} href="/ai-assistant">
-            <Bot size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> ELMS Copilot
+            <Bot size={16} className="shrink-0" /> ELMS Copilot
           </Link>
           <Link className={navItemClass('/profile')} href="/profile">
-            <IdCard size={16} className="shrink-0 text-neutral-400 group-hover:text-neutral-700" /> My Profile
+            <IdCard size={16} className="shrink-0" /> My Profile
           </Link>
           
           {(canApprove || canAdmin) && (
@@ -87,8 +88,15 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
             </Link>
           )}
           {canApprove && (
-            <Link className={navItemClass('/approvals')} href="/approvals">
-              <ClipboardCheck size={16} className="shrink-0" /> Approvals
+            <Link className={`${navItemClass('/approvals')} !justify-between`} href="/approvals">
+              <div className="flex items-center gap-3.5">
+                <ClipboardCheck size={16} className="shrink-0" /> Approvals
+              </div>
+              {auth.pending_approvals_count > 0 && (
+                <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange-600 px-1 text-[10px] font-semibold text-white shadow-premium-sm">
+                  {auth.pending_approvals_count}
+                </span>
+              )}
             </Link>
           )}
           {canAdmin && (
@@ -107,7 +115,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-normal text-neutral-800">{user.name}</div>
-            <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{user.role}</div>
+            <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{formatRole(user.role)}</div>
           </div>
         </div>
 

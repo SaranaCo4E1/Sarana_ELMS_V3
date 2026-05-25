@@ -6,9 +6,10 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -51,6 +52,11 @@ class User extends Authenticatable
         return $this->hasMany(User::class, 'manager_id');
     }
 
+    public function profile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
     public function leaveBalances(): HasMany
     {
         return $this->hasMany(LeaveBalance::class);
@@ -68,11 +74,11 @@ class User extends Authenticatable
 
     public function isHr(): bool
     {
-        return in_array($this->role, ['hr', 'admin'], true);
+        return in_array($this->role, ['hr admin', 'admin'], true);
     }
 
     public function isManager(): bool
     {
-        return in_array($this->role, ['manager', 'hr', 'admin'], true);
+        return in_array($this->role, ['manager', 'hr admin', 'admin'], true);
     }
 }

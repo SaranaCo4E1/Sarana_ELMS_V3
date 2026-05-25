@@ -35,3 +35,17 @@ export function formatTime(value: string | Date | null | undefined): string {
     minute: '2-digit',
   });
 }
+
+export function formatRole(role: string): string {
+  if (role === 'hr admin') return 'HR Admin';
+
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+export function canApproveRole(role: string): boolean {
+  return ['manager', 'hr admin', 'admin'].includes(role);
+}
+
+export function canAdminRole(role: string): boolean {
+  return ['hr admin', 'admin'].includes(role);
+}

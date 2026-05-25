@@ -40,6 +40,27 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'history' | 'faq'>('chat');
   const [leaveDraft, setLeaveDraft] = useState<LeaveDraft | null>(null);
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
+    'Draft annual leave for May 25 to May 28 for family travel.',
+    'How much annual leave can I use this month?',
+    'What happens after I submit a leave request?',
+    'Which leave types require an attachment?',
+  ]);
+
+  useEffect(() => {
+    const now = new Date();
+    const formatMonthDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const start = new Date(now);
+    const end = new Date(now);
+    end.setDate(end.getDate() + 3);
+
+    setSuggestedPrompts([
+      `Draft annual leave for ${formatMonthDay(start)} to ${formatMonthDay(end)} for family travel.`,
+      'How much annual leave can I use this month?',
+      'What happens after I submit a leave request?',
+      'Which leave types require an attachment?',
+    ]);
+  }, []);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' });
@@ -248,7 +269,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     {suggestedPrompts.map((suggestion) => (
                       <button
                         key={suggestion}
-                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-600 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-lg shadow-premium-sm cursor-pointer"
+                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-600 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
                         type="button"
                         onClick={() => setExternalPrompt(suggestion)}
                       >
@@ -686,13 +707,6 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-const suggestedPrompts = [
-  'Draft annual leave for May 25 to May 28 for family travel.',
-  'How much annual leave can I use this month?',
-  'What happens after I submit a leave request?',
-  'Which leave types require an attachment?',
-  'Show me how managers approve or reject a request.',
-];
 
 function parseLeaveDraftResponse(response: string): LeaveDraft {
   return {

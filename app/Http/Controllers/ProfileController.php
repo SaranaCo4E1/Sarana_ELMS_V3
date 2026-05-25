@@ -15,7 +15,7 @@ class ProfileController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('Profile', [
-            'profile' => $request->user()->load(['department', 'manager']),
+            'profile' => $request->user()->load(['department', 'manager', 'profile']),
         ]);
     }
 
@@ -25,15 +25,27 @@ class ProfileController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'work_location' => ['nullable', 'string', 'max:120'],
-            'employment_type' => ['nullable', 'string', 'max:80'],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender' => ['nullable', Rule::in(['Male', 'Female'])],
+            'nationality' => ['nullable', 'string', 'max:100'],
+            'national_id_number' => ['nullable', 'string', 'max:50'],
+            'join_date' => ['nullable', 'date'],
+            'employment_type' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:2000'],
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contact_phone' => ['nullable', 'string', 'max:50'],
-            'bio' => ['nullable', 'string', 'max:1000'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
+            'bank_account_number' => ['nullable', 'string', 'max:50'],
+            'bank_name' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $user->update($data);
+        $user->update([
+            'name' => $data['name'],
+            'email' => $data['email'],
+        ]);
+
+        unset($data['name'], $data['email']);
+
+        $user->profile()->updateOrCreate(['user_id' => $user->id], $data);
         Audit::record($request, 'profile.updated', $user);
 
         return back()->with('success', 'Profile updated.');

@@ -4,7 +4,7 @@ import type React from 'react';
 import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
-import { formatDays, formatShortDate } from '../utils';
+import { canApproveRole, formatDays, formatShortDate } from '../utils';
 import LeaveBadge, { getLeaveStyle } from '../Components/LeaveBadge';
 
 type Props = {
@@ -21,7 +21,7 @@ type Props = {
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  approved: { bg: 'bg-green-500/[0.04]', border: 'border-green-500/10', text: 'text-green-700/90', dot: 'bg-green-500' },
   rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
   cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
 };
@@ -42,6 +42,7 @@ export default function Dashboard({
   const { auth } = usePage<PageProps>().props;
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
+  const canViewTeamLeave = canApproveRole(auth.user.role);
 
   const filteredRequests = requests.filter((request) => {
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
@@ -57,7 +58,7 @@ export default function Dashboard({
           {/* Metrics section */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
             <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
-            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="orange" />
+            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="green" />
             <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
             <Metric icon={<CalendarClock size={15} />} label="Scheduled Days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
           </div>
@@ -111,15 +112,15 @@ export default function Dashboard({
           </div>
 
           {/* Upcoming Leave Schedule Preview */}
-          {((auth.user.role !== 'staff' && teamUpcomingLeaves.length > 0) || myUpcomingLeaves.length > 0) && (
+          {((canViewTeamLeave && teamUpcomingLeaves.length > 0) || myUpcomingLeaves.length > 0) && (
             <div className="rounded-xl border border-neutral-200/50 bg-white p-4 sm:p-6 shadow-premium-sm">
               <div className="mb-5 flex justify-between items-center">
                 <div>
                   <h2 className="text-base font-medium text-neutral-800">
-                    {['manager', 'hr', 'admin'].includes(auth.user.role) ? 'Upcoming Team Leave Schedule' : 'My Upcoming Leave Schedule'}
+                    {canViewTeamLeave ? 'Upcoming Team Leave Schedule' : 'My Upcoming Leave Schedule'}
                   </h2>
                   <p className="text-sm font-medium text-neutral-500 mt-1.5">
-                    {['manager', 'hr', 'admin'].includes(auth.user.role)
+                    {canViewTeamLeave
                       ? 'Approved leaves starting soon for your direct team members'
                       : 'Your upcoming approved leave requests'}
                   </p>
@@ -127,7 +128,7 @@ export default function Dashboard({
               </div>
 
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                {['manager', 'hr', 'admin'].includes(auth.user.role)
+                {canViewTeamLeave
                   ? teamUpcomingLeaves.map((leave) => (
                       <div key={leave.id} className="rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3.5 sm:p-4.5 flex items-center justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -228,11 +229,11 @@ export default function Dashboard({
             <div className="space-y-3.5">
               {upcomingHolidays.map((holiday) => (
                 <div key={holiday.id} className="flex items-center gap-3 rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3 sm:p-3.5 text-sm transition-all hover:bg-neutral-50/60 min-w-0">
-                  <div className="flex h-11 w-11 flex-col items-center justify-center rounded-md bg-orange-50 text-orange-800 border border-orange-100 font-medium shadow-premium-sm shrink-0">
-                    <span className="text-[10px] uppercase font-medium tracking-tight text-orange-700">
+                  <div className="flex h-11 w-11 flex-col items-center justify-center rounded-md bg-red-50 text-red-800 border border-red-100 font-medium shadow-premium-sm shrink-0">
+                    <span className="text-[10px] uppercase font-medium tracking-tight text-red-700">
                       {new Date(holiday.holiday_date).toLocaleDateString(undefined, { month: 'short' })}
                     </span>
-                    <span className="text-sm font-medium leading-none mt-0.5 text-orange-800">
+                    <span className="text-sm font-medium leading-none mt-0.5 text-red-800">
                       {new Date(holiday.holiday_date).toLocaleDateString(undefined, { day: 'numeric' })}
                     </span>
                   </div>
@@ -363,7 +364,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
   );
 }
 
-function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' }) {
+function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' | 'green' }) {
   const themes = {
     amber: {
       border: 'border-amber-100/60',
@@ -374,6 +375,11 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
       border: 'border-orange-100/60',
       bg: 'bg-gradient-to-br from-orange-500/5 to-orange-600/5',
       iconBg: 'bg-orange-50 text-orange-600 border-orange-100/70',
+    },
+    green: {
+      border: 'border-green-100/60',
+      bg: 'bg-gradient-to-br from-green-500/5 to-green-600/5',
+      iconBg: 'bg-green-50 text-green-600 border-green-100/70',
     },
     rose: {
       border: 'border-rose-100/60',

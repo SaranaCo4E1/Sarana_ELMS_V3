@@ -96,74 +96,93 @@ input:focus, select:focus, textarea:focus {
 
 /* React Datepicker styling customizations */
 .react-datepicker-wrapper {
-  width: 100%;
+  display: block;
 }
 
 .react-datepicker {
   font-family: var(--font-sans) !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
   border-radius: 12px !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
-  overflow: hidden;
   background-color: #ffffff !important;
-  padding: 8px !important;
+  overflow: hidden;
+  padding: 12px !important;
 }
 
 .react-datepicker__header {
   background-color: #ffffff !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
-  padding-top: 0.5rem !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
 }
 
 .react-datepicker__current-month {
   font-family: var(--font-display) !important;
-  font-weight: 700 !important;
+  font-weight: var(--font-weight-semibold) !important;
   color: #171717 !important;
-  font-size: 0.9rem !important;
-  margin-bottom: 8px !important;
+  font-size: 0.95rem !important;
 }
 
 .react-datepicker__day-name {
   color: #888888 !important;
-  font-weight: 600 !important;
-  width: 2.2rem !important;
-  line-height: 2.2rem !important;
+  font-weight: var(--font-weight-semibold) !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
   margin: 0.15rem !important;
 }
 
 .react-datepicker__day {
   color: #262626 !important;
-  width: 2.2rem !important;
-  line-height: 2.2rem !important;
-  height: 2.2rem !important;
-  margin: 0.15rem !important;
   border-radius: 6px !important;
   font-weight: 500 !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.15rem !important;
   transition: all 0.15s ease;
 }
 
-.react-datepicker__day:hover {
-  background-color: rgba(255, 117, 15, 0.06) !important;
-  color: #ff750f !important;
-}
-
-.react-datepicker__day--selected,
-.react-datepicker__day--in-selecting-range,
-.react-datepicker__day--in-range {
-  background: linear-gradient(135deg, #ff750f, #d97706) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(255, 117, 15, 0.2) !important;
-}
-
+.react-datepicker__day:hover,
 .react-datepicker__day--keyboard-selected {
   background-color: rgba(255, 117, 15, 0.06) !important;
   color: #ff750f !important;
 }
 
-.react-datepicker__day--disabled {
+.react-datepicker__day--selected,
+.react-datepicker__day--range-start,
+.react-datepicker__day--range-end,
+.react-datepicker__day--selecting-range-start,
+.react-datepicker__day--selecting-range-end {
+  background: linear-gradient(135deg, #ff750f, #d97706) !important;
+  color: #ffffff !important;
+  font-weight: var(--font-weight-semibold) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(255, 117, 15, 0.2) !important;
+}
+
+.react-datepicker__day--in-range:not(.react-datepicker__day--range-start):not(.react-datepicker__day--range-end),
+.react-datepicker__day--in-selecting-range:not(.react-datepicker__day--selecting-range-start):not(.react-datepicker__day--selecting-range-end) {
+  background-color: rgba(255, 117, 15, 0.06) !important;
+  color: #ff750f !important;
+  border-radius: 0 !important;
+}
+
+.react-datepicker__day--disabled,
+.react-datepicker__day--disabled:hover {
   color: #cccccc !important;
   background-color: transparent !important;
+}
+
+.react-datepicker__navigation {
+  top: 14px !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #888888 !important;
+  border-width: 2px 2px 0 0 !important;
+}
+
+.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+  border-color: #ff750f !important;
 }
 
 /* Markdown prose rendering classes */
@@ -319,6 +338,43 @@ label:has(input[type="radio"]),
 input[type="checkbox"] + label,
 input[type="radio"] + label {
   cursor: pointer;
+}
+
+/* Rich modal transitions */
+@keyframes modalBackdropEnter {
+  from { opacity: 0; backdrop-filter: blur(0px); background-color: rgba(9, 9, 11, 0); }
+  to { opacity: 1; backdrop-filter: blur(4px); background-color: rgba(9, 9, 11, 0.35); }
+}
+
+@keyframes modalBackdropLeave {
+  from { opacity: 1; backdrop-filter: blur(4px); background-color: rgba(9, 9, 11, 0.35); }
+  to { opacity: 0; backdrop-filter: blur(0px); background-color: rgba(9, 9, 11, 0); }
+}
+
+@keyframes modalContentEnter {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes modalContentLeave {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.96) translateY(8px); }
+}
+
+.animate-backdrop-enter {
+  animation: modalBackdropEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-backdrop-leave {
+  animation: modalBackdropLeave 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-enter {
+  animation: modalContentEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-leave {
+  animation: modalContentLeave 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 

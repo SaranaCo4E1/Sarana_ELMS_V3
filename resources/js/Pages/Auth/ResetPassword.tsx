@@ -1,11 +1,13 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Bot, Mail, KeyRound, ArrowLeft } from 'lucide-react';
+import { Bot, Mail, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import type { PageProps } from '../../types';
 
 export default function ResetPassword({ token, email }: { token: string; email: string }) {
   const { errors } = usePage<PageProps>().props;
   const [form, setForm] = useState({ token, email, password: '', password_confirmation: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-neutral-50/60 px-4 py-12">
@@ -62,12 +64,19 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                   <KeyRound size={15} />
                 </div>
                 <input 
-                  type="password" 
-                  className="w-full rounded-lg border border-neutral-200 bg-white pl-11 pr-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm font-medium transition-all outline-none"
+                  type={showPassword ? "text" : "password"} 
+                  className="w-full rounded-lg border border-neutral-200 bg-white pl-11 pr-11 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm font-medium transition-all outline-none"
                   onChange={(e) => setForm({ ...form, password: e.target.value })} 
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-neutral-400 hover:text-neutral-600 transition-colors focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
               {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-500">{errors.password}</p>}
             </div>
@@ -82,12 +91,19 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                   <KeyRound size={15} />
                 </div>
                 <input 
-                  type="password" 
-                  className="w-full rounded-lg border border-neutral-200 bg-white pl-11 pr-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm font-medium transition-all outline-none"
+                  type={showConfirmPassword ? "text" : "password"} 
+                  className="w-full rounded-lg border border-neutral-200 bg-white pl-11 pr-11 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm font-medium transition-all outline-none"
                   onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} 
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-neutral-400 hover:text-neutral-600 transition-colors focus:outline-none"
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
               {errors.password_confirmation && <p className="mt-1.5 text-xs font-semibold text-rose-500">{errors.password_confirmation}</p>}
             </div>

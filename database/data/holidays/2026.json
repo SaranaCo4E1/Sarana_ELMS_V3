@@ -103,6 +103,17 @@
       "updated_at": null
     },
     {
+      "holiday_id": 305731,
+      "name": "Queen Mother's Birthday",
+      "date": "2026-06-18",
+      "description": null,
+      "occasion_id": 1011,
+      "country": "KH",
+      "type": "Public Holiday",
+      "created_at": "2025-01-02 08:52:22",
+      "updated_at": null
+    },
+    {
       "holiday_id": 30573,
       "name": "Visak Bochea Day",
       "date": "2026-05-22",

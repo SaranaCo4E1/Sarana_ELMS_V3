@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
     Route::post('/ai-help/stream', [AiHelpController::class, 'stream'])->name('ai-help.stream');
 
-    Route::middleware('role:manager,hr,admin')->group(function () {
+    Route::middleware('role:manager,hr admin,admin')->group(function () {
         Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
         Route::patch('/approvals/{leaveRequest}', [ManagerApprovalController::class, 'update'])->name('approvals.update');
         Route::get('/approvals/attachments/{leaveAttachment}/preview', [ManagerApprovalController::class, 'previewAttachment'])->name('approvals.attachments.preview');
@@ -66,17 +66,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
     });
 
-    Route::middleware('role:hr,admin')->group(function () {
+    Route::middleware('role:hr admin,admin')->group(function () {
         Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
         Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
         Route::post('/admin/leave-types', [AdminController::class, 'storeLeaveType'])->name('admin.leave-types.store');
         Route::post('/admin/holidays', [AdminController::class, 'storeHoliday'])->name('admin.holidays.store');
         Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
+        Route::patch('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
+        Route::patch('/admin/leave-types/{leaveType}', [AdminController::class, 'updateLeaveType'])->name('admin.leave-types.update');
+        Route::patch('/admin/holidays/{holiday}', [AdminController::class, 'updateHoliday'])->name('admin.holidays.update');
+        Route::patch('/admin/users/{user}', [AdminController::class, 'updateUser'])->name('admin.users.update');
         Route::patch('/admin/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
         Route::patch('/admin/leave-types/{leaveType}/status', [AdminController::class, 'updateLeaveTypeStatus'])->name('admin.leave-types.status');
         Route::patch('/admin/departments/{department}/status', [AdminController::class, 'updateDepartmentStatus'])->name('admin.departments.status');
         Route::patch('/admin/holidays/{holiday}/status', [AdminController::class, 'updateHolidayStatus'])->name('admin.holidays.status');
         Route::post('/admin/balances', [AdminController::class, 'overrideBalance'])->name('admin.balances.override');
         Route::get('/reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
+        Route::get('/reports/audit-logs', [ReportController::class, 'auditLogs'])->name('reports.audit-logs');
     });
 });

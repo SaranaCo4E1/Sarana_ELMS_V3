@@ -1,21 +1,28 @@
 import { router, usePage } from '@inertiajs/react';
-import { BriefcaseBusiness, IdCard, KeyRound, LockKeyhole, Phone, Shield, UserRound, MapPin, Mail, Sparkles, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Banknote, BriefcaseBusiness, CalendarDays, Eye, EyeOff, IdCard, KeyRound, LockKeyhole, Mail, MapPin, Phone, Shield, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { PageProps, User } from '../types';
+import { formatDate, formatRole } from '../utils';
 
 export default function Profile({ profile }: { profile: User }) {
   const { errors } = usePage<PageProps>().props;
+  const employeeProfile = profile.profile;
   const [form, setForm] = useState({
     name: profile.name ?? '',
     email: profile.email ?? '',
-    phone: profile.phone ?? '',
-    work_location: profile.work_location ?? '',
-    employment_type: profile.employment_type ?? '',
-    emergency_contact_name: profile.emergency_contact_name ?? '',
-    emergency_contact_phone: profile.emergency_contact_phone ?? '',
-    bio: profile.bio ?? '',
+    date_of_birth: toDateInputValue(employeeProfile?.date_of_birth),
+    gender: employeeProfile?.gender ?? '',
+    nationality: employeeProfile?.nationality ?? '',
+    national_id_number: employeeProfile?.national_id_number ?? '',
+    join_date: toDateInputValue(employeeProfile?.join_date),
+    employment_type: employeeProfile?.employment_type ?? '',
+    address: employeeProfile?.address ?? '',
+    emergency_contact_name: employeeProfile?.emergency_contact_name ?? '',
+    emergency_contact_phone: employeeProfile?.emergency_contact_phone ?? '',
+    bank_account_number: employeeProfile?.bank_account_number ?? '',
+    bank_name: employeeProfile?.bank_name ?? '',
   });
   const [passwordForm, setPasswordForm] = useState({ current_password: '', password: '', password_confirmation: '' });
   const [twoFactorPassword, setTwoFactorPassword] = useState('');
@@ -69,7 +76,7 @@ export default function Profile({ profile }: { profile: User }) {
                 </span>
               </div>
               <p className="mt-1.5 text-sm text-neutral-300 font-medium">
-                {profile.role} · {profile.department?.name ?? 'Unassigned Department'}
+                {formatRole(profile.role)} · {profile.department?.name ?? 'Unassigned Department'}
               </p>
               
               <div className="mt-3.5 flex flex-wrap justify-center gap-y-1.5 gap-x-4 text-sm text-neutral-300 sm:justify-start font-medium">
@@ -100,25 +107,21 @@ export default function Profile({ profile }: { profile: User }) {
             <form onSubmit={submit} className="grid gap-5 md:grid-cols-2">
               <Field label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} error={errors.name} />
               <Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} error={errors.email} />
-              <Field label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} error={errors.phone} />
-              <Field label="Work location" value={form.work_location} onChange={(value) => setForm({ ...form, work_location: value })} error={errors.work_location} />
+              <Field label="Date of birth" type="date" value={form.date_of_birth} onChange={(value) => setForm({ ...form, date_of_birth: value })} error={errors.date_of_birth} />
+              <SelectField label="Gender" value={form.gender} onChange={(value) => setForm({ ...form, gender: value })} error={errors.gender} options={['Male', 'Female']} />
+              <Field label="Nationality" value={form.nationality} onChange={(value) => setForm({ ...form, nationality: value })} error={errors.nationality} />
+              <Field label="National ID number" value={form.national_id_number} onChange={(value) => setForm({ ...form, national_id_number: value })} error={errors.national_id_number} />
+              <Field label="Join date" type="date" value={form.join_date} onChange={(value) => setForm({ ...form, join_date: value })} error={errors.join_date} />
               <Field label="Employment type" value={form.employment_type} onChange={(value) => setForm({ ...form, employment_type: value })} error={errors.employment_type} />
               <Field label="Emergency contact" value={form.emergency_contact_name} onChange={(value) => setForm({ ...form, emergency_contact_name: value })} error={errors.emergency_contact_name} />
               <Field label="Emergency phone" value={form.emergency_contact_phone} onChange={(value) => setForm({ ...form, emergency_contact_phone: value })} error={errors.emergency_contact_phone} />
+              <Field label="Bank name" value={form.bank_name} onChange={(value) => setForm({ ...form, bank_name: value })} error={errors.bank_name} />
+              <Field label="Bank account number" value={form.bank_account_number} onChange={(value) => setForm({ ...form, bank_account_number: value })} error={errors.bank_account_number} />
               
-              <label className="text-sm font-medium uppercase tracking-wider text-neutral-500 md:col-span-2">
-                Bio and Handover Notes
-                <textarea 
-                  className="mt-2 min-h-[7.5rem] w-full rounded-lg border border-neutral-200/70 p-3.5 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none resize-y font-medium leading-relaxed" 
-                  value={form.bio} 
-                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                  placeholder="Tell us about yourself or specify your typical handover guidelines..."
-                />
-                {errors.bio && <span className="mt-1.5 block text-xs text-rose-600 font-medium normal-case">{errors.bio}</span>}
-              </label>
+              <TextAreaField label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })} error={errors.address} />
 
               {/* General Error (if any fallback) */}
-              {Object.values(errors).length > 0 && !errors.name && !errors.email && !errors.phone && !errors.work_location && !errors.employment_type && !errors.emergency_contact_name && !errors.emergency_contact_phone && !errors.bio && (
+              {Object.values(errors).length > 0 && !errors.name && !errors.email && !errors.date_of_birth && !errors.gender && !errors.nationality && !errors.national_id_number && !errors.join_date && !errors.employment_type && !errors.address && !errors.emergency_contact_name && !errors.emergency_contact_phone && !errors.bank_account_number && !errors.bank_name && (
                 <div className="rounded-lg bg-rose-50 border border-rose-100 p-4 text-sm font-medium text-rose-600 md:col-span-2 animate-fade-in">
                   {Object.values(errors)[0]}
                 </div>
@@ -134,9 +137,12 @@ export default function Profile({ profile }: { profile: User }) {
 
           {/* Quick Roster Stats Card */}
           <aside className="space-y-4">
-            <Info icon={<UserRound size={15} />} label="Roster Role" value={profile.role} />
+            <Info icon={<UserRound size={15} />} label="Roster Role" value={formatRole(profile.role)} />
             <Info icon={<BriefcaseBusiness size={15} />} label="Primary Department" value={profile.department?.name ?? 'Unassigned'} />
             <Info icon={<UserRound size={15} />} label="Reporting Manager" value={profile.manager?.name ?? 'No Manager Assigned'} />
+            <Info icon={<CalendarDays size={15} />} label="Join Date" value={formatInfoDate(employeeProfile?.join_date ?? profile.hire_date)} />
+            <Info icon={<MapPin size={15} />} label="Nationality" value={employeeProfile?.nationality ?? 'Not Set'} />
+            <Info icon={<Banknote size={15} />} label="Bank" value={employeeProfile?.bank_name ?? 'Not Set'} />
             <Info 
               icon={<Shield size={15} />} 
               label="Account Protection" 
@@ -238,6 +244,72 @@ export default function Profile({ profile }: { profile: User }) {
   );
 }
 
+function toDateInputValue(value: string | null | undefined): string {
+  return value ? value.slice(0, 10) : '';
+}
+
+function formatInfoDate(value: string | null | undefined): string {
+  return value ? formatDate(value) : 'Not Set';
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  error,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  options: string[];
+}) {
+  return (
+    <label className="block text-sm font-medium uppercase tracking-wider text-neutral-500">
+      {label}
+      <select
+        className="mt-2 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Not set</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      {error && <span className="mt-1.5 block text-xs text-rose-600 font-medium normal-case">{error}</span>}
+    </label>
+  );
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) {
+  return (
+    <label className="text-sm font-medium uppercase tracking-wider text-neutral-500 md:col-span-2">
+      {label}
+      <textarea
+        className="mt-2 min-h-[7.5rem] w-full rounded-lg border border-neutral-200/70 p-3.5 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none resize-y font-medium leading-relaxed"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Current address"
+      />
+      {error && <span className="mt-1.5 block text-xs text-rose-600 font-medium normal-case">{error}</span>}
+    </label>
+  );
+}
+
 function Field({ 
   label, 
   value, 
@@ -253,16 +325,30 @@ function Field({
   error?: string;
   placeholder?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+
   return (
     <label className="block text-sm font-medium uppercase tracking-wider text-neutral-500">
       {label}
-      <input 
-        className="mt-2 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" 
-        type={type} 
-        value={value} 
-        onChange={(e) => onChange(e.target.value)} 
-        placeholder={placeholder}
-      />
+      <div className="relative">
+        <input 
+          className={`mt-2 w-full rounded-lg border border-neutral-200/70 bg-white pl-4 ${isPassword ? 'pr-11' : 'pr-4'} py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium`} 
+          type={isPassword ? (showPassword ? 'text' : 'password') : type} 
+          value={value} 
+          onChange={(e) => onChange(e.target.value)} 
+          placeholder={placeholder}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3.5 bottom-3 text-neutral-400 hover:text-neutral-600 transition-colors focus:outline-none"
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
       {error && <span className="mt-1.5 block text-xs text-rose-600 font-medium normal-case">{error}</span>}
     </label>
   );

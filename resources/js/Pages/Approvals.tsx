@@ -16,7 +16,7 @@ type Props = {
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  approved: { bg: 'bg-green-500/[0.04]', border: 'border-green-500/10', text: 'text-green-700/90', dot: 'bg-green-500' },
   rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
   cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
 };
@@ -66,7 +66,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
         {/* Metric widgets */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Metric icon={<Clock3 size={15} />} label="Waiting Reviews" value={approvalStats.pending} variant="amber" />
-          <Metric icon={<ShieldCheck size={15} />} label="Approved This Month" value={approvalStats.approved_this_month} variant="orange" />
+          <Metric icon={<ShieldCheck size={15} />} label="Approved This Month" value={approvalStats.approved_this_month} variant="green" />
           <Metric icon={<X size={15} />} label="Rejected This Month" value={approvalStats.rejected_this_month} variant="rose" />
           <Metric icon={<Users size={15} />} label="On Leave Today" value={approvalStats.team_members_on_leave} variant="indigo" />
         </div>
@@ -377,7 +377,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
   );
 }
 
-function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' }) {
+function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' | 'green' }) {
   const themes = {
     amber: {
       border: 'border-amber-100/60',
@@ -388,6 +388,11 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
       border: 'border-orange-100/60',
       bg: 'bg-gradient-to-br from-orange-500/5 to-orange-600/5',
       iconBg: 'bg-orange-50 text-orange-600 border-orange-100/70',
+    },
+    green: {
+      border: 'border-green-100/60',
+      bg: 'bg-gradient-to-br from-green-500/5 to-green-600/5',
+      iconBg: 'bg-green-50 text-green-600 border-green-100/70',
     },
     rose: {
       border: 'border-rose-100/60',

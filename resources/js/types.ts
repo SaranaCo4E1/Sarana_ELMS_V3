@@ -2,7 +2,7 @@ export type User = {
   id: number;
   name: string;
   email: string;
-  role: 'staff' | 'manager' | 'hr' | 'admin';
+  role: 'staff' | 'manager' | 'hr admin' | 'admin';
   employee_code?: string | null;
   job_title?: string | null;
   phone?: string | null;
@@ -14,10 +14,29 @@ export type User = {
   hire_date?: string | null;
   is_active?: boolean;
   two_factor_enabled?: boolean;
+  profile?: UserProfile | null;
   department?: { id: number; name: string } | null;
   manager?: { id: number; name: string } | null;
   pending_leave_requests_count?: number;
   approved_leave_requests_count?: number;
+  leaveBalances?: LeaveBalance[];
+};
+
+export type UserProfile = {
+  id: number;
+  user_id: number;
+  date_of_birth?: string | null;
+  gender?: 'Male' | 'Female' | null;
+  nationality?: string | null;
+  national_id_number?: string | null;
+  join_date?: string | null;
+  employment_type?: string | null;
+  address?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  bank_account_number?: string | null;
+  bank_name?: string | null;
+  profile_picture_url?: string | null;
 };
 
 export type LeaveType = {
@@ -34,10 +53,15 @@ export type LeaveType = {
 
 export type LeaveBalance = {
   id: number;
+  leave_type_id: number;
+  year: number;
   allowance_days: string;
+  carried_forward_days: string;
   used_days: string;
   pending_days: string;
+  adjustment_days: string;
   available_days: number;
+  override_reason?: string | null;
   leave_type: LeaveType;
 };
 
@@ -47,7 +71,7 @@ export type LeaveRequest = {
   ends_at: string;
   requested_days: string;
   status: string;
-  reason: string;
+  reason: string | null;
   manager_comment?: string | null;
   submitted_at?: string | null;
   decided_at?: string | null;
@@ -68,7 +92,7 @@ export type SystemNotification = {
 };
 
 export type PageProps = {
-  auth: { user: User };
+  auth: { user: User; pending_approvals_count: number };
   notifications: {
     items: SystemNotification[];
     unread_count: number;
