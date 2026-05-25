@@ -110,14 +110,14 @@ export default function Landing() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1.5 rounded-xl bg-neutral-950 px-4.5 py-2 text-xs font-semibold text-white hover:bg-neutral-900 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
+                className="flex items-center gap-1.5 rounded-xl bg-neutral-800 px-4.5 py-2 text-xs font-semibold text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
               >
                 Go to Dashboard <ArrowUpRight size={14} className="text-emerald-400" />
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="flex items-center gap-1 rounded-xl bg-neutral-950 px-4.5 py-2.5 text-xs font-semibold text-white hover:bg-neutral-900 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
+                className="flex items-center gap-1 rounded-xl bg-neutral-800 px-4.5 py-2.5 text-xs font-semibold text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
               >
                 Sign In
               </Link>
@@ -141,21 +141,21 @@ export default function Landing() {
           </h1>
 
           <p className="mt-6 max-w-lg text-sm sm:text-base font-medium leading-relaxed text-neutral-500">
-            An advanced, AI-powered Employee Leave Management System designed to orchestrate holiday schedules, automate approvals, and maintain department synchronization in real-time. Beautifully intuitive. Extremely fast.
+            An AI-powered Employee Leave Management System designed to orchestrate holiday schedules, automate approvals, and maintain department synchronization in real-time.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {user ? (
               <Link
                 href="/dashboard"
-                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-6 font-semibold text-white hover:bg-neutral-900 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-neutral-800 px-6 font-semibold text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
               >
                 Access Dashboard <ArrowRight size={15} className="text-emerald-400" />
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-6 font-semibold text-white hover:bg-neutral-900 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-neutral-800 px-6 font-semibold text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
               >
                 Access Leave Portal <ArrowRight size={15} className="text-emerald-400" />
               </Link>
@@ -461,7 +461,7 @@ export default function Landing() {
                       : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <Users size={14} /> <span className="truncate">Staff View (Dara)</span>
+                  <Users size={14} /> <span className="truncate">Staff View</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('manager')}
@@ -471,7 +471,7 @@ export default function Landing() {
                       : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <ClipboardCheck size={14} /> <span className="truncate">Manager View (Sokha)</span>
+                  <ClipboardCheck size={14} /> <span className="truncate">Manager View</span>
                 </button>
               </div>
 
@@ -487,7 +487,7 @@ export default function Landing() {
                 <div className="space-y-6 animate-fade-in">
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div>
-                      <h4 className="text-sm font-bold text-neutral-850">Dara's Leave Dashboard</h4>
+                      <h4 className="text-sm font-bold text-neutral-850">Staff's Leave Dashboard</h4>
                       <p className="text-[11px] font-semibold text-neutral-400 mt-0.5">Staff Portal · Engineering Dept</p>
                     </div>
 
@@ -515,7 +515,7 @@ export default function Landing() {
                         {mockRequestApproved ? '0.0 days' : '3.0 days'}
                       </div>
                       <div className="text-[10px] font-medium text-amber-500 mt-1">
-                        {mockRequestApproved ? 'Queue clear' : 'Awaiting Sokha\'s review'}
+                        {mockRequestApproved ? 'Queue clear' : "Awaiting Manager's review"}
                       </div>
                     </div>
                   </div>
@@ -555,7 +555,7 @@ export default function Landing() {
                 <div className="space-y-6 animate-fade-in">
                   <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3">
                     <div>
-                      <h4 className="text-sm font-bold text-neutral-850">Sokha's Approval Desk</h4>
+                      <h4 className="text-sm font-bold text-neutral-850">Manager's Approval Desk</h4>
                       <p className="text-[11px] font-semibold text-neutral-400 mt-0.5">Manager Dashboard · Engineering Lead</p>
                     </div>
                     <span className="rounded-xl border border-neutral-200 bg-neutral-50/50 px-3 py-1.5 text-xs font-semibold text-neutral-700 self-start xs:self-center">
@@ -570,7 +570,7 @@ export default function Landing() {
                       </div>
                       <h5 className="text-xs font-bold text-neutral-800">Leave approval completed!</h5>
                       <p className="text-[11px] text-neutral-400 mt-1">
-                        Dara's request has been updated. Sokha's inbox is empty.
+                        The Staff's request has been updated. The Manager's inbox is empty.
                       </p>
                       <button
                         onClick={() => {
@@ -588,11 +588,11 @@ export default function Landing() {
                       <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <div className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-emerald-100 font-bold text-emerald-800 text-[10px]">
-                            CD
+                            SE
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-neutral-800">Chan Dara</div>
-                            <div className="text-[10px] font-semibold text-neutral-400">Software Engineer</div>
+                            <div className="text-xs font-bold text-neutral-850">Software Engineer</div>
+                            <div className="text-[10px] font-semibold text-neutral-400">Engineering Dept</div>
                           </div>
                         </div>
                         <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-100 self-start xs:self-center">

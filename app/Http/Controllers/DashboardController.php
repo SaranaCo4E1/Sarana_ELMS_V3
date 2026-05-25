@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LeaveRequest;
+use App\Models\PublicHoliday;
 use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\LeaveBalanceService;
@@ -52,6 +53,32 @@ class DashboardController extends Controller
                 ->sum('requested_days'),
         ];
 
+        $upcomingHolidays = PublicHoliday::query()
+            ->where('is_active', true)
+            ->whereDate('holiday_date', '>=', now()->toDateString())
+            ->orderBy('holiday_date')
+            ->limit(5)
+            ->get();
+
+        $myUpcomingLeaves = $user->leaveRequests()
+            ->with(['leaveType', 'approver'])
+            ->where('status', 'approved')
+            ->whereDate('ends_at', '>=', now()->toDateString())
+            ->orderBy('starts_at')
+            ->limit(5)
+            ->get();
+
+        $teamUpcomingLeaves = $user->isManager()
+            ? LeaveRequest::query()
+                ->with(['user.department', 'leaveType'])
+                ->where('status', 'approved')
+                ->whereDate('ends_at', '>=', now()->toDateString())
+                ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))
+                ->orderBy('starts_at')
+                ->limit(5)
+                ->get()
+            : collect();
+
         return Inertia::render('Dashboard', [
             'balances' => $user->leaveBalances()->with('leaveType')->where('year', now()->year)->get(),
             'requests' => $requests,
@@ -59,6 +86,9 @@ class DashboardController extends Controller
             'pendingApprovals' => $pendingApprovals,
             'teamMembers' => $teamMembers,
             'systemAlerts' => SystemNotification::query()->where('user_id', $user->id)->latest()->limit(8)->get(),
+            'upcomingHolidays' => $upcomingHolidays,
+            'myUpcomingLeaves' => $myUpcomingLeaves,
+            'teamUpcomingLeaves' => $teamUpcomingLeaves,
         ]);
     }
 }

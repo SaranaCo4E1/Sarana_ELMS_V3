@@ -1,9 +1,9 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, FileText, Search, Users, X } from 'lucide-react';
+import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, FileText, Search, Users, X, CalendarDays } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
-import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User } from '../types';
+import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
 import { formatDays, formatShortDate } from '../utils';
 
 type Props = {
@@ -13,6 +13,9 @@ type Props = {
   pendingApprovals: LeaveRequest[];
   teamMembers: User[];
   systemAlerts: SystemNotification[];
+  upcomingHolidays: PublicHoliday[];
+  myUpcomingLeaves: LeaveRequest[];
+  teamUpcomingLeaves: LeaveRequest[];
 };
 
 const statusStyles: Record<string, { bg: string; border: string; text: string }> = {
@@ -22,7 +25,31 @@ const statusStyles: Record<string, { bg: string; border: string; text: string }>
   cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' },
 };
 
-export default function Dashboard({ balances, requests, requestStats, pendingApprovals, teamMembers, systemAlerts }: Props) {
+export const getLeaveColor = (code: string) => {
+  const c = code.toLowerCase();
+  if (c === 'al' || c.includes('annual')) {
+    return { dot: 'bg-blue-500', bar: 'bg-blue-500' };
+  }
+  if (c === 'sl' || c.includes('sick')) {
+    return { dot: 'bg-red-500', bar: 'bg-red-500' };
+  }
+  if (c === 'el' || c.includes('emerg') || c.includes('cas')) {
+    return { dot: 'bg-amber-500', bar: 'bg-amber-500' };
+  }
+  return { dot: 'bg-indigo-500', bar: 'bg-indigo-500' };
+};
+
+export default function Dashboard({
+  balances,
+  requests,
+  requestStats,
+  pendingApprovals,
+  teamMembers,
+  systemAlerts,
+  upcomingHolidays = [],
+  myUpcomingLeaves = [],
+  teamUpcomingLeaves = [],
+}: Props) {
   const { auth } = usePage<PageProps>().props;
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
@@ -46,49 +73,112 @@ export default function Dashboard({ balances, requests, requestStats, pendingApp
             <Metric icon={<CalendarClock size={15} />} label="Scheduled Days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
           </div>
 
-          {/* Leave balances cards */}
+          {/* Leave Balances Cards Grid */}
           <div>
             <div className="mb-5">
               <h2 className="text-base font-semibold text-neutral-850">Leave Balance</h2>
-              <p className="text-xs font-medium text-neutral-400 mt-1">Your available quotas for the current calendar year</p>
+              <p className="text-xs font-medium text-neutral-450 mt-1">Your available quotas for the current calendar year</p>
             </div>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
               {balances.map((balance) => {
-                const used = Number(balance.used_days);
+                const avail = Number(balance.available_days);
                 const allowance = Math.max(1, Number(balance.allowance_days));
-                const percent = Math.min(100, (used / allowance) * 100);
-                
+                const used = Number(balance.used_days);
+                const percent = Math.min(100, (avail / allowance) * 100);
+                const color = getLeaveColor(balance.leave_type.code);
+
                 return (
-                  <div key={balance.id} className="relative overflow-hidden rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300 group">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-neutral-850 group-hover:text-emerald-650 transition-colors duration-250">{balance.leave_type.name}</div>
-                        <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 mt-1">{balance.leave_type.code}</div>
+                  <div key={balance.id} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
+                    {/* Top Row */}
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`h-3 w-3 rounded-full shrink-0 ${color.dot}`} />
+                        <span className="font-semibold text-neutral-850 text-sm sm:text-base">
+                          {balance.leave_type.name}
+                        </span>
                       </div>
-                      <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-750 shadow-sm">
-                        {formatDays(balance.available_days)} left
+                      <span className="text-sm font-extrabold text-neutral-850 tracking-tight">
+                        {formatDays(balance.available_days)} / {formatDays(balance.allowance_days)}
                       </span>
                     </div>
 
-                    <div className="mt-6">
-                      <div className="flex justify-between text-xs font-medium text-neutral-400 mb-2">
-                        <span>Used: <span className="font-semibold text-neutral-600">{formatDays(balance.used_days)}</span></span>
-                        <span>{Math.round(percent)}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full overflow-hidden bg-neutral-100">
-                        <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500 ease-out" style={{ width: `${percent}%` }} />
-                      </div>
+                    {/* Progress Bar */}
+                    <div className="h-1.5 w-full rounded-full bg-neutral-100 mb-3 overflow-hidden">
+                      <div
+                        className={`h-full ${color.bar} rounded-full transition-all duration-500 ease-out`}
+                        style={{ width: `${percent}%` }}
+                      />
                     </div>
 
-                    <div className="mt-5 pt-4 border-t border-neutral-100/60 grid grid-cols-2 gap-2 text-xs text-neutral-400 font-medium">
-                      <div>Quota: <span className="font-semibold text-neutral-700">{formatDays(balance.allowance_days)}</span></div>
-                      <div className="text-right font-medium">Pending: <span className="font-semibold text-neutral-700">{formatDays(balance.pending_days)}</span></div>
+                    {/* Footer Row */}
+                    <div className="flex items-center justify-between text-xs text-neutral-455 text-neutral-450 font-medium px-0.5">
+                      <span>Used: {formatDays(balance.used_days)}</span>
+                      <span>Pending: {formatDays(balance.pending_days)}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
+
+          {/* Upcoming Leave Schedule Preview */}
+          {((auth.user.role !== 'staff' && teamUpcomingLeaves.length > 0) || myUpcomingLeaves.length > 0) && (
+            <div className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+              <div className="mb-5 flex justify-between items-center">
+                <div>
+                  <h2 className="text-base font-semibold text-neutral-850">
+                    {['manager', 'hr', 'admin'].includes(auth.user.role) ? 'Upcoming Team Leave Schedule' : 'My Upcoming Leave Schedule'}
+                  </h2>
+                  <p className="text-xs font-medium text-neutral-450 mt-1">
+                    {['manager', 'hr', 'admin'].includes(auth.user.role)
+                      ? 'Approved leaves starting soon for your direct team members'
+                      : 'Your upcoming approved leave requests'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                {['manager', 'hr', 'admin'].includes(auth.user.role)
+                  ? teamUpcomingLeaves.map((leave) => (
+                      <div key={leave.id} className="rounded-xl border border-neutral-100 bg-[#fafbfa]/40 p-4 flex items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-neutral-850 truncate">{leave.user?.name}</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-[10px] font-semibold text-emerald-750 border border-emerald-100/50 uppercase shrink-0">
+                              {leave.leave_type.code}
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-500 font-medium mt-1.5">
+                            {formatShortDate(leave.starts_at)} – {formatShortDate(leave.ends_at)}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-extrabold text-neutral-800">{formatDays(leave.requested_days)}</span>
+                          <span className="block text-[10px] font-semibold text-neutral-450 mt-0.5">days</span>
+                        </div>
+                      </div>
+                    ))
+                  : myUpcomingLeaves.map((leave) => (
+                      <div key={leave.id} className="rounded-xl border border-neutral-100 bg-[#fafbfa]/40 p-4 flex items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-[10px] font-semibold text-emerald-750 border border-emerald-100/50 uppercase shrink-0">
+                              {leave.leave_type.name}
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-500 font-medium mt-1.5">
+                            {formatShortDate(leave.starts_at)} – {formatShortDate(leave.ends_at)}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-extrabold text-neutral-800">{formatDays(leave.requested_days)}</span>
+                          <span className="block text-[10px] font-semibold text-neutral-450 mt-0.5">days</span>
+                        </div>
+                      </div>
+                    ))}
+              </div>
+            </div>
+          )}
 
           {/* Recent Requests list */}
           <div className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
@@ -138,42 +228,42 @@ export default function Dashboard({ balances, requests, requestStats, pendingApp
               href="/approvals"
               className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50/50 px-4 py-3.5 text-xs font-semibold text-amber-900 hover:bg-amber-50 hover:border-amber-200/60 shadow-premium-sm transition-all duration-200"
             >
-              <span>{pendingApprovals.length} request(s) need review</span>
+              <span>{pendingApprovals.length} {pendingApprovals.length === 1 ? 'request needs' : 'requests need'} review</span>
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-bold text-white shadow-sm">
                 {pendingApprovals.length}
               </span>
             </Link>
           )}
 
-          {['manager', 'hr', 'admin'].includes(auth.user.role) && (
-            <div className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-              <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
-                <Users size={14} className="text-neutral-400" /> Team Snapshot
-              </div>
-              <div className="space-y-2.5">
-                {teamMembers.slice(0, 8).map((member) => (
-                  <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-neutral-100 bg-neutral-50/30 px-3.5 py-3 text-xs">
-                    <span className="font-semibold text-neutral-750">{member.name}</span>
-                    <span className="bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-100/50 rounded-full">
-                      {member.pending_leave_requests_count ?? 0} pending
+          {/* Upcoming Holidays widget */}
+          <div className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+            <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+              <CalendarDays size={14} className="text-neutral-400" /> Upcoming Holidays
+            </div>
+            <div className="space-y-3">
+              {upcomingHolidays.map((holiday) => (
+                <div key={holiday.id} className="flex items-center gap-3 rounded-xl border border-neutral-100 bg-[#fafbfa]/40 p-3 text-xs transition-all hover:bg-neutral-50/60">
+                  <div className="flex h-10 w-10 flex-col items-center justify-center rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-100 font-semibold shadow-premium-sm shrink-0">
+                    <span className="text-[10px] uppercase font-bold tracking-tight text-emerald-700">
+                      {new Date(holiday.holiday_date).toLocaleDateString(undefined, { month: 'short' })}
+                    </span>
+                    <span className="text-sm font-extrabold leading-none mt-0.5 text-emerald-800">
+                      {new Date(holiday.holiday_date).toLocaleDateString(undefined, { day: 'numeric' })}
                     </span>
                   </div>
-                ))}
-                {teamMembers.length === 0 && <p className="py-4 text-center text-xs text-neutral-400 font-medium">No team members assigned.</p>}
-              </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold text-neutral-850">{holiday.name}</div>
+                    <div className="text-[10px] font-medium text-neutral-400 mt-0.5">
+                      {new Date(holiday.holiday_date).toLocaleDateString(undefined, { weekday: 'long' })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {upcomingHolidays.length === 0 && (
+                <p className="py-4 text-center text-xs text-neutral-400 font-medium">No upcoming holidays.</p>
+              )}
             </div>
-          )}
-
-          <SideList title="System Alerts" empty="No active alerts." items={systemAlerts.map((item) => `${item.title} · ${item.body}`)} />
-          
-          {['hr', 'admin'].includes(auth.user.role) && (
-            <a
-              className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 shadow-premium-sm transition-all duration-200 active:scale-98"
-              href={`/reports/monthly?month=${new Date().toISOString().slice(0, 7)}`}
-            >
-              <FileText size={14} /> Download current month CSV
-            </a>
-          )}
+          </div>
         </aside>
       </div>
     </AppLayout>

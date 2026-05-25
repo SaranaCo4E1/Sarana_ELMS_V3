@@ -23,6 +23,20 @@ const statusStyles: Record<string, { bg: string; border: string; text: string }>
   cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' },
 };
 
+export const getLeaveColor = (code: string) => {
+  const c = code.toLowerCase();
+  if (c === 'al' || c.includes('annual')) {
+    return { dot: 'bg-blue-500', bar: 'bg-blue-500' };
+  }
+  if (c === 'sl' || c.includes('sick')) {
+    return { dot: 'bg-red-500', bar: 'bg-red-500' };
+  }
+  if (c === 'el' || c.includes('emerg') || c.includes('cas')) {
+    return { dot: 'bg-amber-500', bar: 'bg-amber-500' };
+  }
+  return { dot: 'bg-indigo-500', bar: 'bg-indigo-500' };
+};
+
 export default function ApplyLeave({ leaveTypes, balances, requests, requestStats, holidays }: Props) {
   const { errors } = usePage<PageProps>().props;
   const [form, setForm] = useState({
@@ -359,18 +373,45 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
             <div className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
               My Balances
             </div>
-            <div className="space-y-3">
-              {balances.map((balance) => (
-                <div key={balance.id} className="flex items-center justify-between gap-3 text-sm border-b border-neutral-100/60 pb-3 last:border-0 last:pb-0">
-                  <div>
-                    <div className="font-semibold text-neutral-755">{balance.leave_type.name}</div>
-                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mt-1">{balance.leave_type.code}</div>
+            <div className="space-y-4">
+              {balances.map((balance) => {
+                const avail = Number(balance.available_days);
+                const allowance = Math.max(1, Number(balance.allowance_days));
+                const used = Number(balance.used_days);
+                const percent = Math.min(100, (avail / allowance) * 100);
+                const color = getLeaveColor(balance.leave_type.code);
+
+                return (
+                  <div key={balance.id} className="space-y-2 border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
+                    {/* Top Row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${color.dot}`} />
+                        <span className="font-semibold text-neutral-800 text-xs truncate max-w-[130px]" title={balance.leave_type.name}>
+                          {balance.leave_type.name}
+                        </span>
+                      </div>
+                      <span className="text-xs font-extrabold text-neutral-800 shrink-0">
+                        {formatDays(balance.available_days)} / {formatDays(balance.allowance_days)}
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden">
+                      <div
+                        className={`h-full ${color.bar} rounded-full transition-all duration-500 ease-out`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+
+                    {/* Footer Row */}
+                    <div className="flex justify-between text-[10px] text-neutral-455 text-neutral-450 font-medium px-0.5">
+                      <span>Used: {formatDays(balance.used_days)}</span>
+                      <span>Pending: {formatDays(balance.pending_days)}</span>
+                    </div>
                   </div>
-                  <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 shadow-sm">
-                    {formatDays(balance.available_days)} left
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </aside>

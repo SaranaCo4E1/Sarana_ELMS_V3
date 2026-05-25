@@ -76,3 +76,11 @@ export type PageProps = {
   flash: { success?: string; error?: string };
   errors: Record<string, string>;
 };
+
+export type PublicHoliday = {
+  id: number;
+  holiday_date: string;
+  name: string;
+  is_active: boolean;
+};
+
