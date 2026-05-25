@@ -60,7 +60,7 @@ export default function Dashboard({
             <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
             <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="green" />
             <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
-            <Metric icon={<CalendarClock size={15} />} label="Scheduled Days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
+            <Metric icon={<CalendarClock size={15} />} label="Scheduled" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
           </div>
 
           {/* Leave Balances Cards Grid */}
