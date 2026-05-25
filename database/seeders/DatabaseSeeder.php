@@ -288,7 +288,7 @@ class DatabaseSeeder extends Seeder
                     'status' => $status,
                     'reason' => $reason,
                     'manager_comment' => match ($status) {
-                        'approved' => 'Approved after manager review.',
+                        'approved' => 'Approved',
                         'rejected' => 'Rejected due to coverage needs.',
                         default => null,
                     },
