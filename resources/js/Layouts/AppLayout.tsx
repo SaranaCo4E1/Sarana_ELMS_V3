@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ClipboardCheck, IdCard, LogOut, Menu, Settings, Sparkles, Users, X } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, IdCard, LogOut, Menu, Settings, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
@@ -11,6 +11,29 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [flashVisible, setFlashVisible] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('sidebar_collapsed');
+        return saved ? JSON.parse(saved) : false;
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  const toggleSidebar = () => {
+    setCollapsed((prev: boolean) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar_collapsed', JSON.stringify(next));
+      } catch (e) {
+        // Ignore
+      }
+      return next;
+    });
+  };
 
   const user = auth.user;
   const canApprove = canApproveRole(user.role);
@@ -37,62 +60,86 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
     return url.startsWith(path);
   };
 
-  const navItemClass = (path: string) => {
+  const navItemClass = (path: string, isCollapsed = false) => {
     const active = isActive(path);
-    return `flex items-center gap-3.5 px-4.5 py-3 text-sm transition-all duration-200 rounded-lg mx-2 border ${
+    return `flex items-center transition-all duration-200 rounded-lg border ${
+      isCollapsed
+        ? 'justify-center h-10 w-10 p-0 mx-auto'
+        : 'gap-3.5 px-4.5 py-3 text-sm mx-2'
+    } ${
       active
         ? 'bg-orange-50 bg-orange-50/50 border-orange-100/60 text-orange-800 font-medium shadow-premium-sm'
         : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/40 font-normal'
     }`;
   };
 
-  const NavContent = () => (
+  const NavContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
     <div className="flex h-full flex-col justify-between py-6 bg-white">
       <div>
-        <div className="flex items-center gap-3 px-6">
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10">
+        <div className={`flex items-center gap-3 px-6 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : ''}`}>
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10 shrink-0">
             <Bot size={16} />
           </div>
-          <div>
-            <div className="font-medium tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
-            <div className="text-xs font-normal text-neutral-400 uppercase tracking-wider mt-0.5">Workspace</div>
-          </div>
+          {!isCollapsed && (
+            <div className="animate-fade-in whitespace-nowrap">
+              <div className="font-medium tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
+              <div className="text-xs font-normal text-neutral-400 uppercase tracking-wider mt-0.5">Workspace</div>
+            </div>
+          )}
         </div>
 
         <nav className="mt-8 space-y-1">
-          <Link className={navItemClass('/dashboard')} href="/dashboard">
-            <CalendarCheck size={16} className="shrink-0" /> Dashboard
+          <Link className={navItemClass('/dashboard', isCollapsed)} href="/dashboard" title={isCollapsed ? "Dashboard" : undefined}>
+            <CalendarCheck size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Dashboard</span>}
           </Link>
-          <Link className={navItemClass('/calendar')} href="/calendar">
-            <CalendarDays size={16} className="shrink-0" /> Calendar
+          <Link className={navItemClass('/calendar', isCollapsed)} href="/calendar" title={isCollapsed ? "Calendar" : undefined}>
+            <CalendarDays size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Calendar</span>}
           </Link>
-          <Link className={navItemClass('/apply-leave')} href="/apply-leave">
-            <CalendarPlus size={16} className="shrink-0" /> Apply Leave
+          <Link className={navItemClass('/apply-leave', isCollapsed)} href="/apply-leave" title={isCollapsed ? "Apply Leave" : undefined}>
+            <CalendarPlus size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Apply Leave</span>}
           </Link>
-          <Link className={navItemClass('/ai-assistant')} href="/ai-assistant">
-            <Bot size={16} className="shrink-0" /> ELMS Copilot
+          <Link className={navItemClass('/ai-assistant', isCollapsed)} href="/ai-assistant" title={isCollapsed ? "ELMS Copilot" : undefined}>
+            <Bot size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">ELMS Copilot</span>}
           </Link>
-          <Link className={navItemClass('/profile')} href="/profile">
-            <IdCard size={16} className="shrink-0" /> My Profile
+          <Link className={navItemClass('/profile', isCollapsed)} href="/profile" title={isCollapsed ? "My Profile" : undefined}>
+            <IdCard size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">My Profile</span>}
           </Link>
           
           {(canApprove || canAdmin) && (
-            <div className="my-5 border-t border-neutral-100 px-6 pt-5">
-              <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">Management</span>
+            <div className={`my-5 border-t border-neutral-100 pt-5 transition-all duration-300 ${isCollapsed ? 'px-3' : 'px-6'}`}>
+              {!isCollapsed ? (
+                <span className="text-xs font-medium uppercase tracking-wider text-neutral-400 animate-fade-in whitespace-nowrap">Management</span>
+              ) : (
+                <div className="h-px bg-neutral-100 -mx-3" />
+              )}
             </div>
           )}
 
           {canApprove && (
-            <Link className={navItemClass('/team')} href="/team">
-              <Users size={16} className="shrink-0" /> Team Center
+            <Link className={navItemClass('/team', isCollapsed)} href="/team" title={isCollapsed ? "Team Center" : undefined}>
+              <Users size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Team Center</span>}
             </Link>
           )}
           {canApprove && (
-            <Link className={`${navItemClass('/approvals')} !justify-between`} href="/approvals">
+            <Link className={`${navItemClass('/approvals', isCollapsed)} relative ${!isCollapsed ? '!justify-between' : ''}`} href="/approvals" title={isCollapsed ? `Approvals (${auth.pending_approvals_count} pending)` : undefined}>
               <div className="flex items-center gap-3.5">
-                <ClipboardCheck size={16} className="shrink-0" /> Approvals
+                <div className="relative">
+                  <ClipboardCheck size={16} className="shrink-0" />
+                  {isCollapsed && auth.pending_approvals_count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-600 text-[8px] font-bold text-white ring-2 ring-white">
+                      {auth.pending_approvals_count}
+                    </span>
+                  )}
+                </div>
+                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Approvals</span>}
               </div>
-              {auth.pending_approvals_count > 0 && (
+              {!isCollapsed && auth.pending_approvals_count > 0 && (
                 <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange-600 px-1 text-[10px] font-semibold text-white shadow-premium-sm">
                   {auth.pending_approvals_count}
                 </span>
@@ -100,30 +147,43 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
             </Link>
           )}
           {canAdmin && (
-            <Link className={navItemClass('/admin')} href="/admin">
-              <Settings size={16} className="shrink-0" /> HR Admin
+            <Link className={navItemClass('/admin', isCollapsed)} href="/admin" title={isCollapsed ? "HR Admin" : undefined}>
+              <Settings size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">HR Admin</span>}
             </Link>
           )}
         </nav>
       </div>
 
-      <div className="px-4">
+      <div className={`px-4 transition-all duration-300 ${isCollapsed ? 'px-2 flex flex-col items-center gap-4' : ''}`}>
         {/* User Mini Profile Card */}
-        <div className="mb-5 flex items-center gap-4 border border-neutral-200 bg-[#fafbfa]/70 rounded-xl p-4 shadow-premium-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-inner shrink-0">
+        {isCollapsed ? (
+          <div 
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-premium-sm shrink-0 cursor-pointer hover:bg-orange-100/50 transition-colors"
+            title={`${user.name} (${formatRole(user.role)})`}
+          >
             {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-normal text-neutral-800">{user.name}</div>
-            <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{formatRole(user.role)}</div>
+        ) : (
+          <div className="mb-5 flex items-center gap-4 border border-neutral-200 bg-[#fafbfa]/70 rounded-xl p-4 shadow-premium-sm animate-fade-in">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-inner shrink-0">
+              {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-normal text-neutral-800">{user.name}</div>
+              <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{formatRole(user.role)}</div>
+            </div>
           </div>
-        </div>
+        )}
 
         <button
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98"
+          className={`flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98 cursor-pointer ${
+            isCollapsed ? 'h-10 w-10 px-0 py-0 shrink-0' : 'w-full px-4 py-3 gap-2'
+          }`}
           onClick={() => router.post('/logout')}
+          title={isCollapsed ? "Sign out" : undefined}
         >
-          <LogOut size={14} /> Sign out
+          <LogOut size={14} /> {!isCollapsed && <span>Sign out</span>}
         </button>
       </div>
     </div>
@@ -160,12 +220,25 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
       </aside>
 
       {/* Desktop Permanent Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-neutral-200/70 bg-white/90 backdrop-blur-md lg:block">
-        <NavContent />
+      <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-neutral-200/70 bg-white/90 backdrop-blur-md transition-all duration-300 ease-in-out lg:block ${
+        collapsed ? 'w-20' : 'w-64'
+      }`}>
+        <NavContent isCollapsed={collapsed} />
+        
+        {/* Sidebar Toggle Button */}
+        <button
+          onClick={toggleSidebar}
+          className="absolute -right-3 top-10 z-40 flex h-6.5 w-6.5 items-center justify-center rounded-full border border-neutral-200/85 bg-white text-neutral-500 shadow-premium-sm transition-all hover:bg-neutral-50 hover:text-neutral-800 cursor-pointer hover:scale-105 active:scale-95"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+        </button>
       </aside>
 
       {/* Main Container */}
-      <div className="relative z-10 lg:pl-64 flex flex-col h-screen min-w-0">
+      <div className={`relative z-10 flex flex-col h-screen min-w-0 transition-all duration-300 ease-in-out ${
+        collapsed ? 'lg:pl-20' : 'lg:pl-64'
+      }`}>
         {/* Top Navbar */}
         <header className="sticky top-0 z-20 border-b border-neutral-200/50 bg-white/80 backdrop-blur-md px-3 py-3 xs:px-4 sm:px-8">
           <div className="flex items-center justify-between gap-4">
