@@ -248,7 +248,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     {suggestedPrompts.map((suggestion) => (
                       <button
                         key={suggestion}
-                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-655 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-lg shadow-premium-sm cursor-pointer"
+                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-600 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-lg shadow-premium-sm cursor-pointer"
                         type="button"
                         onClick={() => setExternalPrompt(suggestion)}
                       >

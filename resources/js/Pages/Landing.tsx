@@ -100,7 +100,7 @@ export default function Landing() {
             <a href="#preview" className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">Interactive Demo</a>
             <a href="#faq" className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">Policies & FAQ</a>
             <div className="flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-medium text-orange-700 border border-orange-100/60 shadow-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-505 animate-pulse"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
               Platform Active
             </div>
           </nav>
@@ -260,7 +260,7 @@ export default function Landing() {
                       <div className="flex justify-start animate-fade-in">
                         <div className="max-w-[90%] space-y-2">
                           <div className="rounded-lg bg-neutral-50/60 border border-neutral-200/50 px-3 py-2 text-neutral-600 font-medium">
-                            Ã°Å¸Â¤â€“ Based on NiyAI handbook, you have <strong className="font-medium text-neutral-900">14.5 days</strong> of Annual Leave remaining. Would you like me to draft a request for you?
+                            🤖 Based on the company handbook, you have <strong className="font-medium text-neutral-900">14.5 days</strong> of Annual Leave remaining. Would you like me to draft a request for you?
                           </div>
                           
                           {chatStep === 'initial' && (
@@ -476,7 +476,7 @@ export default function Landing() {
               </div>
 
               <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider flex items-center gap-1.5 w-full sm:w-auto justify-center sm:justify-start">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-505 animate-ping" />
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-ping" />
                 Live simulator
               </div>
             </div>
@@ -488,7 +488,7 @@ export default function Landing() {
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div>
                       <h4 className="text-sm font-medium text-neutral-800">Staff's Leave Dashboard</h4>
-                      <p className="text-[11px] font-medium text-neutral-400 mt-0.5">Staff Portal Ã‚Â· Engineering Dept</p>
+                      <p className="text-[11px] font-medium text-neutral-400 mt-0.5">Staff Portal · Engineering Dept</p>
                     </div>
 
                     <div className="flex gap-2">
@@ -536,8 +536,8 @@ export default function Landing() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-medium text-neutral-500">
                       <div className="space-y-1">
                         <div className="font-medium text-neutral-800">Sick Leave (Medical recovery)</div>
-                        <div>Schedule: May 25 Ã¢â‚¬â€œ May 28 (3.0 requested days)</div>
-                        <div className="text-[10px] font-medium text-neutral-450">Submitted: Today Ã‚Â· Handled via ELMS Copilot</div>
+                        <div>Schedule: May 25 – May 28 (3.0 requested days)</div>
+                        <div className="text-[10px] font-medium text-neutral-450">Submitted: Today · Handled via ELMS Copilot</div>
                       </div>
 
                       {!mockRequestApproved && (
@@ -556,7 +556,7 @@ export default function Landing() {
                   <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3">
                     <div>
                       <h4 className="text-sm font-medium text-neutral-800">Manager's Approval Desk</h4>
-                      <p className="text-[11px] font-medium text-neutral-400 mt-0.5">Manager Dashboard Ã‚Â· Engineering Lead</p>
+                      <p className="text-[11px] font-medium text-neutral-400 mt-0.5">Manager Dashboard · Engineering Lead</p>
                     </div>
                     <span className="rounded-lg border border-neutral-200 bg-neutral-50/50 px-3 py-1.5 text-xs font-medium text-neutral-700 self-start xs:self-center">
                       Active Queue: {mockRequestApproved ? '0' : '1'} request
@@ -602,8 +602,8 @@ export default function Landing() {
 
                       <div className="border-t border-neutral-200/60 pt-3 flex flex-col sm:flex-row justify-between gap-3 text-xs font-medium text-neutral-500">
                         <div className="space-y-1">
-                          <div className="font-medium text-neutral-800">Sick Leave Request Ã‚Â· 3.0 days</div>
-                          <div>Dates: May 25 Ã¢â‚¬â€œ May 28 (Mon - Thu)</div>
+                          <div className="font-medium text-neutral-800">Sick Leave Request · 3.0 days</div>
+                          <div>Dates: May 25 – May 28 (Mon - Thu)</div>
                           <div className="text-[10px] font-medium text-rose-600 flex items-center gap-1 mt-1">
                             <ShieldAlert size={11} /> No calendar conflicts detected for this period.
                           </div>

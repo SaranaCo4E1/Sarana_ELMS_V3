@@ -65,7 +65,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                   type="password" 
                   className="w-full rounded-lg border border-neutral-200 bg-white pl-11 pr-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm font-medium transition-all outline-none"
                   onChange={(e) => setForm({ ...form, password: e.target.value })} 
-                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
+                  placeholder="••••••••"
                   required
                 />
               </div>
@@ -85,7 +85,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                   type="password" 
                   className="w-full rounded-lg border border-neutral-200 bg-white pl-11 pr-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm font-medium transition-all outline-none"
                   onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} 
-                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
+                  placeholder="••••••••"
                   required
                 />
               </div>

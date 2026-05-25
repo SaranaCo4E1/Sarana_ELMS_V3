@@ -149,7 +149,7 @@ export default function Dashboard({
                             </span>
                           </div>
                           <p className="text-sm text-neutral-500 font-medium mt-2">
-                            {formatShortDate(leave.starts_at)} â€“ {formatShortDate(leave.ends_at)}
+                            {formatShortDate(leave.starts_at)} – {formatShortDate(leave.ends_at)}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
@@ -167,7 +167,7 @@ export default function Dashboard({
                             </span>
                           </div>
                           <p className="text-sm text-neutral-500 font-medium mt-2">
-                            {formatShortDate(leave.starts_at)} â€“ {formatShortDate(leave.ends_at)}
+                            {formatShortDate(leave.starts_at)} – {formatShortDate(leave.ends_at)}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
@@ -283,7 +283,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
             </div>
             
             <div className="flex justify-between text-sm text-neutral-500 font-medium gap-2">
-              <span>{formatShortDate(request.starts_at)} â€“ {formatShortDate(request.ends_at)}</span>
+              <span>{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
               <span className="font-medium text-neutral-700 shrink-0">{formatDays(request.requested_days)} day(s)</span>
             </div>
 
@@ -340,15 +340,15 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
               <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
                 <td className="px-6 py-5 font-medium text-neutral-800">{request.leave_type.name}</td>
                 <td className="px-4 py-5 text-neutral-500 font-medium whitespace-nowrap">
-                  {formatShortDate(request.starts_at)} â€“ {formatShortDate(request.ends_at)}
+                  {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
                 </td>
                 <td className="px-4 py-5 font-medium text-neutral-700">{formatDays(request.requested_days)}</td>
                 <td className="px-4 py-5">
                   <Status status={request.status} />
                 </td>
-                <td className="px-4 py-5 text-neutral-600 font-medium">{request.approver?.name ?? 'â€“'}</td>
+                <td className="px-4 py-5 text-neutral-600 font-medium">{request.approver?.name ?? '–'}</td>
                 <td className="px-4 py-5 max-w-48 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
-                  {request.manager_comment ?? 'â€“'}
+                  {request.manager_comment ?? '–'}
                 </td>
                 <td className="px-6 py-5 text-right whitespace-nowrap">
                   {request.status === 'pending' && (

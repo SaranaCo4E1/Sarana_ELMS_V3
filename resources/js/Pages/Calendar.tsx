@@ -46,7 +46,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
           </div>
           <div className="inline-flex items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-5 py-3 text-sm font-medium text-neutral-600 shadow-premium-sm">
             <CalendarDays size={15} className="text-neutral-400" /> 
-            <span>{leaveEvents.length} leave requests Â· {holidays.length} holidays</span>
+            <span>{leaveEvents.length} leave requests · {holidays.length} holidays</span>
           </div>
         </div>
 
@@ -261,8 +261,8 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
           <div className="text-sm font-medium text-neutral-800">{event.user?.name ?? 'Staff Employee'}</div>
           <div className="text-sm text-neutral-500 mt-2 font-medium">
             <span className="font-medium text-neutral-700">{event.leave_type.name}</span>
-            <span className="mx-1 text-neutral-300">Â·</span>
-            <span className="whitespace-nowrap font-medium text-neutral-700">{formatShortDate(event.starts_at)} â€“ {formatShortDate(event.ends_at)}</span>
+            <span className="mx-1 text-neutral-300">·</span>
+            <span className="whitespace-nowrap font-medium text-neutral-700">{formatShortDate(event.starts_at)} – {formatShortDate(event.ends_at)}</span>
           </div>
           {event.user?.department?.name && !compact && (
             <div className="mt-4 pt-4 border-t border-neutral-100">
@@ -322,7 +322,7 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
           <div className="text-sm font-medium text-neutral-800">{item.event.user?.name ?? 'Employee'}</div>
           <div className="text-sm text-neutral-500 mt-1 font-medium">
             <span className="font-medium text-neutral-700">{item.event.leave_type.name}</span>
-            <span className="mx-1 text-neutral-300">Â·</span>
+            <span className="mx-1 text-neutral-300">·</span>
             <span>{formatDays(item.event.requested_days)} day(s)</span>
           </div>
         </div>

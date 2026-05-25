@@ -433,7 +433,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
             </div>
             
             <div className="flex justify-between text-sm text-neutral-500 font-normal">
-              <span>{formatShortDate(request.starts_at)} â€“ {formatShortDate(request.ends_at)}</span>
+              <span>{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
               <span className="font-normal text-neutral-700">{formatDays(request.requested_days)} day(s)</span>
             </div>
 
@@ -490,15 +490,15 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
               <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
                 <td className="px-6 py-5 font-normal text-neutral-800">{request.leave_type.name}</td>
                 <td className="px-4 py-5 text-neutral-500 font-normal whitespace-nowrap">
-                  {formatShortDate(request.starts_at)} â€“ {formatShortDate(request.ends_at)}
+                  {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
                 </td>
                 <td className="px-4 py-5 font-normal text-neutral-700">{formatDays(request.requested_days)}</td>
                 <td className="px-4 py-5">
                   <Status status={request.status} />
                 </td>
-                <td className="px-4 py-5 text-neutral-600 font-normal">{request.approver?.name ?? 'â€“'}</td>
+                <td className="px-4 py-5 text-neutral-600 font-normal">{request.approver?.name ?? '–'}</td>
                 <td className="px-4 py-5 max-w-48 truncate text-neutral-500 font-normal" title={request.manager_comment ?? ''}>
-                  {request.manager_comment ?? 'â€“'}
+                  {request.manager_comment ?? '–'}
                 </td>
                 <td className="px-6 py-5 text-right whitespace-nowrap">
                   {request.status === 'pending' && (

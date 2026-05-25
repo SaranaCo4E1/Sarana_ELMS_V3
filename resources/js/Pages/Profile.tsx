@@ -69,7 +69,7 @@ export default function Profile({ profile }: { profile: User }) {
                 </span>
               </div>
               <p className="mt-1.5 text-sm text-neutral-300 font-medium">
-                {profile.role} Ã‚Â· {profile.department?.name ?? 'Unassigned Department'}
+                {profile.role} · {profile.department?.name ?? 'Unassigned Department'}
               </p>
               
               <div className="mt-3.5 flex flex-wrap justify-center gap-y-1.5 gap-x-4 text-sm text-neutral-300 sm:justify-start font-medium">

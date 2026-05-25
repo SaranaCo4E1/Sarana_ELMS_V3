@@ -122,21 +122,21 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                       <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-700">
                         <div>
                           <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Code / Role</div>
-                          <div className="font-medium mt-1.5 capitalize">{item.employee_code ?? 'No Code'} Ã‚Â· {item.role}</div>
+                          <div className="font-medium mt-1.5 capitalize">{item.employee_code ?? 'No Code'} · {item.role}</div>
                         </div>
                         <div>
                           <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Department</div>
-                          <div className="font-medium mt-1.5">{item.department?.name ?? 'Ã¢â‚¬â€'}</div>
+                          <div className="font-medium mt-1.5">{item.department?.name ?? '—'}</div>
                         </div>
                         <div>
                           <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Manager</div>
-                          <div className="font-medium mt-1.5">{item.manager?.name ?? 'Ã¢â‚¬â€'}</div>
+                          <div className="font-medium mt-1.5">{item.manager?.name ?? '—'}</div>
                         </div>
                         <div>
                           <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Leave stats</div>
                           <div className="font-medium mt-1.5 flex flex-wrap gap-x-1.5 text-sm">
                             <span className="text-amber-600 font-medium">{item.pending_leave_requests_count ?? 0} pending</span>
-                            <span className="text-neutral-300">Ã‚Â·</span>
+                            <span className="text-neutral-300">·</span>
                             <span className="text-orange-600 font-medium">{item.approved_leave_requests_count ?? 0} approved</span>
                           </div>
                         </div>
@@ -168,14 +168,14 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                         <tr key={item.id} className="transition-all hover:bg-neutral-50/50">
                           <td className="px-4 py-4.5">
                             <div className="font-medium text-neutral-800">{item.name}</div>
-                            <div className="text-sm text-neutral-500 font-medium mt-1">{item.email} Ã‚Â· {item.employee_code ?? 'No Code'}</div>
+                            <div className="text-sm text-neutral-500 font-medium mt-1">{item.email} · {item.employee_code ?? 'No Code'}</div>
                           </td>
                           <td className="px-4 py-4.5 text-neutral-700 font-medium capitalize">{item.role}</td>
-                          <td className="px-4 py-4.5 text-neutral-500 font-medium">{item.department?.name ?? 'Ã¢â‚¬â€'}</td>
-                          <td className="px-4 py-4.5 text-neutral-500 font-medium">{item.manager?.name ?? 'Ã¢â‚¬â€'}</td>
+                          <td className="px-4 py-4.5 text-neutral-500 font-medium">{item.department?.name ?? '—'}</td>
+                          <td className="px-4 py-4.5 text-neutral-500 font-medium">{item.manager?.name ?? '—'}</td>
                           <td className="px-4 py-4.5 text-neutral-700 font-medium text-sm">
                             <span className="text-amber-600">{item.pending_leave_requests_count ?? 0} pending</span>
-                            <span className="mx-1.5 text-neutral-300">Ã‚Â·</span>
+                            <span className="mx-1.5 text-neutral-300">·</span>
                             <span className="text-orange-600">{item.approved_leave_requests_count ?? 0} approved</span>
                           </td>
                           <td className="px-4 py-4.5 text-right whitespace-nowrap">
@@ -271,8 +271,8 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 </div>
                 <DataList rows={departments.map((item) => ({
                   id: item.id,
-                  title: `${item.code} Ã‚Â· ${item.name}`,
-                  meta: `${item.users_count ?? 0} active employees Ã‚Â· Manager: ${item.manager?.name ?? 'Unassigned'}`,
+                  title: `${item.code} · ${item.name}`,
+                  meta: `${item.users_count ?? 0} active employees · Manager: ${item.manager?.name ?? 'Unassigned'}`,
                   active: item.is_active,
                   toggle: () => router.patch(`/admin/departments/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true }),
                 }))} />
@@ -324,8 +324,8 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 </div>
                 <DataList rows={leaveTypes.map((item) => ({
                   id: item.id,
-                  title: `${item.code} Ã‚Â· ${item.name}`,
-                  meta: `${formatDays(item.default_allowance_days)} default Ã‚Â· ${item.paid ? 'Paid' : 'Unpaid'} Ã‚Â· ${item.requires_attachment ? 'Attachment required' : 'No attachment'} Ã‚Â· ${item.balances_count ?? 0} active balances`,
+                  title: `${item.code} · ${item.name}`,
+                  meta: `${formatDays(item.default_allowance_days)} default · ${item.paid ? 'Paid' : 'Unpaid'} · ${item.requires_attachment ? 'Attachment required' : 'No attachment'} · ${item.balances_count ?? 0} active balances`,
                   active: item.is_active,
                   toggle: () => router.patch(`/admin/leave-types/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true }),
                 }))} />
@@ -379,7 +379,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 </div>
                 <DataList rows={holidays.slice(0, 12).map((item) => ({
                   id: item.id,
-                  title: `${formatDate(item.holiday_date)} Ã‚Â· ${item.name}`,
+                  title: `${formatDate(item.holiday_date)} · ${item.name}`,
                   meta: item.is_active ? 'Excluded from working-day calculations' : 'Currently ignored',
                   active: item.is_active,
                   toggle: () => router.patch(`/admin/holidays/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true }),
@@ -517,7 +517,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   {auditLogs.map((log) => (
                     <div key={log.id} className="grid gap-2.5 py-4.5 text-sm md:grid-cols-[1fr_200px_180px] hover:bg-neutral-50/50 px-4 transition-all rounded-lg">
                       <span className="font-medium text-slate-800">{log.action}</span>
-                      <span className="text-slate-500 font-medium">{log.subject_type ?? 'System'} #{log.subject_id ?? 'Ã¢â‚¬â€'}</span>
+                      <span className="text-slate-500 font-medium">{log.subject_type ?? 'System'} #{log.subject_id ?? '—'}</span>
                       <span className="text-slate-400 font-medium text-right">{new Date(log.created_at).toLocaleString()}</span>
                     </div>
                   ))}

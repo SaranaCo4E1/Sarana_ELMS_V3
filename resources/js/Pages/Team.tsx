@@ -67,13 +67,13 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                             {member.department.name}
                           </span>
                         ) : (
-                          'Ã¢â‚¬â€'
+                          '—'
                         )}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Manager</div>
-                      <div className="font-medium text-neutral-600 mt-0.5">{member.manager?.name ?? 'Ã¢â‚¬â€'}</div>
+                      <div className="font-medium text-neutral-600 mt-0.5">{member.manager?.name ?? '—'}</div>
                     </div>
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Contact</div>
@@ -85,7 +85,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                     <span>Leave Summary:</span>
                     <div className="font-medium">
                       <span className="text-amber-700">{member.pending_leave_requests_count ?? 0} pending</span>
-                      <span className="mx-1.5 text-neutral-300">Ã‚Â·</span>
+                      <span className="mx-1.5 text-neutral-300">·</span>
                       <span className="text-orange-700">{member.approved_leave_requests_count ?? 0} approved</span>
                     </div>
                   </div>
@@ -134,15 +134,15 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                             {member.department.name}
                           </span>
                         ) : (
-                          <span className="text-neutral-400 font-medium">Ã¢â‚¬â€</span>
+                          <span className="text-neutral-400 font-medium">— </span>
                         )}
                       </td>
                       <td className="px-4 py-4.5 text-neutral-500 font-medium">
-                        {member.manager?.name ?? 'Ã¢â‚¬â€'}
+                        {member.manager?.name ?? '—'}
                       </td>
                       <td className="px-4 py-4.5 whitespace-nowrap text-neutral-600 font-medium">
                         <span className="text-amber-700 font-medium">{member.pending_leave_requests_count ?? 0} pending</span>
-                        <span className="mx-1.5 text-neutral-300">Ã‚Â·</span>
+                        <span className="mx-1.5 text-neutral-300">·</span>
                         <span className="text-orange-700 font-medium">{member.approved_leave_requests_count ?? 0} approved</span>
                       </td>
                       <td className="px-6 py-4.5">
@@ -243,13 +243,13 @@ function RequestLine({ request }: { request: LeaveRequest }) {
   return (
     <div className="rounded-lg bg-neutral-50/50 border border-neutral-100 p-4 text-sm shadow-premium-sm">
       <div className="font-medium text-neutral-800">
-        {request.user?.name} Ã‚Â· <span className="text-orange-700">{request.leave_type.name}</span>
+        {request.user?.name} · <span className="text-orange-700">{request.leave_type.name}</span>
       </div>
       <div className="text-xs text-neutral-500 mt-2.5 flex flex-wrap items-center gap-1.5 font-medium">
-        <span className="font-medium">{formatShortDate(request.starts_at)} Ã¢â‚¬â€œ {formatShortDate(request.ends_at)}</span>
-        <span>Ã‚Â·</span>
+        <span className="font-medium">{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
+        <span>·</span>
         <span className="font-medium text-neutral-700">{formatDays(request.requested_days)} day(s)</span>
-        <span>Ã‚Â·</span>
+        <span>·</span>
         <span className="rounded-full bg-neutral-100 border border-neutral-200 px-2 py-0.5 font-medium text-neutral-600 uppercase text-[10px]">{request.status}</span>
       </div>
     </div>

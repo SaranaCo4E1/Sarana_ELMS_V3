@@ -172,7 +172,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
               <div>
                 <h1 className="text-base font-medium tracking-tight text-neutral-900">Leave Portal</h1>
                 <p className="hidden text-sm font-medium text-neutral-400 sm:block">
-                  {user.department?.name ?? 'General Staff'} Ã‚Â· {user.employee_code ?? 'EMP'}
+                  {user.department?.name ?? 'General Staff'} · {user.employee_code ?? 'EMP'}
                 </p>
               </div>
             </div>

@@ -93,7 +93,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
 
                   <div className="text-sm text-neutral-500 font-medium">
                     Requested: <span className="font-medium text-neutral-800">{formatShortDate(request.starts_at)}</span> to <span className="font-medium text-neutral-800">{formatShortDate(request.ends_at)}</span>
-                    <span className="mx-2.5">Ã‚Â·</span>
+                    <span className="mx-2.5">·</span>
                     <span className="font-medium text-orange-700">{formatDays(request.requested_days)} working day(s)</span>
                   </div>
 
@@ -190,7 +190,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   </div>
 
                   <div className="text-sm text-neutral-500 font-medium">
-                    Dates: <span className="font-medium text-neutral-800">{formatShortDate(request.starts_at)} Ã¢â‚¬â€œ {formatShortDate(request.ends_at)}</span>
+                    Dates: <span className="font-medium text-neutral-800">{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
                   </div>
 
                   {request.manager_comment && (
@@ -229,7 +229,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                       <td className="px-6 py-4.5 font-medium text-neutral-800">{request.user?.name}</td>
                       <td className="px-4 py-4.5 text-neutral-600 font-medium">{request.leave_type.name}</td>
                       <td className="px-4 py-4.5 text-neutral-500 font-medium whitespace-nowrap">
-                        {formatShortDate(request.starts_at)} Ã¢â‚¬â€œ {formatShortDate(request.ends_at)}
+                        {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
                       </td>
                       <td className="px-4 py-4.5 font-medium text-neutral-700">{formatDays(request.requested_days)}</td>
                       <td className="px-4 py-4.5">
@@ -238,7 +238,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                         </span>
                       </td>
                       <td className="px-6 py-4.5 max-w-80 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
-                        {request.manager_comment ?? 'Ã¢â‚¬â€œ'}
+                        {request.manager_comment ?? '–'}
                       </td>
                     </tr>
                   );
