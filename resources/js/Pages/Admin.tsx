@@ -574,10 +574,10 @@ function Toggle({ active, onClick }: { active: boolean; onClick: () => void }) {
   const Icon = active ? ToggleRight : ToggleLeft;
   return (
     <button
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer outline-none ${
         active
-          ? 'bg-orange-500/10 border-orange-500/20 text-orange-700'
-          : 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:text-neutral-700'
+          ? 'bg-orange-500/[0.04] border-orange-500/10 text-orange-700/90'
+          : 'bg-neutral-500/[0.04] border-neutral-500/10 text-neutral-500 hover:text-neutral-700'
       }`}
       onClick={onClick}
       type="button"

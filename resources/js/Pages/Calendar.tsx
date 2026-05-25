@@ -1,9 +1,11 @@
 import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, StickyNote, Umbrella } from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest } from '../types';
 import { formatDays, formatShortDate, formatDate } from '../utils';
+import LeaveBadge from '../Components/LeaveBadge';
 
 type Holiday = { id: number; name: string; holiday_date: string };
 type Props = {
@@ -13,24 +15,52 @@ type Props = {
 };
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-orange-50/60', border: 'border-orange-100/70', text: 'text-orange-800', dot: 'bg-orange-500' },
-  rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800', dot: 'bg-rose-500' },
-  cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200', text: 'text-neutral-500', dot: 'bg-neutral-400' },
+  pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
+  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
+  cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
 };
 
 export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
   const todayKey = dateKey(new Date());
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState(todayKey);
+  const [isMobilePopupOpen, setIsMobilePopupOpen] = useState(false);
+  const [isTimelineCompact, setIsTimelineCompact] = useState(false);
   
-  const upcomingLeave = leaveEvents.filter((event) => parseDateKey(toDateKey(event.ends_at)) >= startOfToday()).slice(0, 12);
-  const upcomingHolidays = holidays.filter((holiday) => parseDateKey(toDateKey(holiday.holiday_date)) >= startOfToday()).slice(0, 12);
+  const upcomingLeave = leaveEvents
+    .filter((event) => event.status === 'approved' && parseDateKey(toDateKey(event.ends_at)) >= startOfToday())
+    .slice(0, 12);
+  const upcomingHolidays = holidays
+    .filter((holiday) => {
+      const holidayDate = parseDateKey(toDateKey(holiday.holiday_date));
+      const today = startOfToday();
+      const soonThreshold = addDays(today, 30);
+      return holidayDate >= today && holidayDate <= soonThreshold;
+    })
+    .slice(0, 12);
   
-  const monthGroups = groupByMonth([
-    ...leaveEvents.map((event) => ({ kind: 'leave' as const, date: event.starts_at, event })),
-    ...holidays.map((holiday) => ({ kind: 'holiday' as const, date: holiday.holiday_date, holiday }))
-  ]);
+  const filteredEventsForTimeline = useMemo(() => {
+    const nextMonth = addMonths(visibleMonth, 1);
+    
+    const leavesInMonth = leaveEvents.filter((event) => {
+      const starts = parseDateKey(toDateKey(event.starts_at));
+      const ends = parseDateKey(toDateKey(event.ends_at));
+      return starts < nextMonth && ends >= visibleMonth;
+    });
+
+    const holidaysInMonth = holidays.filter((holiday) => {
+      const date = parseDateKey(toDateKey(holiday.holiday_date));
+      return date >= visibleMonth && date < nextMonth;
+    });
+
+    return [
+      ...leavesInMonth.map((event) => ({ kind: 'leave' as const, date: event.starts_at, event })),
+      ...holidaysInMonth.map((holiday) => ({ kind: 'holiday' as const, date: holiday.holiday_date, holiday }))
+    ];
+  }, [visibleMonth, leaveEvents, holidays]);
+
+  const monthGroups = useMemo(() => groupByMonth(filteredEventsForTimeline), [filteredEventsForTimeline]);
   
   const calendarDays = useMemo(() => buildCalendarDays(visibleMonth, leaveEvents, holidays), [visibleMonth, leaveEvents, holidays]);
   const selectedItems = calendarDays.find((day) => day.key === selectedDay)?.items ?? itemsForDate(selectedDay, leaveEvents, holidays);
@@ -111,7 +141,10 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                       day.isCurrentMonth ? 'bg-white' : 'bg-neutral-50/30 text-neutral-400'
                       } ${isSelected ? 'ring-2 ring-inset ring-orange-600 z-10' : ''}`}
                       type="button"
-                      onClick={() => setSelectedDay(day.key)}
+                      onClick={() => {
+                        setSelectedDay(day.key);
+                        setIsMobilePopupOpen(true);
+                      }}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span
@@ -140,7 +173,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                               key={item.id}
                               className={`truncate rounded-md px-2 py-1 text-xs font-medium border transition-colors ${
                                 isHoliday
-                                  ? 'bg-orange-50/60 border-orange-100 text-orange-800'
+                                  ? 'bg-indigo-50/60 border-indigo-100 text-indigo-800'
                                   : `${statusStyle?.bg ?? 'bg-neutral-50'} ${statusStyle?.border ?? 'border-neutral-200'} ${statusStyle?.text ?? 'text-neutral-700'}`
                                 }`}
                             >
@@ -164,7 +197,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                             <span
                               key={item.id}
                               className={`h-1.5 w-1.5 rounded-full ${
-                                isHoliday ? 'bg-orange-500' : statusStyle?.dot ?? 'bg-neutral-400'
+                                isHoliday ? 'bg-indigo-500' : statusStyle?.dot ?? 'bg-neutral-400'
                               }`}
                             />
                           );
@@ -177,25 +210,81 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                   );
                 })}
               </div>
+
+              {/* Calendar color legend */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2.5 bg-neutral-50/30 border-t border-neutral-200/80 px-6 py-4 text-xs text-neutral-500 font-medium">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-orange-500 shadow-xs" />
+                  <span>Approved Leave</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 shadow-xs" />
+                  <span>Pending Leave</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-xs" />
+                  <span>Holiday</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-rose-500 shadow-xs" />
+                  <span>Rejected Leave</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-neutral-400 shadow-xs" />
+                  <span>Cancelled Leave</span>
+                </div>
+              </div>
             </section>
             {/* Timeline Row cards */}
             <section className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
-              <div className="border-b border-neutral-200 px-6 py-5 bg-neutral-50/20">
-                <h3 className="font-medium text-neutral-800 text-sm">Monthly Timeline</h3>
-                <p className="text-sm font-medium text-neutral-500 mt-1.5">Continuous view of team leave and corporate holidays</p>
+              <div className="border-b border-neutral-200 px-6 py-5 bg-neutral-50/20 flex flex-wrap justify-between items-center gap-3">
+                <div>
+                  <h3 className="font-medium text-neutral-800 text-sm">Monthly Timeline</h3>
+                  <p className="text-sm font-medium text-neutral-500 mt-1.5">View of team leave and corporate holidays for this month</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* Detailed/Compact Toggle Button */}
+                  <div className="inline-flex rounded-lg border border-neutral-200 bg-neutral-100/60 p-0.5 text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setIsTimelineCompact(false)}
+                      className={`rounded-md px-3 py-1.5 transition-all cursor-pointer ${
+                        !isTimelineCompact 
+                          ? 'bg-white text-neutral-800 shadow-premium-sm font-semibold' 
+                          : 'text-neutral-500 hover:text-neutral-800'
+                      }`}
+                    >
+                      Detailed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsTimelineCompact(true)}
+                      className={`rounded-md px-3 py-1.5 transition-all cursor-pointer ${
+                        isTimelineCompact 
+                          ? 'bg-white text-neutral-800 shadow-premium-sm font-semibold' 
+                          : 'text-neutral-500 hover:text-neutral-800'
+                      }`}
+                    >
+                      Compact
+                    </button>
+                  </div>
+                  <div className="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md px-2.5 py-1.5">
+                    {visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                  </div>
+                </div>
               </div>
               <div className="divide-y divide-neutral-100">
                 {monthGroups.map((group) => (
                   <div key={group.month} className="grid gap-4 px-6 py-6 md:grid-cols-[180px_1fr]">
-                    <div className="text-sm font-medium uppercase tracking-wider text-neutral-500 pt-2">
+                    {/* <div className="text-sm font-medium uppercase tracking-wider text-neutral-500 pt-2">
                       {group.month}
-                    </div>
-                    <div className="space-y-3.5">
+                    </div> */}
+                    <div className="space-y-3 col-span-2">
                       {group.items.map((item) =>
                         item.kind === 'leave' ? (
-                          <LeaveRow key={`leave-${item.event.id}`} event={item.event} />
+                          <LeaveRow key={`leave-${item.event.id}`} event={item.event} compact={isTimelineCompact} />
                         ) : (
-                          <HolidayRow key={`holiday-${item.holiday.id}`} holiday={item.holiday} />
+                          <HolidayRow key={`holiday-${item.holiday.id}`} holiday={item.holiday} compact={isTimelineCompact} />
                         )
                       )}
                     </div>
@@ -212,30 +301,92 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
 
           {/* Right sidebar */}
           <aside className="space-y-6">
-            <Panel icon={<StickyNote size={15} />} title={formatSelectedDay(selectedDay)} empty="No notes for this day.">
-              {selectedItems.map((item) =>
-                item.kind === 'leave' ? (
-                  <LeaveNote key={item.id} item={item} />
-                ) : (
-                  <HolidayNote key={item.id} item={item} />
-                )
-              )}
-            </Panel>
+            <div className="hidden lg:block">
+              <Panel icon={<StickyNote size={15} />} title={formatSelectedDay(selectedDay)} empty="No notes for this day.">
+                {selectedItems.map((item) =>
+                  item.kind === 'leave' ? (
+                    <LeaveNote key={item.id} item={item} />
+                  ) : (
+                    <HolidayNote key={item.id} item={item} />
+                  )
+                )}
+              </Panel>
+            </div>
 
-            <Panel icon={<Umbrella size={15} />} title="Who's On Leave" empty="No upcoming leave.">
+            <Panel icon={<Umbrella size={15} />} title="Upcoming Team Leave" empty="No upcoming leave.">
               {upcomingLeave.map((event) => (
-                <LeaveRow key={event.id} event={event} compact />
+                <CompactLeaveRow key={event.id} event={event} />
               ))}
             </Panel>
 
             <Panel icon={<CalendarClock size={15} />} title="Upcoming Holidays" empty="No upcoming holidays.">
               {upcomingHolidays.map((holiday) => (
-                <HolidayRow key={holiday.id} holiday={holiday} compact />
+                <CompactHolidayRow key={holiday.id} holiday={holiday} />
               ))}
             </Panel>
           </aside>
         </div>
       </div>
+
+      {/* Mobile Day Details Popup */}
+      {isMobilePopupOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 lg:hidden animate-fade-in">
+          {/* Backdrop with smooth blur */}
+          <div 
+            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-300" 
+            onClick={() => setIsMobilePopupOpen(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-md transform rounded-2xl bg-white p-6 shadow-premium-lg border border-neutral-100 transition-all duration-300 max-h-[85vh] flex flex-col z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <StickyNote size={18} className="text-orange-500" />
+                <span className="font-semibold text-lg text-neutral-800">{formatSelectedDay(selectedDay)}</span>
+              </div>
+              <button 
+                onClick={() => setIsMobilePopupOpen(false)}
+                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-150 hover:text-neutral-700 transition-colors cursor-pointer"
+                aria-label="Close dialog"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 py-1">
+              {selectedItems.length > 0 ? (
+                selectedItems.map((item) =>
+                  item.kind === 'leave' ? (
+                    <LeaveNote key={item.id} item={item} />
+                  ) : (
+                    <HolidayNote key={item.id} item={item} />
+                  )
+                )
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-neutral-400 font-medium">No leave or holidays scheduled for this day.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="mt-6 border-t border-neutral-100 pt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsMobilePopupOpen(false)}
+                className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors active:scale-[0.98] shadow-sm cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </AppLayout>
   );
 }
@@ -251,18 +402,63 @@ type CalendarDay = {
   items: CalendarItem[];
 };
 
+function CompactLeaveRow({ event }: { event: LeaveRequest }) {
+  const initials = event.user?.name
+    ? event.user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'SE';
+
+  return (
+    <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 border-b border-neutral-100 last:border-0">
+      {/* Initials Avatar */}
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-xs font-semibold text-orange-700 border border-orange-100/60">
+        {initials}
+      </div>
+      
+      {/* Details */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-neutral-800 truncate">{event.user?.name ?? 'Staff Employee'}</span>
+          <LeaveBadge code={event.leave_type.code} name={event.leave_type.name} />
+        </div>
+        <div className="text-xs text-neutral-500 mt-0.5">
+          {formatShortDate(event.starts_at)} – {formatShortDate(event.ends_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompactHolidayRow({ holiday }: { holiday: Holiday }) {
+  return (
+    <div className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0 border-b border-neutral-100 last:border-0">
+      {/* Indigo Calendar Accent Icon */}
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-650 border border-indigo-100/60">
+        <Umbrella size={14} className="text-indigo-600" />
+      </div>
+      
+      {/* Details */}
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-neutral-800 truncate">{holiday.name}</div>
+        <div className="text-xs text-neutral-500 mt-0.5">
+          {formatDate(holiday.holiday_date)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: boolean }) {
   const statusStyle = statusStyles[event.status] ?? { bg: 'bg-neutral-50 border-neutral-200', text: 'text-neutral-600', dot: 'bg-neutral-400' };
   
   return (
-    <div className={`rounded-lg border border-neutral-100 bg-white ${compact ? 'p-3.5' : 'p-5'} shadow-premium-sm transition-all hover:shadow-premium-md`}>
+    <div className={`rounded-lg border border-neutral-100 bg-white ${compact ? 'p-3' : 'p-5'} shadow-premium-sm transition-all hover:shadow-premium-md`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-neutral-800">{event.user?.name ?? 'Staff Employee'}</div>
-          <div className="text-sm text-neutral-500 mt-2 font-medium">
-            <span className="font-medium text-neutral-700">{event.leave_type.name}</span>
+          <div className={`text-sm text-neutral-500 font-medium inline-flex items-center ${compact ? 'mt-1' : 'mt-2'}`}>
+            <LeaveBadge code={event.leave_type.code} name={event.leave_type.name} variant="minimal" />
             <span className="mx-1 text-neutral-300">·</span>
-            <span className="whitespace-nowrap font-medium text-neutral-700">{formatShortDate(event.starts_at)} – {formatShortDate(event.ends_at)}</span>
+            <span className="whitespace-nowrap text-xs font-medium text-neutral-700">{formatShortDate(event.starts_at)} – {formatShortDate(event.ends_at)}</span>
           </div>
           {event.user?.department?.name && !compact && (
             <div className="mt-4 pt-4 border-t border-neutral-100">
@@ -275,8 +471,9 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
             </div>
           )}
         </div>
-        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-medium shadow-sm`}>
-          {event.status}
+        <span className={`inline-flex items-center rounded-md border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} ${compact ? 'px-2 py-0.5' : 'px-2.5 py-0.5'} text-xs font-semibold tracking-wide transition-all duration-300`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot} mr-1.5 shrink-0`} />
+          {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
         </span>
       </div>
     </div>
@@ -285,9 +482,9 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
 
 function HolidayRow({ holiday, compact = false }: { holiday: Holiday; compact?: boolean }) {
   return (
-    <div className={`rounded-lg border border-orange-100 bg-orange-50/40 ${compact ? 'p-3.5' : 'p-5'} shadow-premium-sm`}>
-      <div className="text-sm font-medium text-orange-900">{holiday.name}</div>
-      <div className="text-sm text-orange-700 mt-2 font-medium">
+    <div className={`rounded-lg border border-indigo-100 bg-indigo-50/40 ${compact ? 'p-3' : 'p-5'} shadow-premium-sm`}>
+      <div className="text-sm font-medium text-indigo-900">{holiday.name}</div>
+      <div className="text-sm text-indigo-650 mt-1 font-medium">
         {formatDate(holiday.holiday_date)}
       </div>
     </div>
@@ -320,16 +517,18 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-sm font-medium text-neutral-800">{item.event.user?.name ?? 'Employee'}</div>
-          <div className="text-sm text-neutral-500 mt-1 font-medium">
-            <span className="font-medium text-neutral-700">{item.event.leave_type.name}</span>
+          
+        </div>
+        <span className={`inline-flex items-center rounded-md border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all duration-300`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot} mr-1.5 shrink-0`} />
+          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+        </span>
+      </div>
+      <div className="text-xs text-neutral-500 mt-1 font-medium inline-flex items-center">
+            <LeaveBadge code={item.event.leave_type.code} name={item.event.leave_type.name} variant="minimal" />
             <span className="mx-1 text-neutral-300">·</span>
             <span>{formatDays(item.event.requested_days)} day(s)</span>
           </div>
-        </div>
-        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-medium shadow-sm`}>
-          {item.status}
-        </span>
-      </div>
       {item.event.reason && (
         <div className="mt-2.5 rounded-md bg-neutral-50/50 p-3 text-sm text-neutral-600 leading-relaxed italic border border-neutral-100/60">
           "{item.event.reason}"
@@ -341,9 +540,9 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
 
 function HolidayNote({ item }: { item: Extract<CalendarItem, { kind: 'holiday' }> }) {
   return (
-    <div className="rounded-lg border border-orange-100 bg-orange-50/40 p-4 shadow-premium-sm">
-      <div className="text-sm font-medium text-orange-900">{item.holiday.name}</div>
-      <div className="text-sm text-orange-700 mt-1.5 font-medium">
+    <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-4 shadow-premium-sm">
+      <div className="text-sm font-medium text-indigo-900">{item.holiday.name}</div>
+      <div className="text-sm text-indigo-600 mt-1.5 font-medium">
         {formatDate(item.holiday.holiday_date)}
       </div>
     </div>

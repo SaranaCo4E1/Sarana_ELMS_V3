@@ -54,7 +54,7 @@ export type LeaveRequest = {
   user?: User;
   approver?: User;
   leave_type: LeaveType;
-  attachments?: { id: number; original_name: string }[];
+  attachments?: { id: number; original_name: string; mime_type?: string | null; path?: string }[];
 };
 
 export type SystemNotification = {
@@ -83,4 +83,3 @@ export type PublicHoliday = {
   name: string;
   is_active: boolean;
 };
-

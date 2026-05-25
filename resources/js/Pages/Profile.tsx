@@ -64,7 +64,7 @@ export default function Profile({ profile }: { profile: User }) {
             <div className="text-center sm:text-left">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <h1 className="text-2xl font-medium tracking-tight text-white">{profile.name}</h1>
-                <span className="inline-flex items-center rounded-full bg-orange-500/15 px-2.5 py-0.5 text-xs font-medium text-orange-300 border border-orange-500/20">
+                <span className="inline-flex items-center rounded-md bg-orange-500/15 px-2 py-0.5 text-xs font-semibold text-orange-200 border border-orange-500/25">
                   Active Account
                 </span>
               </div>

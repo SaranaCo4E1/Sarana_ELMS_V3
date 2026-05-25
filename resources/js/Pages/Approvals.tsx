@@ -1,9 +1,12 @@
 import { router } from '@inertiajs/react';
-import { Check, Clock3, FileText, Search, ShieldCheck, Users, X } from 'lucide-react';
+import { Check, Clock3, FileText, Search, ShieldCheck, Users, X, Eye, Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest } from '../types';
 import { formatDays, formatShortDate } from '../utils';
+import LeaveBadge from '../Components/LeaveBadge';
 
 type Props = {
   requests: LeaveRequest[];
@@ -11,15 +14,39 @@ type Props = {
   approvalStats: { pending: number; approved_this_month: number; rejected_this_month: number; team_members_on_leave: number };
 };
 
-const statusStyles: Record<string, { bg: string; border: string; text: string }> = {
-  approved: { bg: 'bg-orange-50/60', border: 'border-orange-100/70', text: 'text-orange-800' },
-  rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800' },
+const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
+  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
+  cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
 };
+
+const attachmentPreviewUrl = (attachment: { id: number }) => `/approvals/attachments/${attachment.id}/preview`;
+const attachmentDownloadUrl = (attachment: { id: number }) => `/approvals/attachments/${attachment.id}/download`;
 
 export default function Approvals({ requests, recentDecisions, approvalStats }: Props) {
   const [comments, setComments] = useState<Record<number, string>>({});
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('all');
+  const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
+
+  const isPreviewable = (attachment: any) => {
+    const mime = attachment.mime_type?.toLowerCase() ?? '';
+    if (mime.startsWith('image/') || mime === 'application/pdf') {
+      return true;
+    }
+    const ext = attachment.original_name.split('.').pop()?.toLowerCase();
+    return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf'].includes(ext ?? '');
+  };
+
+  const isPdf = (attachment: any) => {
+    const mime = attachment.mime_type?.toLowerCase() ?? '';
+    if (mime === 'application/pdf') {
+      return true;
+    }
+    const ext = attachment.original_name.split('.').pop()?.toLowerCase();
+    return ext === 'pdf';
+  };
 
   const departments = useMemo(() => Array.from(new Set(requests.map((request) => request.user?.department?.name).filter(Boolean))) as string[], [requests]);
   
@@ -83,12 +110,10 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className="text-sm font-medium text-neutral-800">{request.user?.name}</span>
-                    <span className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600 border border-neutral-200/50">
+                    <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-600 border border-neutral-200/50">
                       {request.user?.department?.name ?? 'General'}
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700 border border-orange-100/70">
-                      {request.leave_type.name}
-                    </span>
+                    <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} />
                   </div>
 
                   <div className="text-sm text-neutral-500 font-medium">
@@ -106,15 +131,44 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   )}
 
                   <div className="flex flex-wrap gap-2.5 pt-1.5">
-                    {(request.attachments ?? []).map((attachment) => (
-                      <span
-                        key={attachment.id}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-white border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 shadow-premium-sm"
-                      >
-                        <FileText size={13} className="text-neutral-400" />
-                        <span className="truncate max-w-44">{attachment.original_name}</span>
-                      </span>
-                    ))}
+                    {(request.attachments ?? []).map((attachment) => {
+                      const preview = isPreviewable(attachment);
+                      const ext = attachment.original_name.split('.').pop()?.toUpperCase() ?? 'FILE';
+                      return preview ? (
+                        <button
+                          key={attachment.id}
+                          onClick={() => setPreviewAttachment(attachment)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm cursor-pointer animate-fade-in"
+                          type="button"
+                        >
+                          <FileText size={13} className="text-neutral-400" />
+                          <span className="truncate max-w-44">{attachment.original_name}</span>
+                          <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
+                            {ext}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded bg-orange-50 border border-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 ml-1">
+                            <Eye size={10} /> Preview
+                          </span>
+                        </button>
+                      ) : (
+                        <a
+                          key={attachment.id}
+                          href={attachmentDownloadUrl(attachment)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <FileText size={13} className="text-neutral-400" />
+                          <span className="truncate max-w-44">{attachment.original_name}</span>
+                          <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
+                            {ext}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded bg-neutral-50 border border-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 ml-1">
+                            <Download size={10} /> Download
+                          </span>
+                        </a>
+                      );
+                    })}
                     {(request.attachments ?? []).length === 0 && (
                       <span className="text-sm font-medium text-neutral-400">No attachments provided</span>
                     )}
@@ -134,18 +188,18 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                       onChange={(e) => setComments({ ...comments, [request.id]: e.target.value })}
                     />
                   </div>
-                  <div className="mt-4.5 grid grid-cols-2 gap-2.5">
+                  <div className="mt-4.5 grid grid-cols-2 gap-3">
                     <button
-                      className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-500 py-3 text-sm font-medium text-white transition-all shadow-md shadow-orange-600/10 hover:from-orange-700 hover:to-amber-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-97 cursor-pointer"
+                      className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 py-2.5 text-sm font-semibold text-white transition-all hover:bg-orange-700 active:scale-98 cursor-pointer shadow-premium-sm"
                       onClick={() => decide(request.id, 'approved')}
                     >
-                      <Check size={14} /> Approve
+                      <Check size={15} /> Approve
                     </button>
                     <button
-                      className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-red-500 py-3 text-sm font-medium text-white transition-all shadow-md shadow-rose-600/10 hover:from-rose-700 hover:to-red-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-97 cursor-pointer"
+                      className="flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50/50 py-2.5 text-sm font-semibold text-rose-700 transition-all hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800 active:scale-98 cursor-pointer shadow-premium-sm"
                       onClick={() => decide(request.id, 'rejected')}
                     >
-                      <X size={14} /> Reject
+                      <X size={15} /> Reject
                     </button>
                   </div>
                 </div>
@@ -173,15 +227,18 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                 <div key={request.id} className="p-5 space-y-4 bg-white">
                   <div className="flex items-center justify-between gap-2.5">
                     <span className="font-medium text-neutral-800 text-sm">{request.user?.name}</span>
-                    <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-3 py-1 text-xs font-medium tracking-wide`}>
-                      {request.status.toUpperCase()}
+                    <span className={`inline-flex items-center rounded-md border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all duration-300`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot} mr-1.5 shrink-0`} />
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-500">
                     <div>
                       <div className="text-xs text-neutral-400 uppercase font-medium tracking-wider">Leave Type</div>
-                      <div className="font-medium text-neutral-700 mt-1">{request.leave_type.name}</div>
+                      <div className="mt-1">
+                        <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
+                      </div>
                     </div>
                     <div>
                       <div className="text-xs text-neutral-400 uppercase font-medium tracking-wider">Days</div>
@@ -227,14 +284,17 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   return (
                     <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
                       <td className="px-6 py-4.5 font-medium text-neutral-800">{request.user?.name}</td>
-                      <td className="px-4 py-4.5 text-neutral-600 font-medium">{request.leave_type.name}</td>
+                      <td className="px-4 py-4.5 text-neutral-600 font-medium">
+                        <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
+                      </td>
                       <td className="px-4 py-4.5 text-neutral-500 font-medium whitespace-nowrap">
                         {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
                       </td>
                       <td className="px-4 py-4.5 font-medium text-neutral-700">{formatDays(request.requested_days)}</td>
                       <td className="px-4 py-4.5">
-                        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-3 py-1 text-xs font-medium tracking-wide`}>
-                          {request.status.toUpperCase()}
+                        <span className={`inline-flex items-center rounded-md border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all duration-300`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot} mr-1.5 shrink-0`} />
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4.5 max-w-80 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
@@ -255,6 +315,64 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
           </div>
         </div>
       </div>
+
+      {/* Attachment Preview Modal */}
+      {previewAttachment && createPortal(
+        <div
+          onClick={() => setPreviewAttachment(null)}
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-4xl rounded-2xl bg-white border border-neutral-200/85 shadow-premium-lg overflow-hidden flex flex-col max-h-[90vh] cursor-default"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <FileText size={18} className="text-orange-600" />
+                <h3 className="text-base font-semibold text-neutral-800 truncate max-w-[40vw]">
+                  {previewAttachment.original_name}
+                </h3>
+                <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600 border border-neutral-200/50 uppercase">
+                  {previewAttachment.original_name.split('.').pop() ?? 'FILE'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href={attachmentDownloadUrl(previewAttachment)}
+                  className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors shadow-premium-sm"
+                >
+                  <Download size={13} /> Download
+                </a>
+                <button
+                  onClick={() => setPreviewAttachment(null)}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 p-6 bg-neutral-50/50 flex items-center justify-center overflow-auto">
+              {isPdf(previewAttachment) ? (
+                <iframe
+                  src={attachmentPreviewUrl(previewAttachment)}
+                  title={previewAttachment.original_name}
+                  className="h-[70vh] w-full rounded-xl border border-neutral-200/60 bg-white shadow-premium-md"
+                />
+              ) : (
+                <img
+                  src={attachmentPreviewUrl(previewAttachment)}
+                  alt={previewAttachment.original_name}
+                  className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-premium-md border border-neutral-200/50 bg-white p-2"
+                />
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </AppLayout>
   );
 }

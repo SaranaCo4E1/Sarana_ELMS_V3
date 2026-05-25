@@ -5,6 +5,7 @@ import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
 import { formatDays, formatShortDate } from '../utils';
+import LeaveBadge, { getLeaveStyle } from '../Components/LeaveBadge';
 
 type Props = {
   balances: LeaveBalance[];
@@ -18,26 +19,14 @@ type Props = {
   teamUpcomingLeaves: LeaveRequest[];
 };
 
-const statusStyles: Record<string, { bg: string; border: string; text: string }> = {
-  pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800' },
-  approved: { bg: 'bg-orange-50/60', border: 'border-orange-100/70', text: 'text-orange-800' },
-  rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800' },
-  cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' },
+const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
+  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
+  cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
 };
 
-export const getLeaveColor = (code: string) => {
-  const c = code.toLowerCase();
-  if (c === 'al' || c.includes('annual')) {
-    return { dot: 'bg-blue-500', bar: 'bg-blue-500' };
-  }
-  if (c === 'sl' || c.includes('sick')) {
-    return { dot: 'bg-red-500', bar: 'bg-red-500' };
-  }
-  if (c === 'el' || c.includes('emerg') || c.includes('cas')) {
-    return { dot: 'bg-amber-500', bar: 'bg-amber-500' };
-  }
-  return { dot: 'bg-indigo-500', bar: 'bg-indigo-500' };
-};
+// Removed local getLeaveColor in favor of getLeaveStyle from LeaveBadge component
 
 export default function Dashboard({
   balances,
@@ -85,7 +74,7 @@ export default function Dashboard({
                 const allowance = Math.max(1, Number(balance.allowance_days));
                 const used = Number(balance.used_days);
                 const percent = Math.min(100, (avail / allowance) * 100);
-                const color = getLeaveColor(balance.leave_type.code);
+                const color = getLeaveStyle(balance.leave_type.code);
 
                 return (
                   <div key={balance.id} className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
@@ -144,9 +133,7 @@ export default function Dashboard({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2.5">
                             <span className="text-sm font-medium text-neutral-800 truncate">{leave.user?.name}</span>
-                            <span className="px-2.5 py-1 rounded-sm bg-orange-50 text-xs font-medium text-orange-700 border border-orange-100/50 uppercase shrink-0">
-                              {leave.leave_type.code}
-                            </span>
+                            <LeaveBadge code={leave.leave_type.code} name={leave.leave_type.name} useShortCode />
                           </div>
                           <p className="text-sm text-neutral-500 font-medium mt-2">
                             {formatShortDate(leave.starts_at)} – {formatShortDate(leave.ends_at)}
@@ -162,9 +149,7 @@ export default function Dashboard({
                       <div key={leave.id} className="rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3.5 sm:p-4.5 flex items-center justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2.5">
-                            <span className="px-2.5 py-1 rounded-sm bg-orange-50 text-xs font-medium text-orange-700 border border-orange-100/50 uppercase shrink-0">
-                              {leave.leave_type.name}
-                            </span>
+                            <LeaveBadge code={leave.leave_type.code} name={leave.leave_type.name} />
                           </div>
                           <p className="text-sm text-neutral-500 font-medium mt-2">
                             {formatShortDate(leave.starts_at)} – {formatShortDate(leave.ends_at)}
@@ -229,7 +214,7 @@ export default function Dashboard({
               className="flex items-center justify-between rounded-lg border border-amber-100 bg-amber-50/50 px-5 py-4 text-sm font-medium text-amber-900 hover:bg-amber-50 hover:border-amber-200/60 shadow-premium-sm transition-all duration-200"
             >
               <span>{pendingApprovals.length} {pendingApprovals.length === 1 ? 'request needs' : 'requests need'} review</span>
-              <span className="flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-amber-600 px-1 text-xs font-medium text-white shadow-sm">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-amber-600 px-1.5 text-xs font-semibold text-white shadow-sm">
                 {pendingApprovals.length}
               </span>
             </Link>
@@ -278,7 +263,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
         {requests.map((request) => (
           <div key={request.id} className="p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium text-neutral-800 text-sm">{request.leave_type.name}</span>
+              <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
               <Status status={request.status} />
             </div>
             
@@ -338,7 +323,9 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
           <tbody className="divide-y divide-neutral-100/60">
             {requests.map((request) => (
               <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
-                <td className="px-6 py-5 font-medium text-neutral-800">{request.leave_type.name}</td>
+                <td className="px-6 py-5 font-medium text-neutral-800">
+                  <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
+                </td>
                 <td className="px-4 py-5 text-neutral-500 font-medium whitespace-nowrap">
                   {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
                 </td>
@@ -417,9 +404,10 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
 }
 
 function Status({ status }: { status: string }) {
-  const style = statusStyles[status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-600' };
+  const style = statusStyles[status] ?? { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-600/90', dot: 'bg-neutral-400' };
   return (
-    <span className={`inline-flex items-center rounded-full border ${style.border} ${style.bg} ${style.text} px-3 py-1 text-sm font-medium tracking-wide shadow-sm`}>
+    <span className={`inline-flex items-center rounded-md border ${style.border} ${style.bg} ${style.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all duration-300`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${style.dot} mr-1.5 shrink-0`} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );

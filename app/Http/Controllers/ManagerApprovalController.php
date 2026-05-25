@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LeaveAttachment;
 use App\Models\LeaveRequest;
 use App\Models\SystemNotification;
 use App\Notifications\LeaveRequestDecided;
@@ -9,8 +10,10 @@ use App\Services\LeaveBalanceService;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ManagerApprovalController extends Controller
 {
@@ -75,6 +78,29 @@ class ManagerApprovalController extends Controller
         return back()->with('success', 'Leave request '.$data['decision'].'.');
     }
 
+    public function previewAttachment(Request $request, LeaveAttachment $leaveAttachment): BinaryFileResponse
+    {
+        $this->authorizeAttachment($request, $leaveAttachment);
+
+        $response = response()->file($this->attachmentPath($leaveAttachment), [
+            'Content-Type' => $leaveAttachment->mime_type ?: 'application/octet-stream',
+        ]);
+        $response->setContentDisposition('inline', $this->asciiFilename($leaveAttachment));
+
+        return $response;
+    }
+
+    public function downloadAttachment(Request $request, LeaveAttachment $leaveAttachment): BinaryFileResponse
+    {
+        $this->authorizeAttachment($request, $leaveAttachment);
+
+        return response()->download(
+            $this->attachmentPath($leaveAttachment),
+            $this->asciiFilename($leaveAttachment),
+            ['Content-Type' => $leaveAttachment->mime_type ?: 'application/octet-stream']
+        );
+    }
+
     private function overlapsApprovedRequest(LeaveRequest $leaveRequest): bool
     {
         return LeaveRequest::query()
@@ -84,5 +110,30 @@ class ManagerApprovalController extends Controller
             ->whereDate('starts_at', '<=', $leaveRequest->ends_at)
             ->whereDate('ends_at', '>=', $leaveRequest->starts_at)
             ->exists();
+    }
+
+    private function authorizeAttachment(Request $request, LeaveAttachment $attachment): void
+    {
+        $attachment->loadMissing('leaveRequest.user');
+
+        $actor = $request->user();
+
+        abort_unless($actor->isHr() || $attachment->leaveRequest->user->manager_id === $actor->id, 403);
+    }
+
+    private function attachmentPath(LeaveAttachment $attachment): string
+    {
+        $disk = Storage::disk($attachment->disk);
+
+        abort_unless($disk->exists($attachment->path), 404);
+
+        return $disk->path($attachment->path);
+    }
+
+    private function asciiFilename(LeaveAttachment $attachment): string
+    {
+        $filename = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '_', $attachment->original_name), '_');
+
+        return $filename !== '' ? $filename : 'attachment';
     }
 }

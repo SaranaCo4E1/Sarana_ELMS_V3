@@ -6,6 +6,7 @@ import DatePicker from 'react-datepicker';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, LeaveType, PageProps } from '../types';
 import { formatDays, formatShortDate } from '../utils';
+import LeaveBadge, { getLeaveStyle } from '../Components/LeaveBadge';
 
 type Holiday = { id: number; name: string; holiday_date: string };
 type Props = {
@@ -16,26 +17,14 @@ type Props = {
   holidays: Holiday[];
 };
 
-const statusStyles: Record<string, { bg: string; border: string; text: string }> = {
-  pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800' },
-  approved: { bg: 'bg-orange-50/60', border: 'border-orange-100/70', text: 'text-orange-800' },
-  rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800' },
-  cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' },
+const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
+  approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+  rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
+  cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-555/90', dot: 'bg-neutral-400' },
 };
 
-export const getLeaveColor = (code: string) => {
-  const c = code.toLowerCase();
-  if (c === 'al' || c.includes('annual')) {
-    return { dot: 'bg-blue-500', bar: 'bg-blue-500' };
-  }
-  if (c === 'sl' || c.includes('sick')) {
-    return { dot: 'bg-red-500', bar: 'bg-red-500' };
-  }
-  if (c === 'el' || c.includes('emerg') || c.includes('cas')) {
-    return { dot: 'bg-amber-500', bar: 'bg-amber-500' };
-  }
-  return { dot: 'bg-indigo-500', bar: 'bg-indigo-500' };
-};
+// Removed local getLeaveColor in favor of getLeaveStyle from LeaveBadge component
 
 export default function ApplyLeave({ leaveTypes, balances, requests, requestStats, holidays }: Props) {
   const { errors } = usePage<PageProps>().props;
@@ -194,7 +183,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                     <div className="text-sm font-normal text-orange-800/80 mt-0.5">Review the leave type, dates, and handover notes before submitting.</div>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-orange-700">
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-700">
                   <Sparkles size={11} /> Autofill
                 </span>
               </div>
@@ -213,7 +202,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                   <p className="text-sm font-normal text-neutral-500 mt-1.5">Submit a leave request for approvals</p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-full border border-orange-100 bg-orange-50 px-3.5 py-1 text-xs font-medium text-orange-700 shadow-sm">
+              <span className="inline-flex items-center rounded-md border border-orange-100 bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-700 shadow-sm">
                 {formatDays(projectedDays)} working day(s) calculated
               </span>
             </div>
@@ -379,7 +368,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 const allowance = Math.max(1, Number(balance.allowance_days));
                 const used = Number(balance.used_days);
                 const percent = Math.min(100, (avail / allowance) * 100);
-                const color = getLeaveColor(balance.leave_type.code);
+                const color = getLeaveStyle(balance.leave_type.code);
 
                 return (
                   <div key={balance.id} className="space-y-2 border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
@@ -428,7 +417,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
         {requests.map((request) => (
           <div key={request.id} className="p-5 space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-normal text-neutral-800 text-sm">{request.leave_type.name}</span>
+              <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
               <Status status={request.status} />
             </div>
             
@@ -488,7 +477,9 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
           <tbody className="divide-y divide-neutral-100/60">
             {requests.map((request) => (
               <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
-                <td className="px-6 py-5 font-normal text-neutral-800">{request.leave_type.name}</td>
+                <td className="px-6 py-5 font-normal text-neutral-800">
+                  <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
+                </td>
                 <td className="px-4 py-5 text-neutral-500 font-normal whitespace-nowrap">
                   {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
                 </td>
@@ -567,9 +558,10 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
 }
 
 function Status({ status }: { status: string }) {
-  const style = statusStyles[status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-600' };
+  const style = statusStyles[status] ?? { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-600/90', dot: 'bg-neutral-400' };
   return (
-    <span className={`inline-flex items-center rounded-full border ${style.border} ${style.bg} ${style.text} px-3 py-1 text-sm font-medium tracking-wide shadow-sm`}>
+    <span className={`inline-flex items-center rounded-md border ${style.border} ${style.bg} ${style.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all duration-300`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${style.dot} mr-1.5 shrink-0`} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );

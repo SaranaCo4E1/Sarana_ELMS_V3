@@ -215,7 +215,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">ELMS Copilot</h2>
                   <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-500 mt-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
-                    <span>Gemini 3.5 flash Â· Ready</span>
+                    <span>Gemini 3.5 flash · Ready</span>
                   </div>
                 </div>
               </div>
@@ -394,7 +394,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                     <summary className="flex cursor-pointer items-center justify-between font-medium text-neutral-800 outline-none select-none">
                       <span className="pr-2">{faq.question}</span>
                       <span className="ml-2 text-neutral-400 group-open:rotate-180 transition-transform duration-200">
-                        â–¼
+                        ▼
                       </span>
                     </summary>
                     <p className="mt-3 leading-relaxed text-neutral-500 font-medium group-open:animate-fade-in">

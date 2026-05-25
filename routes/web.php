@@ -12,6 +12,7 @@ use App\Http\Controllers\ManagerApprovalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,8 +39,8 @@ Route::get('/privacy', function () {
     return inertia('Privacy');
 })->name('privacy');
 
-Route::get('/support', [\App\Http\Controllers\SupportController::class, 'index'])->name('support.index');
-Route::post('/support', [\App\Http\Controllers\SupportController::class, 'store'])->name('support.store');
+Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+Route::post('/support', [SupportController::class, 'store'])->name('support.store');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -60,6 +61,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:manager,hr,admin')->group(function () {
         Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
         Route::patch('/approvals/{leaveRequest}', [ManagerApprovalController::class, 'update'])->name('approvals.update');
+        Route::get('/approvals/attachments/{leaveAttachment}/preview', [ManagerApprovalController::class, 'previewAttachment'])->name('approvals.attachments.preview');
+        Route::get('/approvals/attachments/{leaveAttachment}/download', [ManagerApprovalController::class, 'downloadAttachment'])->name('approvals.attachments.download');
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
     });
 

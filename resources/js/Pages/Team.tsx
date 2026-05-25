@@ -4,6 +4,7 @@ import type React from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest, User } from '../types';
 import { formatDays, formatShortDate } from '../utils';
+import LeaveBadge from '../Components/LeaveBadge';
 
 type Props = {
   members: User[];
@@ -63,7 +64,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                       <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Department</div>
                       <div className="mt-0.5">
                         {member.department?.name ? (
-                          <span className="inline-flex items-center rounded-full bg-neutral-50 border border-neutral-200/50 px-2.5 py-1 text-xs font-medium text-neutral-600">
+                          <span className="inline-flex items-center rounded-md bg-neutral-50 border border-neutral-200/50 px-2 py-0.5 text-xs font-semibold text-neutral-600">
                             {member.department.name}
                           </span>
                         ) : (
@@ -130,7 +131,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                       </td>
                       <td className="px-4 py-4.5">
                         {member.department?.name ? (
-                          <span className="inline-flex items-center rounded-full bg-neutral-50 border border-neutral-200 px-3 py-1 text-sm font-medium text-neutral-600">
+                          <span className="inline-flex items-center rounded-md bg-neutral-50 border border-neutral-200 px-2 py-0.5 text-xs font-semibold text-neutral-600">
                             {member.department.name}
                           </span>
                         ) : (
@@ -240,17 +241,30 @@ function Panel({ title, icon, children }: { title: string; icon: React.ReactNode
 }
  
 function RequestLine({ request }: { request: LeaveRequest }) {
+  const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    pending: { bg: 'bg-amber-500/[0.04]', border: 'border-amber-500/10', text: 'text-amber-700/90', dot: 'bg-amber-500' },
+    approved: { bg: 'bg-orange-500/[0.04]', border: 'border-orange-500/10', text: 'text-orange-700/90', dot: 'bg-orange-500' },
+    rejected: { bg: 'bg-rose-500/[0.04]', border: 'border-rose-500/10', text: 'text-rose-700/90', dot: 'bg-rose-500' },
+    cancelled: { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-550/90', dot: 'bg-neutral-400' },
+  };
+  const style = statusStyles[request.status] ?? { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-600/90', dot: 'bg-neutral-400' };
+
   return (
     <div className="rounded-lg bg-neutral-50/50 border border-neutral-100 p-4 text-sm shadow-premium-sm">
-      <div className="font-medium text-neutral-800">
-        {request.user?.name} · <span className="text-orange-700">{request.leave_type.name}</span>
+      <div className="font-medium text-neutral-800 flex items-center gap-1.5 flex-wrap">
+        <span>{request.user?.name}</span>
+        <span>·</span>
+        <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} variant="minimal" />
       </div>
       <div className="text-xs text-neutral-500 mt-2.5 flex flex-wrap items-center gap-1.5 font-medium">
         <span className="font-medium">{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
         <span>·</span>
         <span className="font-medium text-neutral-700">{formatDays(request.requested_days)} day(s)</span>
         <span>·</span>
-        <span className="rounded-full bg-neutral-100 border border-neutral-200 px-2 py-0.5 font-medium text-neutral-600 uppercase text-[10px]">{request.status}</span>
+        <span className={`inline-flex items-center rounded-md border ${style.border} ${style.bg} ${style.text} px-2 py-0.5 text-[10px] font-semibold tracking-wide transition-all duration-300 uppercase`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${style.dot} mr-1.5 shrink-0`} />
+          {request.status}
+        </span>
       </div>
     </div>
   );
