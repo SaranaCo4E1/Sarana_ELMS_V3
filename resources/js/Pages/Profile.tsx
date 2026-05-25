@@ -49,37 +49,37 @@ export default function Profile({ profile }: { profile: User }) {
     <AppLayout>
       <div className="space-y-6">
         {/* Premium Profile Banner Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-650 to-teal-700 p-6 text-white shadow-premium-md animate-fade-in">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-tr from-orange-600 via-orange-600 to-amber-700 p-6 text-white shadow-premium-md animate-fade-in">
           {/* Subtle background decoration */}
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl"></div>
-          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-teal-500/10 blur-3xl"></div>
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/10 blur-3xl"></div>
+          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl"></div>
 
           <div className="relative flex flex-col items-center gap-5 sm:flex-row sm:items-center">
             {/* Avatar Circle */}
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-neutral-950 font-semibold text-2xl shadow-inner border border-emerald-300/20">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 text-neutral-950 font-medium text-2xl shadow-inner border border-orange-300/20">
               {initials}
             </div>
 
             {/* User Info */}
             <div className="text-center sm:text-left">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                <h1 className="text-2xl font-semibold tracking-tight text-white">{profile.name}</h1>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-500/20">
+                <h1 className="text-2xl font-medium tracking-tight text-white">{profile.name}</h1>
+                <span className="inline-flex items-center rounded-full bg-orange-500/15 px-2.5 py-0.5 text-xs font-medium text-orange-300 border border-orange-500/20">
                   Active Account
                 </span>
               </div>
-              <p className="mt-1 text-sm text-neutral-300 font-medium">
-                {profile.role} · {profile.department?.name ?? 'Unassigned Department'}
+              <p className="mt-1.5 text-sm text-neutral-300 font-medium">
+                {profile.role} Ã‚Â· {profile.department?.name ?? 'Unassigned Department'}
               </p>
               
-              <div className="mt-3.5 flex flex-wrap justify-center gap-y-1.5 gap-x-4 text-xs text-neutral-450 sm:justify-start font-medium">
+              <div className="mt-3.5 flex flex-wrap justify-center gap-y-1.5 gap-x-4 text-sm text-neutral-300 sm:justify-start font-medium">
                 <span className="flex items-center gap-1.5">
-                  <Mail size={13} className="text-neutral-550" />
+                  <Mail size={13} className="text-neutral-300/80" />
                   {profile.email}
                 </span>
                 {profile.employee_code && (
                   <span className="flex items-center gap-1.5">
-                    <BriefcaseBusiness size={13} className="text-neutral-550" />
+                    <BriefcaseBusiness size={13} className="text-neutral-300/80" />
                     ID: {profile.employee_code}
                   </span>
                 )}
@@ -91,10 +91,10 @@ export default function Profile({ profile }: { profile: User }) {
         {/* Profile Info and Form Grid */}
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           {/* Main Form */}
-          <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+          <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
             <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
-              <IdCard size={17} className="text-emerald-600" />
-              <h2 className="text-base font-semibold text-neutral-850">Personal Information</h2>
+              <IdCard size={17} className="text-orange-600" />
+              <h2 className="text-base font-medium text-neutral-800">Personal Information</h2>
             </div>
             
             <form onSubmit={submit} className="grid gap-5 md:grid-cols-2">
@@ -106,26 +106,26 @@ export default function Profile({ profile }: { profile: User }) {
               <Field label="Emergency contact" value={form.emergency_contact_name} onChange={(value) => setForm({ ...form, emergency_contact_name: value })} error={errors.emergency_contact_name} />
               <Field label="Emergency phone" value={form.emergency_contact_phone} onChange={(value) => setForm({ ...form, emergency_contact_phone: value })} error={errors.emergency_contact_phone} />
               
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450 md:col-span-2">
+              <label className="text-sm font-medium uppercase tracking-wider text-neutral-500 md:col-span-2">
                 Bio and Handover Notes
                 <textarea 
-                  className="mt-1.5 min-h-[7.5rem] w-full rounded-xl border border-neutral-200/70 p-3 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none resize-y font-medium leading-relaxed" 
+                  className="mt-2 min-h-[7.5rem] w-full rounded-lg border border-neutral-200/70 p-3.5 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none resize-y font-medium leading-relaxed" 
                   value={form.bio} 
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   placeholder="Tell us about yourself or specify your typical handover guidelines..."
                 />
-                {errors.bio && <span className="mt-1.5 block text-[11px] text-rose-600 font-medium normal-case">{errors.bio}</span>}
+                {errors.bio && <span className="mt-1.5 block text-xs text-rose-600 font-medium normal-case">{errors.bio}</span>}
               </label>
 
               {/* General Error (if any fallback) */}
               {Object.values(errors).length > 0 && !errors.name && !errors.email && !errors.phone && !errors.work_location && !errors.employment_type && !errors.emergency_contact_name && !errors.emergency_contact_phone && !errors.bio && (
-                <div className="rounded-xl bg-rose-50 border border-rose-100 p-3.5 text-xs font-semibold text-rose-600 md:col-span-2 animate-fade-in">
+                <div className="rounded-lg bg-rose-50 border border-rose-100 p-4 text-sm font-medium text-rose-600 md:col-span-2 animate-fade-in">
                   {Object.values(errors)[0]}
                 </div>
               )}
 
               <div className="pt-2 md:col-span-2">
-                <button className="rounded-xl bg-emerald-600 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all cursor-pointer">
+                <button className="rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer">
                   Save Changes
                 </button>
               </div>
@@ -149,10 +149,10 @@ export default function Profile({ profile }: { profile: User }) {
         {/* Security Details Sections */}
         <div className="grid gap-6 xl:grid-cols-2">
           {/* Reset Password Form */}
-          <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+          <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
             <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
-              <KeyRound size={17} className="text-emerald-600" />
-              <h2 className="text-base font-semibold text-neutral-850">Change Password</h2>
+              <KeyRound size={17} className="text-orange-600" />
+              <h2 className="text-base font-medium text-neutral-800">Change Password</h2>
             </div>
             
             <form onSubmit={updatePassword} className="space-y-4">
@@ -161,7 +161,7 @@ export default function Profile({ profile }: { profile: User }) {
               <Field label="Confirm new password" type="password" value={passwordForm.password_confirmation} onChange={(value) => setPasswordForm({ ...passwordForm, password_confirmation: value })} error={errors.password_confirmation} />
               
               <div className="pt-2">
-                <button className="rounded-xl bg-emerald-600 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all cursor-pointer">
+                <button className="rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer">
                   Update Password
                 </button>
               </div>
@@ -169,26 +169,26 @@ export default function Profile({ profile }: { profile: User }) {
           </section>
 
           {/* Two Factor Configuration */}
-          <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+          <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
             <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
-              <LockKeyhole size={17} className="text-emerald-600" />
-              <h2 className="text-base font-semibold text-neutral-850">Two-Factor Authentication</h2>
+              <LockKeyhole size={17} className="text-orange-600" />
+              <h2 className="text-base font-medium text-neutral-800">Two-Factor Authentication</h2>
             </div>
 
-            <div className="flex gap-4 items-start rounded-2xl bg-neutral-50/50 p-4 border border-neutral-200/60 shadow-premium-sm">
+            <div className="flex gap-4 items-start rounded-xl bg-neutral-50/50 p-4 border border-neutral-200/60 shadow-premium-sm">
               <div className="mt-0.5">
                 {profile.two_factor_enabled ? (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-orange-50 text-orange-600 border border-orange-100">
                     <ShieldCheck size={16} />
                   </div>
                 ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-50 text-amber-600 border border-amber-100">
                     <ShieldAlert size={16} />
                   </div>
                 )}
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-neutral-850">
+                <h4 className="text-sm font-medium text-neutral-800">
                   {profile.two_factor_enabled ? '2FA Protection Active' : 'Enable Extra Protection'}
                 </h4>
                 <p className="mt-1 text-sm text-neutral-500 leading-relaxed font-medium">
@@ -212,7 +212,7 @@ export default function Profile({ profile }: { profile: User }) {
               <div className="flex flex-wrap gap-2 pt-2">
                 {!profile.two_factor_enabled ? (
                   <button 
-                    className="rounded-xl bg-emerald-600 px-6 py-3 text-xs font-semibold tracking-wide uppercase text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
+                    className="rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
                     onClick={() => toggleTwoFactor(true)} 
                     type="button"
                     disabled={!twoFactorPassword}
@@ -221,7 +221,7 @@ export default function Profile({ profile }: { profile: User }) {
                   </button>
                 ) : (
                   <button 
-                    className="rounded-xl border border-rose-200 bg-white px-6 py-3 text-xs font-semibold tracking-wide uppercase text-rose-600 shadow-premium-sm hover:bg-rose-50 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
+                    className="rounded-lg border border-rose-200 bg-white px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-rose-600 shadow-premium-sm hover:bg-rose-50 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
                     onClick={() => toggleTwoFactor(false)} 
                     type="button"
                     disabled={!twoFactorPassword}
@@ -254,29 +254,29 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+    <label className="block text-sm font-medium uppercase tracking-wider text-neutral-500">
       {label}
       <input 
-        className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" 
+        className="mt-2 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" 
         type={type} 
         value={value} 
         onChange={(e) => onChange(e.target.value)} 
         placeholder={placeholder}
       />
-      {error && <span className="mt-1.5 block text-[11px] text-rose-600 font-medium normal-case">{error}</span>}
+      {error && <span className="mt-1.5 block text-xs text-rose-600 font-medium normal-case">{error}</span>}
     </label>
   );
 }
 
 function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-xl border border-neutral-200/50 bg-white p-4 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 border border-neutral-200 shadow-premium-sm">
+    <div className="flex items-center gap-3.5 rounded-lg border border-neutral-200/50 bg-white p-4 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-neutral-50 text-neutral-500 border border-neutral-200 shadow-premium-sm">
         <div className="text-neutral-400">{icon}</div>
       </div>
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">{label}</div>
-        <div className="mt-1 text-sm font-semibold text-neutral-850">{value}</div>
+        <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">{label}</div>
+        <div className="mt-1 text-sm font-medium text-neutral-800">{value}</div>
       </div>
     </div>
   );

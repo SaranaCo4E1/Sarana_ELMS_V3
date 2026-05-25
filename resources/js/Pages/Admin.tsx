@@ -43,26 +43,26 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
       <div className="space-y-8 animate-fade-in">
         {/* Metric Statistics */}
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
-          <Metric label="Active Users" value={stats.active_users} variant="emerald" />
+          <Metric label="Active Users" value={stats.active_users} variant="orange" />
           <Metric label="Inactive Users" value={stats.inactive_users} variant="slate" />
           <Metric label="Pending Requests" value={stats.pending_requests} variant="amber" />
-          <Metric label="Approved Month" value={stats.approved_this_month} variant="teal" />
+          <Metric label="Approved Month" value={stats.approved_this_month} variant="amber" />
           <Metric label="Departments" value={stats.departments} variant="indigo" />
           <Metric label="Leave Types" value={stats.leave_types} variant="indigo" />
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border-b border-neutral-200/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-2">
+        <div className="flex border-b border-neutral-200/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-3">
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setQuery(''); }}
-                className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4.5 py-4 text-sm font-medium uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                   active
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-850 font-medium'
+                    ? 'border-orange-600 text-orange-700'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-800 font-medium'
                 }`}
               >
                 {tab.icon}
@@ -77,24 +77,24 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
           {activeTab === 'users' && (
             <div className="grid gap-8 lg:grid-cols-[1fr_310px] items-start">
               {/* Users list directory */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm overflow-hidden">
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5 mb-5">
                   <div>
-                    <h3 className="text-base font-semibold text-neutral-850">User Directory</h3>
-                    <p className="text-xs text-neutral-500 font-medium mt-0.5">View and manage staff accounts and roles</p>
+                    <h3 className="text-base font-medium text-neutral-800">User Directory</h3>
+                    <p className="text-sm text-neutral-500 font-medium mt-1">View and manage staff accounts and roles</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3">
                     <div className="relative">
-                      <Search className="absolute left-3 top-3 text-neutral-400" size={14} />
+                      <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
                       <input
-                        className="w-48 rounded-xl border border-neutral-200 py-2 pl-8 pr-3 text-xs bg-white font-medium text-neutral-800 placeholder-neutral-400 outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all shadow-premium-sm"
+                        className="w-52 rounded-lg border border-neutral-200 py-2.5 pl-9 pr-3.5 text-sm bg-white font-medium text-neutral-800 placeholder-neutral-400 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
                         placeholder="Search employees..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                       />
                     </div>
                     <select
-                      className="rounded-xl border border-neutral-200 px-3.5 py-2 text-xs bg-white font-semibold text-neutral-700 outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all shadow-premium-sm"
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
                       value={roleFilter}
                       onChange={(e) => setRoleFilter(e.target.value)}
                     >
@@ -113,38 +113,38 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     <div key={item.id} className="p-5 space-y-4 bg-white hover:bg-neutral-50/30 transition-all">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <div className="font-semibold text-neutral-850 text-xs">{item.name}</div>
-                          <div className="text-[11px] text-neutral-450 mt-0.5 font-medium">{item.email}</div>
+                          <div className="font-medium text-neutral-800 text-sm">{item.name}</div>
+                          <div className="text-xs text-neutral-400 mt-1 font-medium">{item.email}</div>
                         </div>
                         <Toggle active={Boolean(item.is_active)} onClick={() => router.patch(`/admin/users/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true })} />
                       </div>
-
-                      <div className="grid grid-cols-2 gap-3.5 text-xs text-neutral-700">
+ 
+                      <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-700">
                         <div>
-                          <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-450">Code / Role</div>
-                          <div className="font-medium mt-1.5 capitalize">{item.employee_code ?? 'No Code'} · {item.role}</div>
+                          <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Code / Role</div>
+                          <div className="font-medium mt-1.5 capitalize">{item.employee_code ?? 'No Code'} Ã‚Â· {item.role}</div>
                         </div>
                         <div>
-                          <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-450">Department</div>
-                          <div className="font-medium mt-1.5">{item.department?.name ?? '—'}</div>
+                          <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Department</div>
+                          <div className="font-medium mt-1.5">{item.department?.name ?? 'Ã¢â‚¬â€'}</div>
                         </div>
                         <div>
-                          <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-450">Manager</div>
-                          <div className="font-medium mt-1.5">{item.manager?.name ?? '—'}</div>
+                          <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Manager</div>
+                          <div className="font-medium mt-1.5">{item.manager?.name ?? 'Ã¢â‚¬â€'}</div>
                         </div>
                         <div>
-                          <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-450">Leave stats</div>
-                          <div className="font-medium mt-1.5 flex flex-wrap gap-x-1.5 text-xs">
-                            <span className="text-amber-600 font-semibold">{item.pending_leave_requests_count ?? 0} pending</span>
-                            <span className="text-neutral-300">·</span>
-                            <span className="text-emerald-600 font-semibold">{item.approved_leave_requests_count ?? 0} approved</span>
+                          <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">Leave stats</div>
+                          <div className="font-medium mt-1.5 flex flex-wrap gap-x-1.5 text-sm">
+                            <span className="text-amber-600 font-medium">{item.pending_leave_requests_count ?? 0} pending</span>
+                            <span className="text-neutral-300">Ã‚Â·</span>
+                            <span className="text-orange-600 font-medium">{item.approved_leave_requests_count ?? 0} approved</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <div className="p-8 text-center text-xs text-neutral-450 font-semibold">
+                    <div className="p-8 text-center text-xs text-neutral-400 font-semibold">
                       No matching users found.
                     </div>
                   )}
@@ -153,32 +153,32 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 {/* Desktop Table View */}
                 <div className="hidden sm:block overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-neutral-50/50 text-[10px] font-semibold uppercase tracking-widest text-neutral-450 border-b border-neutral-200/60">
+                    <thead className="bg-neutral-50/50 text-xs font-medium uppercase tracking-wider text-neutral-500 border-b border-neutral-200/60">
                       <tr>
-                        <th className="px-4 py-4">Employee</th>
-                        <th className="px-4 py-4">Role</th>
-                        <th className="px-4 py-4">Department</th>
-                        <th className="px-4 py-4">Manager</th>
-                        <th className="px-4 py-4">Leave stats</th>
-                        <th className="px-4 py-4 text-right">Status</th>
+                        <th className="px-4 py-4.5">Employee</th>
+                        <th className="px-4 py-4.5">Role</th>
+                        <th className="px-4 py-4.5">Department</th>
+                        <th className="px-4 py-4.5">Manager</th>
+                        <th className="px-4 py-4.5">Leave stats</th>
+                        <th className="px-4 py-4.5 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
                       {filteredUsers.map((item) => (
                         <tr key={item.id} className="transition-all hover:bg-neutral-50/50">
-                          <td className="px-4 py-4">
-                            <div className="font-semibold text-neutral-850">{item.name}</div>
-                            <div className="text-xs text-neutral-500 font-medium mt-0.5">{item.email} · {item.employee_code ?? 'No Code'}</div>
+                          <td className="px-4 py-4.5">
+                            <div className="font-medium text-neutral-800">{item.name}</div>
+                            <div className="text-sm text-neutral-500 font-medium mt-1">{item.email} Ã‚Â· {item.employee_code ?? 'No Code'}</div>
                           </td>
-                          <td className="px-4 py-4 text-neutral-700 font-semibold capitalize">{item.role}</td>
-                          <td className="px-4 py-4 text-neutral-500 font-medium">{item.department?.name ?? '—'}</td>
-                          <td className="px-4 py-4 text-neutral-500 font-medium">{item.manager?.name ?? '—'}</td>
-                          <td className="px-4 py-4 text-neutral-700 font-semibold text-xs">
+                          <td className="px-4 py-4.5 text-neutral-700 font-medium capitalize">{item.role}</td>
+                          <td className="px-4 py-4.5 text-neutral-500 font-medium">{item.department?.name ?? 'Ã¢â‚¬â€'}</td>
+                          <td className="px-4 py-4.5 text-neutral-500 font-medium">{item.manager?.name ?? 'Ã¢â‚¬â€'}</td>
+                          <td className="px-4 py-4.5 text-neutral-700 font-medium text-sm">
                             <span className="text-amber-600">{item.pending_leave_requests_count ?? 0} pending</span>
-                            <span className="mx-1.5 text-neutral-300">·</span>
-                            <span className="text-emerald-600">{item.approved_leave_requests_count ?? 0} approved</span>
+                            <span className="mx-1.5 text-neutral-300">Ã‚Â·</span>
+                            <span className="text-orange-600">{item.approved_leave_requests_count ?? 0} approved</span>
                           </td>
-                          <td className="px-4 py-4 text-right whitespace-nowrap">
+                          <td className="px-4 py-4.5 text-right whitespace-nowrap">
                             <Toggle active={Boolean(item.is_active)} onClick={() => router.patch(`/admin/users/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true })} />
                           </td>
                         </tr>
@@ -189,12 +189,12 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
               </section>
 
               {/* Create User Account */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-                <h3 className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
-                  <UserPlus size={15} className="text-emerald-600" /> Create User Account
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+                <h3 className="mb-4 flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  <UserPlus size={15} className="text-orange-600" /> Create User Account
                 </h3>
                 <form
-                  className="space-y-4"
+                  className="space-y-4.5"
                   onSubmit={(e) => {
                     e.preventDefault();
                     router.post('/admin/users', userForm, {
@@ -203,56 +203,56 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     });
                   }}
                 >
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Full Name
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="Name" value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="Name" value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Email Address
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" type="email" placeholder="Email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" type="email" placeholder="Email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} required />
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                    <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                       Employee Code
-                      <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="EMP-01" value={userForm.employee_code} onChange={(e) => setUserForm({ ...userForm, employee_code: e.target.value })} />
+                      <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="EMP-01" value={userForm.employee_code} onChange={(e) => setUserForm({ ...userForm, employee_code: e.target.value })} />
                     </label>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                    <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                       Job Title
-                      <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="Title" value={userForm.job_title} onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })} />
+                      <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="Title" value={userForm.job_title} onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })} />
                     </label>
                   </div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Hire Date
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium text-neutral-500" type="date" value={userForm.hire_date} onChange={(e) => setUserForm({ ...userForm, hire_date: e.target.value })} />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium text-neutral-500" type="date" value={userForm.hire_date} onChange={(e) => setUserForm({ ...userForm, hire_date: e.target.value })} />
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                    <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                       Role
-                      <select className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value as any })}>
+                      <select className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value as any })}>
                         <option>staff</option>
                         <option>manager</option>
                         <option>hr</option>
                         <option>admin</option>
                       </select>
                     </label>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                    <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                       Department
-                      <select className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={userForm.department_id} onChange={(e) => setUserForm({ ...userForm, department_id: e.target.value })}>
+                      <select className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={userForm.department_id} onChange={(e) => setUserForm({ ...userForm, department_id: e.target.value })}>
                         <option value="">None</option>
                         {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                       </select>
                     </label>
                   </div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Reporting Manager
-                    <select className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={userForm.manager_id} onChange={(e) => setUserForm({ ...userForm, manager_id: e.target.value })}>
+                    <select className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={userForm.manager_id} onChange={(e) => setUserForm({ ...userForm, manager_id: e.target.value })}>
                       <option value="">None</option>
                       {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </select>
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Temporary Password
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" type="password" placeholder="Password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" type="password" placeholder="Password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} required />
                   </label>
                   <Check label="Require 2FA Authentication" checked={userForm.two_factor_enabled} onChange={(checked) => setUserForm({ ...userForm, two_factor_enabled: checked })} />
                   <Submit label="Create User Account" />
@@ -264,24 +264,24 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
           {activeTab === 'departments' && (
             <div className="grid gap-8 lg:grid-cols-[1fr_310px] items-start">
               {/* Departments List */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
                 <div className="border-b border-neutral-100 pb-4 mb-4">
-                  <h3 className="text-base font-semibold text-neutral-850">Departments Directory</h3>
-                  <p className="text-xs text-neutral-500 font-medium mt-0.5">Active organizational groupings and management</p>
+                  <h3 className="text-base font-medium text-neutral-800">Departments Directory</h3>
+                  <p className="text-sm text-neutral-500 font-medium mt-1">Active organizational groupings and management</p>
                 </div>
                 <DataList rows={departments.map((item) => ({
                   id: item.id,
-                  title: `${item.code} · ${item.name}`,
-                  meta: `${item.users_count ?? 0} active employees · Manager: ${item.manager?.name ?? 'Unassigned'}`,
+                  title: `${item.code} Ã‚Â· ${item.name}`,
+                  meta: `${item.users_count ?? 0} active employees Ã‚Â· Manager: ${item.manager?.name ?? 'Unassigned'}`,
                   active: item.is_active,
                   toggle: () => router.patch(`/admin/departments/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true }),
                 }))} />
               </section>
 
               {/* Add Department Form */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-                <h3 className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
-                  <Building2 size={15} className="text-emerald-600" /> Add Department
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+                <h3 className="mb-4 flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  <Building2 size={15} className="text-orange-600" /> Add Department
                 </h3>
                 <form
                   className="space-y-4"
@@ -293,17 +293,17 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     });
                   }}
                 >
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Department Name
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. Technology" value={departmentForm.name} onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. Technology" value={departmentForm.name} onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Code Identifier
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. TECH" value={departmentForm.code} onChange={(e) => setDepartmentForm({ ...departmentForm, code: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. TECH" value={departmentForm.code} onChange={(e) => setDepartmentForm({ ...departmentForm, code: e.target.value })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Department Manager
-                    <select className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={departmentForm.manager_id} onChange={(e) => setDepartmentForm({ ...departmentForm, manager_id: e.target.value })}>
+                    <select className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={departmentForm.manager_id} onChange={(e) => setDepartmentForm({ ...departmentForm, manager_id: e.target.value })}>
                       <option value="">No manager</option>
                       {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </select>
@@ -317,24 +317,24 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
           {activeTab === 'leave-types' && (
             <div className="grid gap-8 lg:grid-cols-[1fr_310px] items-start">
               {/* Leave Types List */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
                 <div className="border-b border-neutral-100 pb-4 mb-4">
-                  <h3 className="text-base font-semibold text-neutral-850">Leave Policies</h3>
-                  <p className="text-xs text-neutral-500 font-medium mt-0.5">Configured time-off types, limits, and rules</p>
+                  <h3 className="text-base font-semibold text-neutral-800">Leave Policies</h3>
+                  <p className="text-sm text-neutral-500 font-medium mt-1">Configured time-off types, limits, and rules</p>
                 </div>
                 <DataList rows={leaveTypes.map((item) => ({
                   id: item.id,
-                  title: `${item.code} · ${item.name}`,
-                  meta: `${formatDays(item.default_allowance_days)} default · ${item.paid ? 'Paid' : 'Unpaid'} · ${item.requires_attachment ? 'Attachment required' : 'No attachment'} · ${item.balances_count ?? 0} active balances`,
+                  title: `${item.code} Ã‚Â· ${item.name}`,
+                  meta: `${formatDays(item.default_allowance_days)} default Ã‚Â· ${item.paid ? 'Paid' : 'Unpaid'} Ã‚Â· ${item.requires_attachment ? 'Attachment required' : 'No attachment'} Ã‚Â· ${item.balances_count ?? 0} active balances`,
                   active: item.is_active,
                   toggle: () => router.patch(`/admin/leave-types/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true }),
                 }))} />
               </section>
 
               {/* Add Leave Type Form */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-                <h3 className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
-                  <SlidersHorizontal size={15} className="text-emerald-600" /> Add Leave Type
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+                <h3 className="mb-4 flex items-center gap-2.5 text-xs font-medium uppercase tracking-wider text-neutral-500">
+                  <SlidersHorizontal size={15} className="text-orange-600" /> Add Leave Type
                 </h3>
                 <form
                   className="space-y-4"
@@ -346,17 +346,17 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     });
                   }}
                 >
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Policy Name
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. Maternity Leave" value={leaveTypeForm.name} onChange={(e) => setLeaveTypeForm({ ...leaveTypeForm, name: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. Maternity Leave" value={leaveTypeForm.name} onChange={(e) => setLeaveTypeForm({ ...leaveTypeForm, name: e.target.value })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Code Identifier
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. MAT" value={leaveTypeForm.code} onChange={(e) => setLeaveTypeForm({ ...leaveTypeForm, code: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. MAT" value={leaveTypeForm.code} onChange={(e) => setLeaveTypeForm({ ...leaveTypeForm, code: e.target.value })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Default Allowance Days
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" min="0" step="0.5" placeholder="12" value={leaveTypeForm.default_allowance_days} onChange={(e) => setLeaveTypeForm({ ...leaveTypeForm, default_allowance_days: Number(e.target.value) })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" min="0" step="0.5" placeholder="12" value={leaveTypeForm.default_allowance_days} onChange={(e) => setLeaveTypeForm({ ...leaveTypeForm, default_allowance_days: Number(e.target.value) })} required />
                   </label>
                   <div className="flex flex-col gap-2.5 pt-2">
                     <Check label="Paid Leave" checked={leaveTypeForm.paid} onChange={(checked) => setLeaveTypeForm({ ...leaveTypeForm, paid: checked })} />
@@ -372,14 +372,14 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
           {activeTab === 'holidays' && (
             <div className="grid gap-8 lg:grid-cols-[1fr_310px] items-start">
               {/* Holidays List */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
                 <div className="border-b border-neutral-100 pb-4 mb-4">
-                  <h3 className="text-base font-semibold text-neutral-850">Public Holidays</h3>
-                  <p className="text-xs text-neutral-500 font-medium mt-0.5">Ignored dates for calculation of request working days</p>
+                  <h3 className="text-base font-medium text-neutral-800">Public Holidays</h3>
+                  <p className="text-sm text-neutral-500 font-medium mt-1">Ignored dates for calculation of request working days</p>
                 </div>
                 <DataList rows={holidays.slice(0, 12).map((item) => ({
                   id: item.id,
-                  title: `${formatDate(item.holiday_date)} · ${item.name}`,
+                  title: `${formatDate(item.holiday_date)} Ã‚Â· ${item.name}`,
                   meta: item.is_active ? 'Excluded from working-day calculations' : 'Currently ignored',
                   active: item.is_active,
                   toggle: () => router.patch(`/admin/holidays/${item.id}/status`, { is_active: !item.is_active }, { preserveScroll: true }),
@@ -387,9 +387,9 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
               </section>
 
               {/* Add Holiday Form */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-                <h3 className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
-                  <CalendarDays size={15} className="text-emerald-600" /> Add Holiday
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+                <h3 className="mb-4 flex items-center gap-2.5 text-xs font-medium uppercase tracking-wider text-neutral-500">
+                  <CalendarDays size={15} className="text-orange-600" /> Add Holiday
                 </h3>
                 <form
                   className="space-y-4"
@@ -401,13 +401,13 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     });
                   }}
                 >
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Holiday Date
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium text-neutral-500" type="date" value={holidayForm.holiday_date} onChange={(e) => setHolidayForm({ ...holidayForm, holiday_date: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium text-neutral-500" type="date" value={holidayForm.holiday_date} onChange={(e) => setHolidayForm({ ...holidayForm, holiday_date: e.target.value })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Holiday Name
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. New Year Day" value={holidayForm.name} onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. New Year Day" value={holidayForm.name} onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })} required />
                   </label>
                   <Submit label="Add Public Holiday" />
                 </form>
@@ -416,14 +416,14 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
           )}
 
           {activeTab === 'balances' && (
-            <div className="max-w-2xl mx-auto rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+            <div className="max-w-2xl mx-auto rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
               <div className="border-b border-neutral-100 pb-5 mb-5 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-50 text-neutral-500 border border-neutral-200 shadow-premium-sm">
-                  <Shield size={18} className="text-emerald-600" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 border border-neutral-200 shadow-premium-sm">
+                  <Shield size={18} className="text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-neutral-850">Balance Override</h3>
-                  <p className="text-xs text-neutral-500 font-medium mt-0.5">Directly adjust or set quota values for specific staff members</p>
+                  <h3 className="text-base font-medium text-neutral-800">Balance Override</h3>
+                  <p className="text-sm text-neutral-500 font-medium mt-1">Directly adjust or set quota values for specific staff members</p>
                 </div>
               </div>
               
@@ -438,16 +438,16 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 }}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Select Employee
-                    <select className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={balanceForm.user_id} onChange={(e) => setBalanceForm({ ...balanceForm, user_id: e.target.value })} required>
+                    <select className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={balanceForm.user_id} onChange={(e) => setBalanceForm({ ...balanceForm, user_id: e.target.value })} required>
                       <option value="">Choose User</option>
                       {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </select>
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Leave Type
-                    <select className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={balanceForm.leave_type_id} onChange={(e) => setBalanceForm({ ...balanceForm, leave_type_id: e.target.value })} required>
+                    <select className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" value={balanceForm.leave_type_id} onChange={(e) => setBalanceForm({ ...balanceForm, leave_type_id: e.target.value })} required>
                       <option value="">Choose Type</option>
                       {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
@@ -455,23 +455,23 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Calendar Year
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" value={balanceForm.year} onChange={(e) => setBalanceForm({ ...balanceForm, year: Number(e.target.value) })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" value={balanceForm.year} onChange={(e) => setBalanceForm({ ...balanceForm, year: Number(e.target.value) })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Override Allowance (Days)
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" step="0.5" placeholder="Quota" value={balanceForm.allowance_days} onChange={(e) => setBalanceForm({ ...balanceForm, allowance_days: Number(e.target.value) })} required />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" step="0.5" placeholder="Quota" value={balanceForm.allowance_days} onChange={(e) => setBalanceForm({ ...balanceForm, allowance_days: Number(e.target.value) })} required />
                   </label>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                     Adjustment Override (Days)
-                    <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" step="0.5" placeholder="Adjustment" value={balanceForm.adjustment_days} onChange={(e) => setBalanceForm({ ...balanceForm, adjustment_days: Number(e.target.value) })} />
+                    <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" type="number" step="0.5" placeholder="Adjustment" value={balanceForm.adjustment_days} onChange={(e) => setBalanceForm({ ...balanceForm, adjustment_days: Number(e.target.value) })} />
                   </label>
                 </div>
 
-                <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
                   Override Reason & Audit Note
-                  <input className="mt-1.5 w-full rounded-xl border border-neutral-200/70 bg-white px-3.5 py-2.5 text-xs text-neutral-850 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. Rollover from previous year" value={balanceForm.override_reason} onChange={(e) => setBalanceForm({ ...balanceForm, override_reason: e.target.value })} required />
+                  <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" placeholder="e.g. Rollover from previous year" value={balanceForm.override_reason} onChange={(e) => setBalanceForm({ ...balanceForm, override_reason: e.target.value })} required />
                 </label>
 
                 <div className="pt-2">
@@ -484,10 +484,10 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
           {activeTab === 'reports' && (
             <div className="space-y-6">
               {/* Reports links */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
                 <div className="border-b border-neutral-100 pb-4 mb-4">
-                  <h3 className="text-base font-semibold text-neutral-850">Download Reports</h3>
-                  <p className="text-xs text-neutral-500 font-medium mt-0.5">Export CSV formats of monthly staff leave records</p>
+                  <h3 className="text-base font-medium text-neutral-800">Download Reports</h3>
+                  <p className="text-sm text-neutral-500 font-medium mt-1">Export CSV formats of monthly staff leave records</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {[0, 1, 2].map((offset) => {
@@ -497,10 +497,10 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     return (
                       <a
                         key={month}
-                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 transition-all cursor-pointer active:scale-98"
+                        className="inline-flex items-center gap-2.5 rounded-lg bg-orange-600 px-6 py-4 text-sm font-medium uppercase tracking-wider text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 transition-all cursor-pointer active:scale-98"
                         href={`/reports/monthly?month=${month}`}
                       >
-                        <Download size={14} className="text-neutral-350" /> {month} CSV Report
+                        <Download size={14} className="text-neutral-300" /> {month} CSV Report
                       </a>
                     );
                   })}
@@ -508,21 +508,21 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
               </section>
 
               {/* Audit Trail list */}
-              <section className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+              <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
                 <div className="border-b border-neutral-100 pb-4 mb-4">
-                  <h3 className="text-base font-semibold text-neutral-850">Audit Trail Logs</h3>
-                  <p className="text-xs text-neutral-500 font-medium mt-0.5">History of administrative and policy changes</p>
+                  <h3 className="text-base font-medium text-neutral-800">Audit Trail Logs</h3>
+                  <p className="text-sm text-neutral-500 font-medium mt-1">History of administrative and policy changes</p>
                 </div>
                 <div className="divide-y divide-neutral-100">
                   {auditLogs.map((log) => (
-                    <div key={log.id} className="grid gap-2 py-4 text-xs md:grid-cols-[1fr_200px_180px] hover:bg-neutral-50/50 px-3 transition-all rounded-xl">
-                      <span className="font-semibold text-slate-800">{log.action}</span>
-                      <span className="text-slate-500 font-medium">{log.subject_type ?? 'System'} #{log.subject_id ?? '—'}</span>
+                    <div key={log.id} className="grid gap-2.5 py-4.5 text-sm md:grid-cols-[1fr_200px_180px] hover:bg-neutral-50/50 px-4 transition-all rounded-lg">
+                      <span className="font-medium text-slate-800">{log.action}</span>
+                      <span className="text-slate-500 font-medium">{log.subject_type ?? 'System'} #{log.subject_id ?? 'Ã¢â‚¬â€'}</span>
                       <span className="text-slate-400 font-medium text-right">{new Date(log.created_at).toLocaleString()}</span>
                     </div>
                   ))}
                   {auditLogs.length === 0 && (
-                    <p className="py-6 text-center text-xs text-neutral-450 font-semibold">No logs registered yet.</p>
+                    <p className="py-8 text-center text-sm text-neutral-500 font-medium">No logs registered yet.</p>
                   )}
                 </div>
               </section>
@@ -534,20 +534,19 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
   );
 }
 
-function Metric({ label, value, variant }: { label: string; value: number; variant: 'emerald' | 'slate' | 'amber' | 'teal' | 'indigo' }) {
+function Metric({ label, value, variant }: { label: string; value: number; variant: 'orange' | 'slate' | 'amber' | 'indigo' }) {
   const styles = {
-    emerald: 'bg-emerald-500/10 text-emerald-700',
+    orange: 'bg-orange-500/10 text-orange-700',
     slate: 'bg-neutral-500/10 text-neutral-600',
     amber: 'bg-amber-500/10 text-amber-700',
-    teal: 'bg-teal-500/10 text-teal-700',
     indigo: 'bg-indigo-500/10 text-indigo-700',
   };
 
   return (
-    <div className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">{label}</div>
+    <div className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
+      <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">{label}</div>
       <div className="mt-3.5 flex items-baseline gap-2.5">
-        <span className="text-3xl font-bold tracking-tight text-neutral-800">{value}</span>
+        <span className="text-3xl font-semibold tracking-tight text-neutral-800">{value}</span>
         <span className={`inline-flex h-2 w-2 rounded-full ${styles[variant].split(' ')[0]}`}></span>
       </div>
     </div>
@@ -556,16 +555,16 @@ function Metric({ label, value, variant }: { label: string; value: number; varia
 
 function Submit({ label }: { label: string }) {
   return (
-    <button className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-semibold uppercase tracking-wide text-white shadow-md shadow-emerald-600/10 hover:bg-emerald-700 active:scale-98 transition-all duration-200 cursor-pointer">
-      <Plus size={14} className="text-neutral-350" /> {label}
+    <button className="w-full inline-flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 py-3.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all duration-200 cursor-pointer">
+      <Plus size={14} className="text-neutral-300" /> {label}
     </button>
   );
 }
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <label className="inline-flex items-center gap-2 rounded-xl border border-neutral-200/70 bg-white px-4 py-3 text-xs font-semibold text-neutral-700 cursor-pointer transition-all hover:bg-neutral-50 shadow-premium-sm">
-      <input type="checkbox" className="rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="inline-flex items-center gap-2.5 rounded-lg border border-neutral-200/70 bg-white px-4.5 py-3.5 text-sm font-medium text-neutral-700 cursor-pointer transition-all hover:bg-neutral-50 shadow-premium-sm">
+      <input type="checkbox" className="rounded border-neutral-300 text-orange-600 focus:ring-orange-500 cursor-pointer" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
   );
@@ -575,10 +574,10 @@ function Toggle({ active, onClick }: { active: boolean; onClick: () => void }) {
   const Icon = active ? ToggleRight : ToggleLeft;
   return (
     <button
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wider transition-all duration-200 cursor-pointer ${
         active
-          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700'
-          : 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:text-neutral-750'
+          ? 'bg-orange-500/10 border-orange-500/20 text-orange-700'
+          : 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:text-neutral-700'
       }`}
       onClick={onClick}
       type="button"
@@ -593,10 +592,10 @@ function DataList({ rows }: { rows: { id: number; title: string; meta: string; a
   return (
     <div className="divide-y divide-neutral-100 text-sm">
       {rows.map((row) => (
-        <div key={row.id} className="flex items-center justify-between gap-4 py-4 px-3 hover:bg-neutral-50/50 rounded-xl transition-all">
+        <div key={row.id} className="flex items-center justify-between gap-4 py-4.5 px-3 hover:bg-neutral-50/50 rounded-lg transition-all">
           <div>
-            <div className="font-semibold text-neutral-850 text-sm">{row.title}</div>
-            <div className="text-xs text-neutral-500 font-medium mt-1">{row.meta}</div>
+            <div className="font-medium text-neutral-800 text-sm">{row.title}</div>
+            <div className="text-sm text-neutral-500 font-medium mt-1.5">{row.meta}</div>
           </div>
           <Toggle active={row.active} onClick={row.toggle} />
         </div>

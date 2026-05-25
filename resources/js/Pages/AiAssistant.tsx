@@ -180,14 +180,14 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
     <AppLayout fullHeight>
       <div className="flex flex-col h-full px-4 py-4 sm:px-6">
         {/* Mobile Tab Bar (iOS style Segmented Control) */}
-        <div className="flex bg-neutral-100/80 p-1 lg:hidden mb-4 rounded-2xl border border-neutral-200/40 shadow-premium-sm">
+        <div className="flex bg-neutral-100/80 p-1 lg:hidden mb-4 rounded-xl border border-neutral-200/40 shadow-premium-sm">
           {(['chat', 'history', 'faq'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 text-xs font-semibold capitalize tracking-wide transition-all duration-200 rounded-xl cursor-pointer ${
+              className={`flex-1 py-2 text-sm font-medium capitalize tracking-wide transition-all duration-200 rounded-lg cursor-pointer ${
                 activeTab === tab
-                  ? 'bg-white text-emerald-800 shadow-premium-sm border border-neutral-200'
+                  ? 'bg-white text-orange-800 shadow-premium-sm border border-neutral-200'
                   : 'text-neutral-500 hover:text-neutral-800'
               }`}
             >
@@ -198,29 +198,29 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
         <div className="grid gap-4 lg:grid-cols-[1fr_22rem] flex-1 min-h-0">
           {/* Main Chat Interface */}
-          <section className={`min-h-0 flex-col overflow-hidden border border-neutral-200/50 bg-white rounded-2xl shadow-premium-sm ${
+          <section className={`min-h-0 flex-col overflow-hidden border border-neutral-200/50 bg-white rounded-xl shadow-premium-sm ${
             activeTab === 'chat' ? 'flex h-[calc(100svh-14rem)]' : 'hidden'
           } lg:flex lg:h-full`}>
             {/* Chat Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50/20 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="relative flex h-10 w-10 items-center justify-center border border-emerald-100 bg-emerald-50 text-emerald-700 rounded-xl shadow-premium-sm">
+                <div className="relative flex h-10 w-10 items-center justify-center border border-orange-100 bg-orange-50 text-orange-700 rounded-lg shadow-premium-sm">
                   <Bot size={18} />
                   <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 border border-white"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500 border border-white"></span>
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">ELMS Copilot</h2>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 mt-0.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                    <span>Gemini 3.5 flash · Ready</span>
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">ELMS Copilot</h2>
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-500 mt-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
+                    <span>Gemini 3.5 flash Â· Ready</span>
                   </div>
                 </div>
               </div>
               <button
-                className="group flex h-9 items-center gap-2 border border-neutral-200 bg-white px-3.5 text-xs font-semibold tracking-wide text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 active:scale-98 transition-all duration-200 rounded-xl shadow-premium-sm cursor-pointer"
+                className="group flex h-10 items-center gap-2 border border-neutral-200 bg-white px-4.5 text-sm font-medium tracking-wide text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 active:scale-98 transition-all duration-200 rounded-lg shadow-premium-sm cursor-pointer"
                 type="button"
                 onClick={startNewChat}
               >
@@ -228,33 +228,32 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                 New Chat
               </button>
             </div>
-
             {/* Chat Scroll Area */}
             <div ref={transcriptRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-6 bg-neutral-50/10">
               {!hasMessages ? (
                 <div className="mx-auto flex h-full max-w-2xl flex-col justify-center py-10">
                   <div className="text-center">
-                    <div className="inline-flex h-12 w-12 items-center justify-center border border-emerald-100 bg-emerald-50/50 text-emerald-600 mb-4 rounded-xl shadow-premium-sm">
+                    <div className="inline-flex h-12 w-12 items-center justify-center border border-orange-100 bg-orange-50/50 text-orange-600 mb-4 rounded-lg shadow-premium-sm">
                       <Sparkles size={18} />
                     </div>
-                    <h3 className="text-xl font-semibold tracking-tight text-neutral-850">
+                    <h3 className="text-xl font-medium tracking-tight text-neutral-800">
                       How can I assist you today?
                     </h3>
-                    <p className="mt-2 text-xs font-medium text-neutral-500 max-w-md mx-auto leading-relaxed">
+                    <p className="mt-2.5 text-sm font-medium text-neutral-500 max-w-md mx-auto leading-relaxed">
                       Ask me questions about company leave policies, current leave balances, approval workflows, or upcoming public holidays.
                     </p>
                   </div>
 
-                  <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-8 grid gap-4 sm:grid-cols-2">
                     {suggestedPrompts.map((suggestion) => (
                       <button
                         key={suggestion}
-                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4 text-left text-xs font-medium text-neutral-500 hover:border-emerald-300 hover:bg-emerald-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
+                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-655 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-lg shadow-premium-sm cursor-pointer"
                         type="button"
                         onClick={() => setExternalPrompt(suggestion)}
                       >
-                        <span className="pr-4 font-semibold text-neutral-800 group-hover:text-emerald-950">{suggestion}</span>
-                        <ArrowRight size={14} className="shrink-0 text-neutral-400 opacity-0 group-hover:opacity-100 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                        <span className="pr-4 font-medium text-neutral-800 group-hover:text-orange-950">{suggestion}</span>
+                        <ArrowRight size={14} className="shrink-0 text-neutral-400 opacity-0 group-hover:opacity-100 group-hover:text-orange-600 group-hover:translate-x-0.5 transition-all duration-200" />
                       </button>
                     ))}
                   </div>
@@ -270,7 +269,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
             {/* Stream Error Banner */}
             {streamError && (
-              <div className="border-t border-rose-100 bg-rose-50 px-6 py-2.5 text-xs font-semibold text-rose-700 flex items-center gap-2">
+              <div className="border-t border-rose-100 bg-rose-50 px-6 py-3 text-sm font-semibold text-rose-700 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-600 shrink-0"></span>
                 {streamError}
               </div>
@@ -279,12 +278,12 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             {/* Input Form */}
             {isThreadLimitReached && !loading ? (
               <div className="border-t border-neutral-100 bg-white p-4">
-                <div className="mx-auto flex max-w-3xl flex-col gap-3 border-t border-neutral-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mx-auto flex max-w-3xl flex-col gap-4 border-t border-neutral-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm font-medium leading-relaxed text-neutral-600">
                     This conversation has reached its {MAX_CHAT_TURNS}-question limit. Start a new conversation to keep responses focused and easier to follow.
                   </p>
                   <button
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-premium-sm transition-all hover:bg-emerald-700 active:scale-98 cursor-pointer"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-premium-sm transition-all hover:bg-orange-700 active:scale-98 cursor-pointer"
                     type="button"
                     onClick={startNewChat}
                   >
@@ -310,35 +309,35 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
           }`}>
             {/* History Panel */}
             {leaveDraft && (
-              <section className="border border-emerald-100 bg-emerald-50/50 p-5 rounded-2xl shadow-premium-sm">
-                <div className="mb-4 flex items-center gap-2 border-b border-emerald-100/70 pb-3">
-                  <CalendarPlus size={15} className="text-emerald-700" />
-                  <h2 className="text-[10px] font-semibold uppercase tracking-widest text-emerald-800">Leave Draft Ready</h2>
+              <section className="border border-orange-100 bg-orange-50/50 p-5 rounded-xl shadow-premium-sm">
+                <div className="mb-4 flex items-center gap-2 border-b border-orange-100/70 pb-3">
+                  <CalendarPlus size={15} className="text-orange-700" />
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-orange-800">Leave Draft Ready</h2>
                 </div>
-                <div className="space-y-3 text-xs font-medium text-emerald-900">
-                  <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Type</div>
-                    <div className="mt-1 font-semibold">{leaveDraft.leave_type || 'Review in form'}</div>
+                <div className="space-y-3.5 text-sm font-medium text-orange-900">
+                  <div className="rounded-lg border border-orange-100 bg-white/80 p-3.5 shadow-premium-sm">
+                    <div className="text-xs font-medium uppercase tracking-wider text-orange-700">Type</div>
+                    <div className="mt-1 font-medium">{leaveDraft.leave_type || 'Review in form'}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Start</div>
-                      <div className="mt-1 font-semibold">{leaveDraft.starts_at || 'Choose'}</div>
+                    <div className="rounded-lg border border-orange-100 bg-white/80 p-3.5 shadow-premium-sm">
+                      <div className="text-xs font-medium uppercase tracking-wider text-orange-700">Start</div>
+                      <div className="mt-1 font-medium">{leaveDraft.starts_at || 'Choose'}</div>
                     </div>
-                    <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">End</div>
-                      <div className="mt-1 font-semibold">{leaveDraft.ends_at || 'Choose'}</div>
+                    <div className="rounded-lg border border-orange-100 bg-white/80 p-3.5 shadow-premium-sm">
+                      <div className="text-xs font-medium uppercase tracking-wider text-orange-700">End</div>
+                      <div className="mt-1 font-medium">{leaveDraft.ends_at || 'Choose'}</div>
                     </div>
                   </div>
                   {leaveDraft.reason && (
-                    <div className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-premium-sm">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Application note</div>
-                      <div className="mt-1.5 text-xs leading-relaxed text-emerald-950">{leaveDraft.reason}</div>
+                    <div className="rounded-lg border border-orange-100 bg-white/80 p-3.5 shadow-premium-sm">
+                      <div className="text-xs font-medium uppercase tracking-wider text-orange-700">Application note</div>
+                      <div className="mt-1.5 text-sm leading-relaxed text-orange-950">{leaveDraft.reason}</div>
                     </div>
                   )}
                   <Link
                     href={leaveDraftUrl(leaveDraft)}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-semibold text-white shadow-md shadow-emerald-600/10 transition-all hover:bg-emerald-700 active:scale-98"
+                    className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3.5 text-sm font-medium text-white shadow-md shadow-orange-600/10 transition-all hover:bg-orange-700 active:scale-98"
                   >
                     Autofill Application <ArrowRight size={13} />
                   </Link>
@@ -347,64 +346,64 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
             )}
 
             {/* History Panel */}
-            <section className={`min-h-0 flex-1 flex-col border border-neutral-200/50 bg-white p-5 rounded-2xl shadow-premium-sm ${
+            <section className={`min-h-0 flex-1 flex-col border border-neutral-200/50 bg-white p-5 rounded-xl shadow-premium-sm ${
               activeTab === 'history' ? 'flex h-full' : 'hidden lg:flex'
             }`}>
               <div className="mb-4 flex items-center gap-2 border-b border-neutral-200 pb-3">
                 <Clock3 size={15} className="text-neutral-400" />
-                <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">Recent Chats</h2>
+                <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">Recent Chats</h2>
               </div>
-              <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-1">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                 {chatHistory.map((chat) => (
                   <button
                     key={chat.id}
-                    className="group block w-full border border-neutral-200/70 bg-neutral-50/20 p-3.5 text-left hover:border-emerald-300 hover:bg-emerald-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
+                    className="group block w-full border border-neutral-200/70 bg-neutral-50/20 p-4 text-left hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-lg shadow-premium-sm cursor-pointer"
                     type="button"
                     onClick={() => loadRecentChat(chat)}
                   >
-                    <div className="line-clamp-1 text-xs font-semibold text-neutral-850 group-hover:text-emerald-800 transition-colors">
+                    <div className="line-clamp-1 text-sm font-medium text-neutral-800 group-hover:text-orange-800 transition-colors">
                       {chat.prompt}
                     </div>
-                    <div className="mt-1.5 line-clamp-2 text-xs text-neutral-500 font-medium leading-relaxed">
+                    <div className="mt-1.5 line-clamp-2 text-sm text-neutral-500 font-medium leading-relaxed">
                       {chat.response}
                     </div>
-                    <div className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                    <div className="mt-3 text-xs font-medium uppercase tracking-wider text-neutral-400">
                       {formatDate(chat.created_at)}
                     </div>
                   </button>
                 ))}
                 {chatHistory.length === 0 && (
                   <div className="flex h-32 flex-col items-center justify-center text-center">
-                    <p className="text-xs text-neutral-400 font-semibold">No saved chats yet.</p>
+                    <p className="text-sm text-neutral-400 font-medium">No saved chats yet.</p>
                   </div>
                 )}
               </div>
             </section>
 
             {/* Policy FAQ Panel */}
-            <section className={`border border-neutral-200/50 bg-white p-5 rounded-2xl shadow-premium-sm ${
+            <section className={`border border-neutral-200/50 bg-white p-5 rounded-xl shadow-premium-sm ${
               activeTab === 'faq' ? 'flex flex-col h-full overflow-y-auto' : 'hidden lg:block'
             }`}>
               <div className="mb-4 flex items-center gap-2 border-b border-neutral-200 pb-3">
                 <HelpCircle size={15} className="text-neutral-400" />
-                <h2 className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450">Quick Policy FAQ</h2>
+                <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">Quick Policy FAQ</h2>
               </div>
-              <div className="max-h-64 lg:max-h-none lg:overflow-y-auto space-y-2.5 pr-1">
+              <div className="max-h-64 lg:max-h-none lg:overflow-y-auto space-y-3 pr-1">
                 {faqs.slice(0, 5).map((faq) => (
-                  <details key={faq.id} className="group border border-neutral-200/60 p-3.5 text-xs bg-neutral-50/30 hover:bg-neutral-50/80 transition-all rounded-xl shadow-premium-sm cursor-pointer">
-                    <summary className="flex cursor-pointer items-center justify-between font-semibold text-neutral-800 outline-none select-none">
+                  <details key={faq.id} className="group border border-neutral-200/60 p-4 text-sm bg-neutral-50/30 hover:bg-neutral-50/80 transition-all rounded-lg shadow-premium-sm cursor-pointer">
+                    <summary className="flex cursor-pointer items-center justify-between font-medium text-neutral-800 outline-none select-none">
                       <span className="pr-2">{faq.question}</span>
                       <span className="ml-2 text-neutral-400 group-open:rotate-180 transition-transform duration-200">
-                        ▼
+                        â–¼
                       </span>
                     </summary>
-                    <p className="mt-2.5 leading-relaxed text-neutral-500 font-medium group-open:animate-fade-in">
+                    <p className="mt-3 leading-relaxed text-neutral-500 font-medium group-open:animate-fade-in">
                       {faq.answer}
                     </p>
                   </details>
                 ))}
                 {faqs.length === 0 && (
-                  <p className="text-xs text-neutral-400 font-semibold text-center py-4">No active FAQ entries.</p>
+                  <p className="text-sm text-neutral-400 font-medium text-center py-4">No active FAQ entries.</p>
                 )}
               </div>
             </section>
@@ -421,14 +420,14 @@ function ChatBubble({ message, loading }: { message: ChatMessage; loading: boole
 
   return (
     <div className={`flex ${isAssistant ? 'justify-start' : 'justify-end'} animate-fade-in`}>
-      <div className={`max-w-[85%] border px-4 py-2.5 text-sm leading-relaxed ${
+      <div className={`max-w-[85%] border px-5 py-4 text-sm leading-relaxed ${
         isAssistant 
-          ? 'bg-neutral-50/60 text-neutral-600 border-neutral-200/50 rounded-xl font-medium shadow-premium-sm' 
-          : 'bg-emerald-50 text-emerald-800 border-emerald-100/40 rounded-xl font-semibold shadow-premium-sm'
+          ? 'bg-neutral-50/60 text-neutral-600 border-neutral-200/50 rounded-lg font-medium shadow-premium-sm' 
+          : 'bg-orange-50 text-orange-800 border-orange-100/40 rounded-lg font-medium shadow-premium-sm'
       }`}>
         {loading ? (
-          <span className="flex items-center gap-2 text-xs font-medium text-neutral-450">
-            <Loader2 size={13} className="animate-spin text-emerald-600" /> 
+          <span className="flex items-center gap-2 text-sm font-medium text-neutral-500">
+            <Loader2 size={13} className="animate-spin text-orange-600" /> 
             Thinking...
           </span>
         ) : draft ? (
@@ -470,7 +469,7 @@ function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPrompt
 
   return (
     <form onSubmit={handleSubmit} className="border-t border-neutral-100 bg-white p-4">
-      <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-200 rounded-2xl shadow-premium-sm">
+      <div className="mx-auto flex max-w-3xl items-end gap-3 border border-neutral-200 bg-neutral-50/50 p-2 focus-within:border-orange-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-orange-500/5 transition-all duration-200 rounded-xl shadow-premium-sm">
         <textarea
           className="max-h-32 min-h-10 focus:border-0! focus:ring-0! focus:shadow-none! flex-1 resize-none border-0 border-transparent! bg-transparent px-3 py-2.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
           value={value}
@@ -487,7 +486,7 @@ function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPrompt
         <div className="flex items-center gap-2 pr-1 pb-1">
           {loading ? (
             <button
-              className="flex h-9 w-9 shrink-0 items-center justify-center bg-rose-600 text-white hover:bg-rose-700 transition-colors rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+              className="flex h-9 w-9 shrink-0 items-center justify-center bg-rose-600 text-white hover:bg-rose-700 transition-colors rounded-lg shadow-premium-sm cursor-pointer active:scale-95"
               type="button"
               aria-label="Stop streaming"
               onClick={onStop}
@@ -496,7 +495,7 @@ function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPrompt
             </button>
           ) : (
             <button
-              className="flex h-9 w-9 shrink-0 items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-450 transition-all rounded-xl shadow-premium-sm cursor-pointer active:scale-95"
+              className="flex h-9 w-9 shrink-0 items-center justify-center bg-orange-600 text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400 transition-all rounded-lg shadow-premium-sm cursor-pointer active:scale-95"
               type="submit"
               aria-label="Send message"
               disabled={!value.trim()}
@@ -506,7 +505,7 @@ function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPrompt
           )}
         </div>
       </div>
-      <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+      <div className="mx-auto max-w-3xl mt-2.5 flex items-center justify-between px-2 text-xs font-normal uppercase tracking-wider text-neutral-500">
         <span>Use Shift + Enter for new lines</span>
         <span className="flex items-center gap-1">
           <CornerDownLeft size={10} /> Enter to send
@@ -518,33 +517,33 @@ function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPrompt
 
 function LeaveDraftMessage({ draft }: { draft: LeaveDraft }) {
   return (
-    <div className="w-full min-w-[min(26rem,70vw)] space-y-3">
-      <div className="flex items-center gap-2 border-b border-emerald-100 pb-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-700 shadow-premium-sm">
-          <CalendarPlus size={15} />
+    <div className="w-full min-w-[min(26rem,70vw)] space-y-4">
+      <div className="flex items-center gap-3 border-b border-orange-100 pb-3.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-orange-100 bg-white text-orange-700 shadow-premium-sm">
+          <CalendarPlus size={16} />
         </div>
         <div>
-          <div className="text-sm font-semibold text-neutral-900">Leave draft ready</div>
-          <div className="text-[11px] font-medium text-neutral-500">Review before filling the application form.</div>
+          <div className="text-sm font-medium text-neutral-900">Leave draft ready</div>
+          <div className="text-xs font-medium text-neutral-500">Review before filling the application form.</div>
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <DraftField label="Type" value={draft.leave_type || 'Review in form'} />
         <DraftField label="Start" value={draft.starts_at || 'Choose'} />
         <DraftField label="End" value={draft.ends_at || 'Choose'} />
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-premium-sm">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Application note</div>
-        <div className="mt-1.5 text-xs font-medium leading-relaxed text-neutral-700">
+      <div className="rounded-lg border border-neutral-200 bg-white p-3.5 shadow-premium-sm">
+        <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Application note</div>
+        <div className="mt-1.5 text-sm font-medium leading-relaxed text-neutral-700">
           {draft.reason || 'No note generated yet.'}
         </div>
       </div>
 
       <Link
         href={leaveDraftUrl(draft)}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-emerald-600/10 transition-all hover:bg-emerald-700 active:scale-98"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3.5 text-sm font-medium text-white shadow-md shadow-orange-600/10 transition-all hover:bg-orange-700 active:scale-98"
       >
         Autofill Application <ArrowRight size={13} />
       </Link>
@@ -552,11 +551,16 @@ function LeaveDraftMessage({ draft }: { draft: LeaveDraft }) {
   );
 }
 
-function DraftField({ label, value }: { label: string; value: string }) {
+interface DraftFieldProps {
+  label: string;
+  value: string;
+}
+
+function DraftField({ label, value }: DraftFieldProps) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-premium-sm">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</div>
-      <div className="mt-1 truncate text-xs font-semibold text-neutral-850" title={value}>
+    <div className="rounded-lg border border-neutral-200 bg-white p-3.5 shadow-premium-sm">
+      <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">{label}</div>
+      <div className="mt-1 truncate text-sm font-medium text-neutral-800" title={value}>
         {value}
       </div>
     </div>

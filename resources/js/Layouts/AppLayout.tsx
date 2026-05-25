@@ -38,10 +38,10 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
 
   const navItemClass = (path: string) => {
     const active = isActive(path);
-    return `flex items-center gap-3.5 px-4.5 py-3 text-sm transition-all duration-200 rounded-xl mx-2 border ${
+    return `flex items-center gap-3.5 px-4.5 py-3 text-sm transition-all duration-200 rounded-lg mx-2 border ${
       active
-        ? 'bg-emerald-55 bg-emerald-50/50 border-emerald-100/60 text-emerald-800 font-semibold shadow-premium-sm'
-        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/40 font-medium'
+        ? 'bg-orange-50 bg-orange-50/50 border-orange-100/60 text-orange-800 font-medium shadow-premium-sm'
+        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/40 font-normal'
     }`;
   };
 
@@ -49,12 +49,12 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
     <div className="flex h-full flex-col justify-between py-6 bg-white">
       <div>
         <div className="flex items-center gap-3 px-6">
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/10 border border-emerald-500/10">
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10">
             <Bot size={16} />
           </div>
           <div>
-            <div className="font-semibold tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
-            <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mt-0.5">Workspace</div>
+            <div className="font-medium tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
+            <div className="text-xs font-normal text-neutral-400 uppercase tracking-wider mt-0.5">Workspace</div>
           </div>
         </div>
 
@@ -76,8 +76,8 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
           </Link>
           
           {(canApprove || canAdmin) && (
-            <div className="my-4 border-t border-neutral-100 px-6 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">Management</span>
+            <div className="my-5 border-t border-neutral-100 px-6 pt-5">
+              <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">Management</span>
             </div>
           )}
 
@@ -101,18 +101,18 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
 
       <div className="px-4">
         {/* User Mini Profile Card */}
-        <div className="mb-4 flex items-center gap-3.5 border border-neutral-200 bg-[#fafbfa]/70 rounded-2xl p-3.5 shadow-premium-sm">
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100 font-semibold text-emerald-800 text-xs shadow-inner shrink-0">
+        <div className="mb-5 flex items-center gap-4 border border-neutral-200 bg-[#fafbfa]/70 rounded-xl p-4 shadow-premium-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-inner shrink-0">
             {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-semibold text-neutral-800">{user.name}</div>
-            <div className="truncate text-[10px] font-semibold text-neutral-450 uppercase tracking-widest mt-1">{user.role}</div>
+            <div className="truncate text-sm font-normal text-neutral-800">{user.name}</div>
+            <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{user.role}</div>
           </div>
         </div>
 
         <button
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98"
           onClick={() => router.post('/logout')}
         >
           <LogOut size={14} /> Sign out
@@ -124,8 +124,8 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   return (
     <div className="relative flex flex-col min-h-screen overflow-hidden bg-[#fafbfa]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -right-40 top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-emerald-400/8 to-teal-500/8 blur-3xl" />
-        <div className="absolute bottom-0 left-40 h-[24rem] w-[24rem] rounded-full bg-gradient-to-tr from-emerald-400/5 to-amber-300/5 blur-3xl" />
+        <div className="absolute -right-40 top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-orange-400/8 to-amber-500/8 blur-3xl" />
+        <div className="absolute bottom-0 left-40 h-[24rem] w-[24rem] rounded-full bg-gradient-to-tr from-orange-400/5 to-amber-300/5 blur-3xl" />
       </div>
       {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
@@ -142,7 +142,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
         }`}
       >
         <button
-          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
           onClick={() => setMobileOpen(false)}
           aria-label="Close menu"
         >
@@ -157,22 +157,22 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
       </aside>
 
       {/* Main Container */}
-      <div className="relative z-10 lg:pl-64 flex flex-col h-screen">
+      <div className="relative z-10 lg:pl-64 flex flex-col h-screen min-w-0">
         {/* Top Navbar */}
-        <header className="sticky top-0 z-20 border-b border-neutral-200/50 bg-white/80 backdrop-blur-md px-4 py-3 sm:px-8">
+        <header className="sticky top-0 z-20 border-b border-neutral-200/50 bg-white/80 backdrop-blur-md px-3 py-3 xs:px-4 sm:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 lg:hidden"
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50 lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open menu"
               >
                 <Menu size={16} />
               </button>
               <div>
-                <h1 className="text-base font-semibold tracking-tight text-neutral-900">Leave Portal</h1>
-                <p className="hidden text-xs font-medium text-neutral-450 sm:block">
-                  {user.department?.name ?? 'General Staff'} · {user.employee_code ?? 'EMP'}
+                <h1 className="text-base font-medium tracking-tight text-neutral-900">Leave Portal</h1>
+                <p className="hidden text-sm font-medium text-neutral-400 sm:block">
+                  {user.department?.name ?? 'General Staff'} Ã‚Â· {user.employee_code ?? 'EMP'}
                 </p>
               </div>
             </div>
@@ -181,20 +181,20 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
             <div className="flex items-center gap-2.5">
               <Link
                 href="/ai-assistant"
-                className="hidden items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-premium-sm transition-all hover:bg-emerald-50 sm:inline-flex"
+                className="hidden items-center gap-2 rounded-lg border border-orange-100 bg-orange-50/70 px-4 py-1.5 text-sm font-medium text-orange-800 shadow-premium-sm transition-all hover:bg-orange-50 sm:inline-flex"
               >
-                <Sparkles size={13} /> Ask Copilot
+                <Sparkles size={14} /> Ask Copilot
               </Link>
               <Link
                 href="/apply-leave"
-                className="hidden h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 shadow-premium-sm transition-all hover:bg-neutral-50 md:flex"
+                className="hidden h-8 w-8 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 shadow-premium-sm transition-all hover:bg-neutral-50 md:flex"
                 aria-label="Apply for leave"
               >
                 <CalendarPlus size={15} />
               </Link>
               <div className="relative">
                 <button
-                  className={`relative flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-premium-sm ${
+                  className={`relative flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 shadow-premium-sm ${
                     notificationOpen ? 'bg-neutral-50' : 'bg-white'
                   }`}
                   onClick={() => setNotificationOpen((open) => !open)}
@@ -204,17 +204,17 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                 >
                   <Bell size={16} />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-semibold text-white shadow-2xs">
+                    <span className="absolute -right-1 -top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange-600 px-1 text-xs font-medium text-white shadow-2xs">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </button>
 
                 {notificationOpen && (
-                  <div className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200/50 bg-white p-2.5 shadow-premium-lg animate-fade-in">
+                  <div className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-neutral-200/50 bg-white p-2.5 shadow-premium-lg animate-fade-in">
                   <div className="flex items-center justify-between border-b border-neutral-100/60 px-3 pb-2.5 mb-1.5">
-                    <span className="font-semibold text-xs text-neutral-800">Notifications</span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-100">
+                    <span className="font-normal text-sm text-neutral-800">Notifications</span>
+                    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 border border-orange-100">
                       {unreadCount} unread
                     </span>
                   </div>
@@ -223,7 +223,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                       notificationItems.map((item) => (
                         <Link
                           key={item.id}
-                          className={`block w-full px-3 py-2.5 text-left rounded-xl transition-all hover:bg-neutral-50 ${
+                          className={`block w-full px-3 py-2.5 text-left rounded-lg transition-all hover:bg-neutral-50 ${
                             item.read_at ? '' : 'bg-neutral-50/40'
                           }`}
                           href={`/notifications/${item.id}/read`}
@@ -232,17 +232,17 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                           onClick={() => setNotificationOpen(false)}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="text-xs font-semibold text-neutral-750">{item.title}</div>
-                            {!item.read_at && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" />}
+                            <div className="text-sm font-medium text-neutral-700">{item.title}</div>
+                            {!item.read_at && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-600" />}
                           </div>
-                          <div className="mt-0.5 text-xs text-neutral-500 line-clamp-2">{item.body}</div>
+                          <div className="mt-0.5 text-sm text-neutral-500 line-clamp-2">{item.body}</div>
                           <div className="mt-1.5 text-xs font-medium text-neutral-400">
                             {formatRelativeDate(item.created_at)}
                           </div>
                         </Link>
                       ))
                     ) : (
-                      <div className="py-8 text-center text-xs text-neutral-400">No notifications yet.</div>
+                      <div className="py-8 text-center text-sm text-neutral-400">No notifications yet.</div>
                     )}
                   </div>
                   </div>
@@ -253,16 +253,16 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
 
           {/* Flash Messages */}
           {flashVisible && flash.success && (
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/70 backdrop-blur-xs px-4.5 py-3 text-xs text-emerald-800 font-semibold shadow-premium-sm animate-fade-in">
-              <span className="font-semibold">{flash.success}</span>
-              <button onClick={() => setFlashVisible(false)} className="text-emerald-500 hover:text-emerald-700">
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50/70 backdrop-blur-xs px-5 py-3.5 text-sm text-orange-800 font-medium shadow-premium-sm animate-fade-in">
+              <span className="font-medium">{flash.success}</span>
+              <button onClick={() => setFlashVisible(false)} className="text-orange-500 hover:text-orange-700">
                 <X size={14} />
               </button>
             </div>
           )}
           {flashVisible && flash.error && (
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50/70 backdrop-blur-xs px-4.5 py-3 text-xs text-rose-800 font-semibold shadow-premium-sm animate-fade-in">
-              <span className="font-semibold">{flash.error}</span>
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-rose-100 bg-rose-50/70 backdrop-blur-xs px-5 py-3.5 text-sm text-rose-800 font-medium shadow-premium-sm animate-fade-in">
+              <span className="font-medium">{flash.error}</span>
               <button onClick={() => setFlashVisible(false)} className="text-rose-500 hover:text-rose-700">
                 <X size={14} />
               </button>
@@ -271,7 +271,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
         </header>
 
         {/* Content Body */}
-        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden animate-fade-in' : 'px-4 py-6 sm:px-8 max-w-7xl mx-auto w-full overflow-y-auto animate-fade-in'}>
+        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden animate-fade-in' : 'min-w-0 px-3 py-5 xs:px-4 sm:px-8 max-w-7xl mx-auto w-full overflow-y-auto animate-fade-in'}>
           {children}
         </main>
       </div>

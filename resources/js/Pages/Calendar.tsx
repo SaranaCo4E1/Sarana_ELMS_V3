@@ -14,7 +14,7 @@ type Props = {
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-emerald-50/60', border: 'border-emerald-100/70', text: 'text-emerald-800', dot: 'bg-emerald-500' },
+  approved: { bg: 'bg-orange-50/60', border: 'border-orange-100/70', text: 'text-orange-800', dot: 'bg-orange-500' },
   rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800', dot: 'bg-rose-500' },
   cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200', text: 'text-neutral-500', dot: 'bg-neutral-400' },
 };
@@ -39,14 +39,14 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Page title header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5">
+        <div className="flex flex-wrap items-center justify-between gap-5 border-b border-neutral-100 pb-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-neutral-805">Coverage Calendar</h2>
-            <p className="text-xs font-medium text-neutral-455 mt-1">{scopeLabel} for leave schedules, holidays, and upcoming coverage</p>
+            <h2 className="text-2xl font-medium tracking-tight text-neutral-800">Coverage Calendar</h2>
+            <p className="text-sm font-medium text-neutral-500 mt-1.5">{scopeLabel} for leave schedules, holidays, and upcoming coverage</p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-medium text-neutral-600 shadow-premium-sm">
+          <div className="inline-flex items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-5 py-3 text-sm font-medium text-neutral-600 shadow-premium-sm">
             <CalendarDays size={15} className="text-neutral-400" /> 
-            <span>{leaveEvents.length} leave requests · {holidays.length} holidays</span>
+            <span>{leaveEvents.length} leave requests Â· {holidays.length} holidays</span>
           </div>
         </div>
 
@@ -54,15 +54,15 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
           {/* Main sections */}
           <div className="space-y-8">
             {/* Grid Month calendar */}
-            <section className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 px-6 py-5 bg-neutral-50/20">
+            <section className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-5 border-b border-neutral-200 px-6 py-6 bg-neutral-50/20">
                 <div>
-                  <h3 className="font-semibold text-neutral-850 text-base">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
-                  <p className="text-xs font-medium text-neutral-450 mt-0.5">Leave, holidays, and daily summaries</p>
+                  <h3 className="font-medium text-neutral-800 text-base">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
+                  <p className="text-sm font-medium text-neutral-400 mt-1">Leave, holidays, and daily summaries</p>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <button
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95"
                     type="button"
                     onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
                     aria-label="Previous month"
@@ -70,7 +70,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                     <ChevronLeft size={16} />
                   </button>
                   <button
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95 shadow-premium-sm"
+                    className="rounded-lg border border-neutral-200 bg-white px-5 py-2.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95 shadow-premium-sm"
                     type="button"
                     onClick={() => {
                       const now = new Date();
@@ -81,7 +81,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                     Today
                   </button>
                   <button
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer active:scale-95"
                     type="button"
                     onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
                     aria-label="Next month"
@@ -92,65 +92,64 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               </div>
 
               {/* Day headers */}
-              <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50/10 text-center text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+              <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50/10 text-center text-sm font-medium uppercase tracking-wider text-neutral-500">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <div key={day} className="py-3.5">
+                  <div key={day} className="py-4">
                     {day}
                   </div>
                 ))}
               </div>
 
-              {/* Calendar grid cells */}
-              <div className="grid grid-cols-7 bg-neutral-200 gap-[1px]">
+              {/* Calendar grid cells */}              <div className="grid grid-cols-7 bg-neutral-200 gap-[1px]">
                 {calendarDays.map((day) => {
                   const isSelected = day.key === selectedDay;
                   const isToday = day.key === todayKey;
                   return (
                     <button
                       key={day.key}
-                      className={`min-h-[60px] sm:min-h-[110px] p-2 text-left transition-all hover:bg-neutral-50/60 flex flex-col justify-between cursor-pointer outline-none relative ${
+                      className={`min-h-[65px] sm:min-h-[120px] p-2.5 text-left transition-all hover:bg-neutral-50/60 flex flex-col justify-between cursor-pointer outline-none relative ${
                       day.isCurrentMonth ? 'bg-white' : 'bg-neutral-50/30 text-neutral-400'
-                      } ${isSelected ? 'ring-2 ring-inset ring-emerald-600 z-10' : ''}`}
+                      } ${isSelected ? 'ring-2 ring-inset ring-orange-600 z-10' : ''}`}
                       type="button"
                       onClick={() => setSelectedDay(day.key)}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span
-                          className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg text-xs font-semibold transition-all ${
+                          className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md text-sm font-medium transition-all ${
                             isToday
-                              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
+                              ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10'
                               : 'text-neutral-700'
                           }`}
                         >
                           {day.date.getDate()}
                         </span>
                         {day.items.length > 0 && (
-                          <span className="hidden sm:inline-block text-[10px] font-semibold text-neutral-500 bg-neutral-50 border border-neutral-200 rounded px-1.5 py-0.5">
+                          <span className="hidden sm:inline-block text-xs font-medium text-neutral-500 bg-neutral-50 border border-neutral-200 rounded px-2 py-0.5">
                             {day.items.length}
                           </span>
                         )}
                       </div>
                       
                       {/* Desktop list view */}
-                      <div className="hidden sm:block mt-2.5 space-y-1 w-full flex-1 overflow-y-auto">
+                      <div className="hidden sm:block mt-3 space-y-1.5 w-full flex-1 overflow-y-auto">
                         {day.items.slice(0, 3).map((item) => {
                           const isHoliday = item.kind === 'holiday';
                           const statusStyle = !isHoliday ? statusStyles[item.status] : null;
                           return (
                             <div
                               key={item.id}
-                              className={`truncate rounded-lg px-2 py-0.5 text-xs font-medium border transition-colors ${
+                              className={`truncate rounded-md px-2 py-1 text-xs font-medium border transition-colors ${
                                 isHoliday
-                                  ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800'
+                                  ? 'bg-orange-50/60 border-orange-100 text-orange-800'
                                   : `${statusStyle?.bg ?? 'bg-neutral-50'} ${statusStyle?.border ?? 'border-neutral-200'} ${statusStyle?.text ?? 'text-neutral-700'}`
-                              }`}
+                                }`}
                             >
                               {item.title}
                             </div>
                           );
                         })}
                         {day.items.length > 3 && (
-                          <div className="text-[10px] font-semibold text-neutral-500 px-1 mt-0.5">
+                          <div className="text-xs font-medium text-neutral-500 px-1 mt-0.5">
                             +{day.items.length - 3} more
                           </div>
                         )}
@@ -165,13 +164,13 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                             <span
                               key={item.id}
                               className={`h-1.5 w-1.5 rounded-full ${
-                                isHoliday ? 'bg-emerald-500' : statusStyle?.dot ?? 'bg-neutral-400'
+                                isHoliday ? 'bg-orange-500' : statusStyle?.dot ?? 'bg-neutral-400'
                               }`}
                             />
                           );
                         })}
                         {day.items.length > 3 && (
-                          <span className="text-[10px] font-semibold text-neutral-500 leading-none">+</span>
+                          <span className="text-xs font-medium text-neutral-500 leading-none">+</span>
                         )}
                       </div>
                     </button>
@@ -179,17 +178,16 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                 })}
               </div>
             </section>
-
             {/* Timeline Row cards */}
-            <section className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+            <section className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
               <div className="border-b border-neutral-200 px-6 py-5 bg-neutral-50/20">
-                <h3 className="font-semibold text-neutral-850 text-sm">Monthly Timeline</h3>
-                <p className="text-xs font-medium text-neutral-450 mt-1">Continuous view of team leave and corporate holidays</p>
+                <h3 className="font-medium text-neutral-800 text-sm">Monthly Timeline</h3>
+                <p className="text-sm font-medium text-neutral-500 mt-1.5">Continuous view of team leave and corporate holidays</p>
               </div>
               <div className="divide-y divide-neutral-100">
                 {monthGroups.map((group) => (
-                  <div key={group.month} className="grid gap-4 px-6 py-6 md:grid-cols-[160px_1fr]">
-                    <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-450 pt-2">
+                  <div key={group.month} className="grid gap-4 px-6 py-6 md:grid-cols-[180px_1fr]">
+                    <div className="text-sm font-medium uppercase tracking-wider text-neutral-500 pt-2">
                       {group.month}
                     </div>
                     <div className="space-y-3.5">
@@ -204,7 +202,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                   </div>
                 ))}
                 {monthGroups.length === 0 && (
-                  <div className="px-6 py-12 text-center text-xs text-neutral-400 font-medium">
+                  <div className="px-6 py-12 text-center text-sm text-neutral-400 font-medium">
                     No scheduled items for this period.
                   </div>
                 )}
@@ -257,22 +255,27 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
   const statusStyle = statusStyles[event.status] ?? { bg: 'bg-neutral-50 border-neutral-200', text: 'text-neutral-600', dot: 'bg-neutral-400' };
   
   return (
-    <div className={`rounded-xl border border-neutral-100 bg-white ${compact ? 'p-3' : 'p-4.5'} shadow-premium-sm transition-all hover:shadow-premium-md`}>
+    <div className={`rounded-lg border border-neutral-100 bg-white ${compact ? 'p-3.5' : 'p-5'} shadow-premium-sm transition-all hover:shadow-premium-md`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold text-neutral-850">{event.user?.name ?? 'Staff Employee'}</div>
-          <div className="text-xs text-neutral-500 mt-1.5 font-medium">
-            <span className="font-semibold text-neutral-700">{event.leave_type.name}</span>
-            <span> · {formatDays(event.requested_days)} day(s) · </span>
-            <span className="whitespace-nowrap font-medium">{formatShortDate(event.starts_at)} – {formatShortDate(event.ends_at)}</span>
+          <div className="text-sm font-medium text-neutral-800">{event.user?.name ?? 'Staff Employee'}</div>
+          <div className="text-sm text-neutral-500 mt-2 font-medium">
+            <span className="font-medium text-neutral-700">{event.leave_type.name}</span>
+            <span className="mx-1 text-neutral-300">Â·</span>
+            <span className="whitespace-nowrap font-medium text-neutral-700">{formatShortDate(event.starts_at)} â€“ {formatShortDate(event.ends_at)}</span>
           </div>
           {event.user?.department?.name && !compact && (
-            <div className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-              {event.user.department.name}
+            <div className="mt-4 pt-4 border-t border-neutral-100">
+              <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+                Reason & Notes
+              </div>
+              <p className="mt-1 text-xs text-neutral-500 font-normal line-clamp-3 italic">
+                {event.reason || 'No handover notes provided.'}
+              </p>
             </div>
           )}
         </div>
-        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-[11px] font-semibold shadow-sm`}>
+        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-medium shadow-sm`}>
           {event.status}
         </span>
       </div>
@@ -282,9 +285,9 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
 
 function HolidayRow({ holiday, compact = false }: { holiday: Holiday; compact?: boolean }) {
   return (
-    <div className={`rounded-xl border border-emerald-100 bg-emerald-50/40 ${compact ? 'p-3' : 'p-4.5'} shadow-premium-sm`}>
-      <div className="text-xs font-semibold text-emerald-900">{holiday.name}</div>
-      <div className="text-xs text-emerald-700 mt-1.5 font-semibold">
+    <div className={`rounded-lg border border-orange-100 bg-orange-50/40 ${compact ? 'p-3.5' : 'p-5'} shadow-premium-sm`}>
+      <div className="text-sm font-medium text-orange-900">{holiday.name}</div>
+      <div className="text-sm text-orange-700 mt-2 font-medium">
         {formatDate(holiday.holiday_date)}
       </div>
     </div>
@@ -293,8 +296,8 @@ function HolidayRow({ holiday, compact = false }: { holiday: Holiday; compact?: 
 
 function Panel({ icon, title, empty, children }: { icon: React.ReactNode; title: string; empty: string; children: React.ReactNode[] }) {
   return (
-    <div className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-      <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+    <div className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+      <div className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-neutral-800">
         <div className="text-neutral-400">{icon}</div>
         <span>{title}</span>
       </div>
@@ -302,7 +305,7 @@ function Panel({ icon, title, empty, children }: { icon: React.ReactNode; title:
         {children.length > 0 ? (
           children
         ) : (
-          <p className="py-3 text-center text-xs text-neutral-400 font-medium">{empty}</p>
+          <p className="py-3 text-center text-sm text-neutral-400 font-medium">{empty}</p>
         )}
       </div>
     </div>
@@ -313,21 +316,22 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
   const statusStyle = statusStyles[item.status] ?? { bg: 'bg-neutral-50 border-neutral-200', text: 'text-neutral-600', dot: 'bg-neutral-400' };
   
   return (
-    <div className="rounded-xl border border-neutral-100 bg-white p-3.5 shadow-premium-sm">
+    <div className="rounded-lg border border-neutral-100 bg-white p-4 shadow-premium-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-xs font-semibold text-neutral-850">{item.event.user?.name ?? 'Employee'}</div>
-          <div className="text-xs text-neutral-500 mt-1 font-medium">
-            <span className="font-semibold text-neutral-700">{item.event.leave_type.name}</span>
-            <span> · {formatDays(item.event.requested_days)} day(s)</span>
+          <div className="text-sm font-medium text-neutral-800">{item.event.user?.name ?? 'Employee'}</div>
+          <div className="text-sm text-neutral-500 mt-1 font-medium">
+            <span className="font-medium text-neutral-700">{item.event.leave_type.name}</span>
+            <span className="mx-1 text-neutral-300">Â·</span>
+            <span>{formatDays(item.event.requested_days)} day(s)</span>
           </div>
         </div>
-        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2 py-0.5 text-[11px] font-semibold shadow-sm`}>
+        <span className={`inline-flex items-center rounded-full border ${statusStyle.border} ${statusStyle.bg} ${statusStyle.text} px-2.5 py-0.5 text-xs font-medium shadow-sm`}>
           {item.status}
         </span>
       </div>
       {item.event.reason && (
-        <div className="mt-2 rounded-lg bg-neutral-50/50 p-2.5 text-xs text-neutral-600 leading-relaxed italic border border-neutral-100/60">
+        <div className="mt-2.5 rounded-md bg-neutral-50/50 p-3 text-sm text-neutral-600 leading-relaxed italic border border-neutral-100/60">
           "{item.event.reason}"
         </div>
       )}
@@ -337,9 +341,9 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
 
 function HolidayNote({ item }: { item: Extract<CalendarItem, { kind: 'holiday' }> }) {
   return (
-    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3.5 shadow-premium-sm">
-      <div className="text-xs font-semibold text-emerald-900">{item.holiday.name}</div>
-      <div className="text-xs text-emerald-700 mt-1.5 font-semibold">
+    <div className="rounded-lg border border-orange-100 bg-orange-50/40 p-4 shadow-premium-sm">
+      <div className="text-sm font-medium text-orange-900">{item.holiday.name}</div>
+      <div className="text-sm text-orange-700 mt-1.5 font-medium">
         {formatDate(item.holiday.holiday_date)}
       </div>
     </div>

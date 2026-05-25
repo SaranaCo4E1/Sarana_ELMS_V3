@@ -6,29 +6,33 @@
   --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Figtree', var(--font-sans);
 
-  --color-emerald-50: #fff7ed;
-  --color-emerald-100: #ffedd5;
-  --color-emerald-200: #fed7aa;
-  --color-emerald-300: #fdba74;
-  --color-emerald-400: #fb923c;
-  --color-emerald-500: #ff750f; /* Core NiyAI brand orange */
-  --color-emerald-600: #ea580c;
-  --color-emerald-700: #c2410c;
-  --color-emerald-800: #9a3412;
-  --color-emerald-900: #7c2d12;
-  --color-emerald-950: #431407;
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #ff750f; /* Core NiyAI brand orange */
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  --color-orange-800: #9a3412;
+  --color-orange-900: #7c2d12;
+  --color-orange-950: #431407;
 
-  --color-teal-50: #fefce8;
-  --color-teal-100: #fef9c3;
-  --color-teal-200: #fef08a;
-  --color-teal-300: #fde047;
-  --color-teal-400: #facc15;
-  --color-teal-500: #eab308;
-  --color-teal-600: #d97706;
-  --color-teal-700: #b45309;
-  --color-teal-800: #78350f;
-  --color-teal-900: #451a03;
-  --color-teal-950: #291001;
+  --color-amber-50: #fefce8;
+  --color-amber-100: #fef9c3;
+  --color-amber-200: #fef08a;
+  --color-amber-300: #fde047;
+  --color-amber-400: #facc15;
+  --color-amber-500: #eab308;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #78350f;
+  --color-amber-900: #451a03;
+  --color-amber-950: #291001;
+
+  --font-weight-medium: 460;
+  --font-weight-semibold: 560;
+  --font-weight-bold: 680;
 }
 
 html {
@@ -57,7 +61,7 @@ code, pre, kbd, samp, .font-mono, [class*="font-mono"] {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display) !important;
   letter-spacing: -0.025em;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Custom Scrollbars */
@@ -98,7 +102,7 @@ input:focus, select:focus, textarea:focus {
 .react-datepicker {
   font-family: var(--font-sans) !important;
   border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  border-radius: 16px !important;
+  border-radius: 12px !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
   overflow: hidden;
   background-color: #ffffff !important;
@@ -133,7 +137,7 @@ input:focus, select:focus, textarea:focus {
   line-height: 2.2rem !important;
   height: 2.2rem !important;
   margin: 0.15rem !important;
-  border-radius: 12px !important;
+  border-radius: 6px !important;
   font-weight: 500 !important;
   transition: all 0.15s ease;
 }
@@ -211,7 +215,7 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.85em;
   background-color: rgba(0, 0, 0, 0.04);
   padding: 0.2rem 0.4rem;
-  border-radius: 6px;
+  border-radius: 4px;
   font-weight: 600;
   color: #ff750f;
 }
@@ -225,7 +229,7 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.8rem;
   background-color: #f8fafc;
   border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .markdown-prose pre code {

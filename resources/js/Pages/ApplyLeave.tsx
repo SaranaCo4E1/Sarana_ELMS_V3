@@ -18,7 +18,7 @@ type Props = {
 
 const statusStyles: Record<string, { bg: string; border: string; text: string }> = {
   pending: { bg: 'bg-amber-50/60', border: 'border-amber-100/70', text: 'text-amber-800' },
-  approved: { bg: 'bg-emerald-50/60', border: 'border-emerald-100/70', text: 'text-emerald-800' },
+  approved: { bg: 'bg-orange-50/60', border: 'border-orange-100/70', text: 'text-orange-800' },
   rejected: { bg: 'bg-rose-50/60', border: 'border-rose-100/70', text: 'text-rose-800' },
   cancelled: { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' },
 };
@@ -183,18 +183,18 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
         {/* Main section */}
         <section className="space-y-6 animate-fade-in">
           {aiDraftImported && (
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4.5 shadow-premium-sm">
+            <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-4.5 shadow-premium-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-700 shadow-premium-sm">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-orange-100 bg-white text-orange-700 shadow-premium-sm">
                     <Bot size={16} />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-emerald-950">AI draft imported</div>
-                    <div className="text-xs font-medium text-emerald-800/80">Review the leave type, dates, and handover notes before submitting.</div>
+                    <div className="text-sm font-medium text-orange-950">AI draft imported</div>
+                    <div className="text-sm font-normal text-orange-800/80 mt-0.5">Review the leave type, dates, and handover notes before submitting.</div>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-orange-700">
                   <Sparkles size={11} /> Autofill
                 </span>
               </div>
@@ -202,27 +202,27 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
           )}
 
           {/* Apply Leave form */}
-          <form onSubmit={submitLeave} className="rounded-2xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
+          <form onSubmit={submitLeave} className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100/60 pb-5 mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 text-neutral-600 bg-neutral-50 shadow-premium-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 bg-neutral-50 shadow-premium-sm">
                   <CalendarPlus size={15} />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-neutral-850">Request Time Off</h2>
-                  <p className="text-xs font-medium text-neutral-455 mt-1">Submit a leave request for approvals</p>
+                  <h2 className="text-base font-medium text-neutral-800">Request Time Off</h2>
+                  <p className="text-sm font-normal text-neutral-500 mt-1.5">Submit a leave request for approvals</p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
+              <span className="inline-flex items-center rounded-full border border-orange-100 bg-orange-50 px-3.5 py-1 text-xs font-medium text-orange-700 shadow-sm">
                 {formatDays(projectedDays)} working day(s) calculated
               </span>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+            <div className="grid gap-4.5 sm:grid-cols-2 md:grid-cols-4">
+              <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                 Leave Type
                 <select
-                  className="mt-1.5 w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  className="mt-1.5 w-full rounded-lg border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-normal text-neutral-700 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                   value={form.leave_type_id}
                   onChange={(e) => setForm({ ...form, leave_type_id: Number(e.target.value) })}
                 >
@@ -234,10 +234,10 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 </select>
               </label>
 
-              <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+              <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                 Duration
                 <select
-                  className="mt-1.5 w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  className="mt-1.5 w-full rounded-lg border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-normal text-neutral-700 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                   value={form.duration}
                   onChange={handleDurationChange}
                 >
@@ -246,14 +246,14 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 </select>
               </label>
 
-              <div className="sm:col-span-2 block text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+              <div className="sm:col-span-2 block text-xs font-medium uppercase tracking-wider text-neutral-500">
                 Date Selection
                 <div className="mt-1.5 relative">
                   {form.duration === 'half_day' ? (
                     <DatePicker
                       selected={startDate}
                       onChange={handleSingleDateChange}
-                      className="w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                      className="w-full rounded-lg border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-normal text-neutral-700 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                       placeholderText="Select date"
                       dateFormat="yyyy-MM-dd"
                     />
@@ -263,7 +263,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                       startDate={startDate}
                       endDate={endDate}
                       onChange={handleDateRangeChange}
-                      className="w-full rounded-xl border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-medium text-neutral-700 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                      className="w-full rounded-lg border border-neutral-200/70 px-3 py-2.5 text-sm bg-white font-normal text-neutral-700 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                       placeholderText="Select start and end date"
                       dateFormat="yyyy-MM-dd"
                     />
@@ -273,17 +273,17 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
             </div>
 
             {selectedType?.requires_attachment && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-3 text-xs text-amber-900 font-medium animate-fade-in">
-                <AlertCircle size={14} className="shrink-0 text-amber-600" />
+              <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-amber-100 bg-amber-50/40 px-4.5 py-3.5 text-sm text-amber-900 font-normal animate-fade-in">
+                <AlertCircle size={15} className="shrink-0 text-amber-600" />
                 <span>An official attachment is required for this leave type (e.g. medical certificate).</span>
               </div>
             )}
 
-            <div className="mt-4">
-              <label className="block text-[10px] font-semibold uppercase tracking-widest text-neutral-455">
+            <div className="mt-4.5">
+              <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500">
                 Reason & Handover Notes
                 <textarea
-                  className="mt-1.5 min-h-[90px] w-full rounded-xl border border-neutral-200/70 p-3 text-sm font-normal text-neutral-700 placeholder:text-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none resize-y"
+                  className="mt-1.5 min-h-[90px] w-full rounded-lg border border-neutral-200/70 p-3 text-sm font-normal text-neutral-700 placeholder:text-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none resize-y"
                   placeholder="Details for coverage, client handover, or reason for time off request..."
                   value={form.reason}
                   onChange={(e) => setForm({ ...form, reason: e.target.value })}
@@ -291,9 +291,9 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               </label>
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-neutral-100/60">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-t-neutral-100/60">
               <div className="flex flex-wrap items-center gap-2">
-                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-neutral-200 px-3.5 py-2 text-sm font-semibold text-neutral-650 transition-all hover:bg-neutral-50 hover:text-neutral-800 bg-white shadow-premium-sm active:scale-98">
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 px-3.5 py-2 text-sm font-normal text-neutral-600 transition-all hover:bg-neutral-50 hover:text-neutral-800 bg-white shadow-premium-sm active:scale-98">
                   <Paperclip size={12} /> Attach Files
                   <input
                     className="hidden"
@@ -304,7 +304,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 </label>
 
                 {form.attachments.map((file, index) => (
-                  <span key={index} className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-semibold text-neutral-600 animate-fade-in">
+                  <span key={index} className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-sm font-normal text-neutral-600 animate-fade-in">
                     <span className="truncate max-w-28">{file.name}</span>
                     <button type="button" onClick={() => removeAttachment(index)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
                       <X size={11} />
@@ -314,7 +314,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               </div>
 
               <button
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4.5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-emerald-600/10 transition-all duration-200"
+                className="flex items-center gap-2 rounded-lg bg-orange-600 px-4.5 py-2.5 text-sm font-medium text-white hover:bg-orange-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200"
                 type="submit"
               >
                 <Send size={12} /> Submit Request
@@ -322,29 +322,29 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
             </div>
 
             {Object.values(errors).length > 0 && (
-              <p className="mt-3 text-xs font-semibold text-rose-600">{Object.values(errors)[0]}</p>
+              <p className="mt-3 text-xs font-medium text-rose-600">{Object.values(errors)[0]}</p>
             )}
           </form>
 
           {/* Request History */}
-          <div className="rounded-2xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+          <div className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100/60 px-6 py-5 bg-neutral-50/20">
               <div>
-                <h2 className="text-base font-semibold text-neutral-850">Request History</h2>
-                <p className="text-xs font-medium text-neutral-450 mt-1">View all previous leave applications</p>
+                <h2 className="text-base font-medium text-neutral-800">Request History</h2>
+                <p className="text-sm font-normal text-neutral-500 mt-1.5">View all previous leave applications</p>
               </div>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 text-neutral-400" size={13} />
+                  <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
                   <input
-                    className="w-48 rounded-xl border border-neutral-200/70 bg-white py-2 pl-8 pr-3 text-xs text-neutral-700 placeholder-neutral-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                    className="w-52 rounded-lg border border-neutral-200/70 bg-white py-2.5 pl-9 pr-3.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                     placeholder="Search requests..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
                 <select
-                  className="rounded-xl border border-neutral-200/70 px-3 py-2 text-xs bg-white font-semibold text-neutral-600 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  className="rounded-lg border border-neutral-200/70 px-3.5 py-2.5 text-sm bg-white font-normal text-neutral-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
@@ -364,13 +364,13 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
         <aside className="space-y-6">
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
             <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
-            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="emerald" />
+            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="orange" />
             <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
             <Metric icon={<CalendarClock size={15} />} label="Scheduled days" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
           </div>
 
-          <div className="rounded-2xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
-            <div className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-neutral-450">
+          <div className="rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
+            <div className="mb-4 text-xs font-medium uppercase tracking-wider text-neutral-500">
               My Balances
             </div>
             <div className="space-y-4">
@@ -384,14 +384,14 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                 return (
                   <div key={balance.id} className="space-y-2 border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
                     {/* Top Row */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
                         <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${color.dot}`} />
-                        <span className="font-semibold text-neutral-800 text-xs truncate max-w-[130px]" title={balance.leave_type.name}>
+                        <span className="font-normal text-neutral-800 text-sm truncate max-w-[130px]" title={balance.leave_type.name}>
                           {balance.leave_type.name}
                         </span>
                       </div>
-                      <span className="text-xs font-extrabold text-neutral-800 shrink-0">
+                      <span className="text-sm font-normal text-neutral-800 shrink-0">
                         {formatDays(balance.available_days)} / {formatDays(balance.allowance_days)}
                       </span>
                     </div>
@@ -405,7 +405,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                     </div>
 
                     {/* Footer Row */}
-                    <div className="flex justify-between text-[10px] text-neutral-455 text-neutral-450 font-medium px-0.5">
+                    <div className="flex justify-between text-xs text-neutral-400 font-normal px-0.5">
                       <span>Used: {formatDays(balance.used_days)}</span>
                       <span>Pending: {formatDays(balance.pending_days)}</span>
                     </div>
@@ -428,25 +428,25 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
         {requests.map((request) => (
           <div key={request.id} className="p-5 space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-neutral-850 text-xs">{request.leave_type.name}</span>
+              <span className="font-normal text-neutral-800 text-sm">{request.leave_type.name}</span>
               <Status status={request.status} />
             </div>
             
-            <div className="flex justify-between text-xs text-neutral-500 font-medium">
-              <span>{formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}</span>
-              <span className="font-semibold text-neutral-700">{formatDays(request.requested_days)} day(s)</span>
+            <div className="flex justify-between text-sm text-neutral-500 font-normal">
+              <span>{formatShortDate(request.starts_at)} â€“ {formatShortDate(request.ends_at)}</span>
+              <span className="font-normal text-neutral-700">{formatDays(request.requested_days)} day(s)</span>
             </div>
 
             {(request.manager_comment || request.approver) && (
-              <div className="bg-neutral-50/50 rounded-xl p-3.5 border border-neutral-100 text-xs text-neutral-500 space-y-1.5">
+              <div className="bg-neutral-50/50 rounded-lg p-3.5 border border-neutral-100 text-sm text-neutral-500 space-y-1.5">
                 {request.approver && (
                   <div>
-                    <span className="font-semibold text-neutral-600">Approver:</span> {request.approver.name}
+                    <span className="font-normal text-neutral-600">Approver:</span> {request.approver.name}
                   </div>
                 )}
                 {request.manager_comment && (
                   <div>
-                    <span className="font-semibold text-neutral-600">Comment:</span> {request.manager_comment}
+                    <span className="font-normal text-neutral-600">Comment:</span> {request.manager_comment}
                   </div>
                 )}
               </div>
@@ -455,7 +455,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
             {request.status === 'pending' && (
               <div className="flex justify-end pt-1">
                 <button
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 transition-all active:scale-95"
+                  className="text-sm font-normal text-rose-600 hover:text-rose-700 transition-all active:scale-95"
                   onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
                 >
                   Cancel Request
@@ -465,7 +465,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
           </div>
         ))}
         {requests.length === 0 && (
-          <div className="p-8 text-center text-xs text-neutral-400 font-medium">
+          <div className="p-8 text-center text-sm text-neutral-400 font-normal">
             No leave requests found.
           </div>
         )}
@@ -474,36 +474,36 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
       {/* Desktop Table View */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-50/50 text-[10px] font-semibold uppercase tracking-widest text-neutral-450 border-b border-neutral-100/60">
+          <thead className="bg-neutral-50/50 text-xs font-medium uppercase tracking-wider text-neutral-400 border-b border-neutral-100/60">
             <tr>
-              <th className="px-6 py-4.5">Type</th>
-              <th className="px-4 py-4.5">Dates</th>
-              <th className="px-4 py-4.5">Days</th>
-              <th className="px-4 py-4.5">Status</th>
-              <th className="px-4 py-4.5">Approver</th>
-              <th className="px-4 py-4.5">Comment</th>
-              <th className="px-6 py-4.5 text-right">Actions</th>
+              <th className="px-6 py-5">Type</th>
+              <th className="px-4 py-5">Dates</th>
+              <th className="px-4 py-5">Days</th>
+              <th className="px-4 py-5">Status</th>
+              <th className="px-4 py-5">Approver</th>
+              <th className="px-4 py-5">Comment</th>
+              <th className="px-6 py-5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100/60">
             {requests.map((request) => (
               <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
-                <td className="px-6 py-4.5 font-semibold text-neutral-850">{request.leave_type.name}</td>
-                <td className="px-4 py-4.5 text-neutral-500 font-medium whitespace-nowrap">
-                  {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
+                <td className="px-6 py-5 font-normal text-neutral-800">{request.leave_type.name}</td>
+                <td className="px-4 py-5 text-neutral-500 font-normal whitespace-nowrap">
+                  {formatShortDate(request.starts_at)} â€“ {formatShortDate(request.ends_at)}
                 </td>
-                <td className="px-4 py-4.5 font-semibold text-neutral-700">{formatDays(request.requested_days)}</td>
-                <td className="px-4 py-4.5">
+                <td className="px-4 py-5 font-normal text-neutral-700">{formatDays(request.requested_days)}</td>
+                <td className="px-4 py-5">
                   <Status status={request.status} />
                 </td>
-                <td className="px-4 py-4.5 text-neutral-600 font-medium">{request.approver?.name ?? '–'}</td>
-                <td className="px-4 py-4.5 max-w-48 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
-                  {request.manager_comment ?? '–'}
+                <td className="px-4 py-5 text-neutral-600 font-normal">{request.approver?.name ?? 'â€“'}</td>
+                <td className="px-4 py-5 max-w-48 truncate text-neutral-500 font-normal" title={request.manager_comment ?? ''}>
+                  {request.manager_comment ?? 'â€“'}
                 </td>
-                <td className="px-6 py-4.5 text-right whitespace-nowrap">
+                <td className="px-6 py-5 text-right whitespace-nowrap">
                   {request.status === 'pending' && (
                     <button
-                      className="text-xs font-semibold text-rose-600 hover:text-rose-700 transition-all active:scale-95"
+                      className="text-sm font-normal text-rose-600 hover:text-rose-700 transition-all active:scale-95"
                       onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
                     >
                       Cancel
@@ -514,7 +514,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
             ))}
             {requests.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-neutral-400 font-medium">
+                <td colSpan={7} className="px-6 py-12 text-center text-neutral-400 font-normal">
                   No leave requests found.
                 </td>
               </tr>
@@ -526,17 +526,17 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
   );
 }
 
-function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'emerald' | 'rose' | 'indigo' }) {
+function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' }) {
   const themes = {
     amber: {
       border: 'border-amber-100/60',
       bg: 'bg-gradient-to-br from-amber-500/5 to-amber-600/5',
       iconBg: 'bg-amber-50 text-amber-600 border-amber-100/70',
     },
-    emerald: {
-      border: 'border-emerald-100/60',
-      bg: 'bg-gradient-to-br from-emerald-500/5 to-emerald-600/5',
-      iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100/70',
+    orange: {
+      border: 'border-orange-100/60',
+      bg: 'bg-gradient-to-br from-orange-500/5 to-orange-600/5',
+      iconBg: 'bg-orange-50 text-orange-600 border-orange-100/70',
     },
     rose: {
       border: 'border-rose-100/60',
@@ -553,15 +553,15 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
   const theme = themes[variant];
 
   return (
-    <div className={`rounded-2xl border ${theme.border} p-6 bg-white shadow-premium-sm hover:shadow-premium-md transition-all duration-300 relative overflow-hidden group`}>
+    <div className={`rounded-xl border ${theme.border} p-6 bg-white shadow-premium-sm hover:shadow-premium-md transition-all duration-300 relative overflow-hidden group`}>
       <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${theme.bg} blur-2xl -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500`} />
-      <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-neutral-400 relative z-10">
+      <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-neutral-400 relative z-10">
         <span>{label}</span>
-        <div className={`flex h-7 w-7 items-center justify-center rounded-lg border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-md border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
           {icon}
         </div>
       </div>
-      <div className="mt-5 text-3xl font-bold tracking-tight text-neutral-800 relative z-10">{value}</div>
+      <div className="mt-5 text-3xl font-normal tracking-tight text-neutral-800 relative z-10">{value}</div>
     </div>
   );
 }
@@ -569,7 +569,7 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
 function Status({ status }: { status: string }) {
   const style = statusStyles[status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-600' };
   return (
-    <span className={`inline-flex items-center rounded-full border ${style.border} ${style.bg} ${style.text} px-2.5 py-0.5 text-[11px] font-semibold tracking-wide shadow-sm`}>
+    <span className={`inline-flex items-center rounded-full border ${style.border} ${style.bg} ${style.text} px-3 py-1 text-sm font-medium tracking-wide shadow-sm`}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
