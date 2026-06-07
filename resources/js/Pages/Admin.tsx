@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, Building2, Calculator, CalendarDays, CheckCircle2, ClipboardList, Clock, Download, Edit3, Eye, EyeOff, Plus, Search, Shield, SlidersHorizontal, ToggleLeft, ToggleRight, UserPlus, Users, X } from 'lucide-react';
+import { AlertCircle, Building2, Calculator, CalendarDays, CheckCircle2, ClipboardList, Clock, Download, Edit3, Eye, EyeOff, Plus, Search, Shield, SlidersHorizontal, ToggleLeft, ToggleRight, UserPlus, Users, X, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -225,6 +225,8 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
   const [modal, setModal] = useState<AdminModal | null>(null);
   const [isModalClosing, setIsModalClosing] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [isSubmittingModal, setIsSubmittingModal] = useState(false);
+  const [isSubmittingBalance, setIsSubmittingBalance] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState<{
     title: string;
     message: string;
@@ -457,7 +459,12 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
     event.preventDefault();
     if (!modal) return;
 
-    const options = { preserveScroll: true, onSuccess: closeModal };
+    const options = {
+      preserveScroll: true,
+      onStart: () => setIsSubmittingModal(true),
+      onFinish: () => setIsSubmittingModal(false),
+      onSuccess: closeModal,
+    };
 
     if (modal.type === 'user') {
       if (modal.mode === 'edit' && modal.record) {
@@ -1012,6 +1019,8 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     e.preventDefault();
                     router.post('/admin/balances', balanceForm, {
                       preserveScroll: true,
+                      onStart: () => setIsSubmittingBalance(true),
+                      onFinish: () => setIsSubmittingBalance(false),
                       onSuccess: () => setBalanceForm({ user_id: '', leave_type_id: '', year: new Date().getFullYear(), allowance_days: 0, adjustment_days: 0, override_reason: '' })
                     });
                   }}
@@ -1091,7 +1100,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   </label>
 
                   <div className="pt-2">
-                    <Submit label="Apply Balance Override" />
+                    <Submit label="Apply Balance Override" processing={isSubmittingBalance} />
                   </div>
                 </form>
               </div>
@@ -1662,8 +1671,20 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                 <button className="inline-flex items-center justify-center rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium uppercase tracking-wide text-neutral-600 transition-all hover:bg-neutral-50" onClick={closeModal} type="button">
                   Cancel
                 </button>
-                <button className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 px-5 py-3 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 transition-all hover:bg-orange-700 active:scale-98" type="submit">
-                  <Plus size={14} /> {modal.mode === 'edit' ? 'Save Changes' : 'Create'}
+                <button
+                  type="submit"
+                  disabled={isSubmittingModal}
+                  className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 px-5 py-3 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 transition-all hover:bg-orange-700 active:scale-98 cursor-pointer"
+                >
+                  {isSubmittingModal ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin text-neutral-450" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} /> {modal.mode === 'edit' ? 'Save Changes' : 'Create'}
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -1742,10 +1763,22 @@ function Metric({ label, value, variant }: { label: string; value: number; varia
   );
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, processing = false }: { label: string; processing?: boolean }) {
   return (
-    <button className="w-full inline-flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 py-3.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all duration-200 cursor-pointer">
-      <Plus size={14} className="text-neutral-300" /> {label}
+    <button
+      type="submit"
+      disabled={processing}
+      className="w-full inline-flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-3.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all duration-200 cursor-pointer"
+    >
+      {processing ? (
+        <>
+          <Loader2 size={14} className="animate-spin text-neutral-450" /> Applying Override...
+        </>
+      ) : (
+        <>
+          <Plus size={14} className="text-neutral-300" /> {label}
+        </>
+      )}
     </button>
   );
 }

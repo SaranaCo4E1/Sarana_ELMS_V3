@@ -1,11 +1,12 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Bot, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Bot, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 import type { PageProps } from '../../types';
 
 export default function TwoFactor() {
   const { errors } = usePage<PageProps>().props;
   const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-neutral-50/60 px-4 py-12">
@@ -28,7 +29,13 @@ export default function TwoFactor() {
 
           {/* Form */}
           <form 
-            onSubmit={(e) => { e.preventDefault(); router.post('/two-factor', { code }); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              router.post('/two-factor', { code }, {
+                onStart: () => setLoading(true),
+                onFinish: () => setLoading(false),
+              });
+            }}
             className="space-y-5"
           >
             {/* Verification Code Field */}
@@ -51,9 +58,17 @@ export default function TwoFactor() {
             {/* Submit Button */}
             <button 
               type="submit"
-              className="w-full rounded-lg bg-orange-600 py-4 text-sm font-semibold tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-4 text-sm font-semibold tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
             >
-              Verify & Sign In
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-neutral-400" />
+                  Verifying...
+                </>
+              ) : (
+                'Verify & Sign In'
+              )}
             </button>
           </form>
 

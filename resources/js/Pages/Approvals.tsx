@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { Check, Clock3, FileText, Search, ShieldCheck, Users, X, Eye, Download } from 'lucide-react';
+import { Check, Clock3, FileText, Search, ShieldCheck, Users, X, Eye, Download, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -25,6 +25,7 @@ const attachmentPreviewUrl = (attachment: { id: number }) => `/approvals/attachm
 const attachmentDownloadUrl = (attachment: { id: number }) => `/approvals/attachments/${attachment.id}/download`;
 
 export default function Approvals({ requests, recentDecisions, approvalStats }: Props) {
+  const [decidingIds, setDecidingIds] = useState<Record<number, 'approved' | 'rejected' | null>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('all');
@@ -107,7 +108,11 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
   };
 
   const decide = (id: number, decision: 'approved' | 'rejected') => {
-    router.patch(`/approvals/${id}`, { decision, manager_comment: comments[id] ?? '' }, { preserveScroll: true });
+    router.patch(`/approvals/${id}`, { decision, manager_comment: comments[id] ?? '' }, {
+      preserveScroll: true,
+      onStart: () => setDecidingIds(prev => ({ ...prev, [id]: decision })),
+      onFinish: () => setDecidingIds(prev => ({ ...prev, [id]: null })),
+    });
   };
 
   return (
@@ -252,16 +257,34 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   </div>
                   <div className="mt-4.5 grid grid-cols-2 gap-3">
                     <button
-                      className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 py-2.5 text-sm font-semibold text-white transition-all hover:bg-orange-700 active:scale-98 cursor-pointer shadow-premium-sm"
+                      disabled={decidingIds[request.id] !== undefined && decidingIds[request.id] !== null}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-2.5 text-sm font-semibold text-white transition-all hover:bg-orange-700 active:scale-98 cursor-pointer shadow-premium-sm"
                       onClick={() => decide(request.id, 'approved')}
                     >
-                      <Check size={15} /> Approve
+                      {decidingIds[request.id] === 'approved' ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin text-neutral-450" /> Approving...
+                        </>
+                      ) : (
+                        <>
+                          <Check size={15} /> Approve
+                        </>
+                      )}
                     </button>
                     <button
-                      className="flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50/50 py-2.5 text-sm font-semibold text-rose-700 transition-all hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800 active:scale-98 cursor-pointer shadow-premium-sm"
+                      disabled={decidingIds[request.id] !== undefined && decidingIds[request.id] !== null}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50/50 disabled:bg-neutral-250 disabled:text-neutral-400 py-2.5 text-sm font-semibold text-rose-700 transition-all hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800 active:scale-98 cursor-pointer shadow-premium-sm"
                       onClick={() => decide(request.id, 'rejected')}
                     >
-                      <X size={15} /> Reject
+                      {decidingIds[request.id] === 'rejected' ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin text-rose-350" /> Rejecting...
+                        </>
+                      ) : (
+                        <>
+                          <X size={15} /> Reject
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

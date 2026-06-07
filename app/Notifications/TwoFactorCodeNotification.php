@@ -39,7 +39,7 @@ class TwoFactorCodeNotification extends Notification
         $device = $this->getReadableDevice($this->userAgent);
 
         return (new MailMessage)
-            ->subject('Your ELMS Verification Code: '.$this->code)
+            ->subject('Your ELMS 2FA Code')
             ->greeting('Hello '.$notifiable->name.',')
             ->line('Use the verification code below to complete your sign-in request.')
             ->line(new HtmlString('<table class="panel" width="100%" cellpadding="0" cellspacing="0" role="presentation"><tr><td class="panel-content" style="text-align: center;"><span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #ff750f;">'.$this->code.'</span></td></tr></table>'))

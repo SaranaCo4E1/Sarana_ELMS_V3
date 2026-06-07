@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Bot, Mail, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Bot, Mail, KeyRound, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import type { PageProps } from '../../types';
 
 export default function ResetPassword({ token, email }: { token: string; email: string }) {
@@ -8,6 +8,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
   const [form, setForm] = useState({ token, email, password: '', password_confirmation: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-neutral-50/60 px-4 py-12">
@@ -30,7 +31,13 @@ export default function ResetPassword({ token, email }: { token: string; email: 
 
           {/* Form */}
           <form 
-            onSubmit={(e) => { e.preventDefault(); router.post('/reset-password', form); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              router.post('/reset-password', form, {
+                onStart: () => setLoading(true),
+                onFinish: () => setLoading(false),
+              });
+            }}
             className="space-y-4"
           >
             {/* Email Field */}
@@ -111,9 +118,17 @@ export default function ResetPassword({ token, email }: { token: string; email: 
             {/* Submit Button */}
             <button 
               type="submit"
-              className="w-full rounded-lg bg-orange-600 py-4 text-sm font-semibold tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-4 text-sm font-semibold tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
             >
-              Reset Password
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-neutral-400" />
+                  Resetting Password...
+                </>
+              ) : (
+                'Reset Password'
+              )}
             </button>
           </form>
 

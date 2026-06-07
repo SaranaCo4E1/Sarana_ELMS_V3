@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, Bot, Calendar, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Sparkles, X } from 'lucide-react';
+import { AlertCircle, Bot, Calendar, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Sparkles, X, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
@@ -28,6 +28,7 @@ const statusStyles: Record<string, { bg: string; border: string; text: string; d
 
 export default function ApplyLeave({ leaveTypes, balances, requests, requestStats, holidays }: Props) {
   const { errors } = usePage<PageProps>().props;
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     leave_type_id: leaveTypes[0]?.id ?? '',
     starts_at: '',
@@ -162,6 +163,8 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     router.post('/leave-requests', data, {
       forceFormData: true,
       preserveScroll: true,
+      onStart: () => setIsSubmitting(true),
+      onFinish: () => setIsSubmitting(false),
       onSuccess: () => {
         // Reset form on success
         setForm((prev) => ({ ...prev, starts_at: '', ends_at: '', reason: '', attachments: [] }));
@@ -320,10 +323,19 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               </div>
 
               <button
-                className="flex items-center gap-2 rounded-lg bg-orange-600 px-4.5 py-2.5 text-sm font-medium text-white hover:bg-orange-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200"
+                className="flex items-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 px-4.5 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:hover:translate-y-0 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200 cursor-pointer"
                 type="submit"
+                disabled={isSubmitting}
               >
-                <Send size={12} /> Submit Request
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin text-neutral-400" /> Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send size={12} /> Submit Request
+                  </>
+                )}
               </button>
             </div>
 
@@ -419,6 +431,16 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 }
 
 function RequestTable({ requests }: { requests: LeaveRequest[] }) {
+  const [cancellingIds, setCancellingIds] = useState<Record<number, boolean>>({});
+
+  const handleCancel = (id: number) => {
+    router.delete(`/leave-requests/${id}`, {
+      preserveScroll: true,
+      onStart: () => setCancellingIds(prev => ({ ...prev, [id]: true })),
+      onFinish: () => setCancellingIds(prev => ({ ...prev, [id]: false })),
+    });
+  };
+
   return (
     <div>
       {/* Mobile Card List View */}
@@ -453,10 +475,17 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
             {request.status === 'pending' && (
               <div className="flex justify-end pt-1">
                 <button
-                  className="text-sm font-normal text-rose-600 hover:text-rose-700 transition-all active:scale-95"
-                  onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
+                  disabled={cancellingIds[request.id]}
+                  className="inline-flex items-center gap-1.5 text-sm font-normal text-rose-600 hover:text-rose-700 disabled:text-neutral-400 transition-all active:scale-95 cursor-pointer"
+                  onClick={() => handleCancel(request.id)}
                 >
-                  Cancel Request
+                  {cancellingIds[request.id] ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin text-neutral-450" /> Cancelling...
+                    </>
+                  ) : (
+                    'Cancel Request'
+                  )}
                 </button>
               </div>
             )}
@@ -503,10 +532,17 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
                 <td className="px-6 py-5 text-right whitespace-nowrap">
                   {request.status === 'pending' && (
                     <button
-                      className="text-sm font-normal text-rose-600 hover:text-rose-700 transition-all active:scale-95"
-                      onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
+                      disabled={cancellingIds[request.id]}
+                      className="inline-flex items-center gap-1.5 text-sm font-normal text-rose-600 hover:text-rose-700 disabled:text-neutral-400 transition-all active:scale-95 cursor-pointer"
+                      onClick={() => handleCancel(request.id)}
                     >
-                      Cancel
+                      {cancellingIds[request.id] ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin text-neutral-450" /> Cancelling...
+                        </>
+                      ) : (
+                        'Cancel'
+                      )}
                     </button>
                   )}
                 </td>

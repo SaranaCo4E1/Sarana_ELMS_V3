@@ -1,12 +1,13 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Bot, Mail, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Bot, Mail, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
 import type { PageProps } from '../../types';
 
 export default function Login() {
   const { errors, flash } = usePage<PageProps>().props;
   const [form, setForm] = useState({ email: '', password: '', remember: true });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-neutral-50/60 px-4 py-12">
@@ -35,7 +36,13 @@ export default function Login() {
 
           {/* Login Form */}
           <form
-            onSubmit={(e) => { e.preventDefault(); router.post('/login', form); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              router.post('/login', form, {
+                onStart: () => setLoading(true),
+                onFinish: () => setLoading(false),
+              });
+            }}
             className="space-y-5"
           >
             {/* Email Field */}
@@ -116,10 +123,18 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full rounded-lg bg-orange-600 py-4 text-sm font-semibold tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-4 text-sm font-semibold tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
               tabIndex={3}
             >
-              Sign In
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-neutral-400" />
+                  Signing In...
+                </>
+              ) : (
+                'Sign In'
+              )}
             </button>
           </form>
         </div>

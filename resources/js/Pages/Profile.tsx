@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { Banknote, BriefcaseBusiness, CalendarDays, Eye, EyeOff, IdCard, KeyRound, LockKeyhole, Mail, MapPin, Phone, Shield, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
+import { Banknote, BriefcaseBusiness, CalendarDays, Eye, EyeOff, IdCard, KeyRound, LockKeyhole, Mail, MapPin, Phone, Shield, ShieldAlert, ShieldCheck, UserRound, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
@@ -9,6 +9,9 @@ import { formatDate, formatRole } from '../utils';
 export default function Profile({ profile }: { profile: User }) {
   const { errors } = usePage<PageProps>().props;
   const employeeProfile = profile.profile;
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingTwoFactor, setIsUpdatingTwoFactor] = useState(false);
   const [form, setForm] = useState({
     name: profile.name ?? '',
     email: profile.email ?? '',
@@ -29,13 +32,19 @@ export default function Profile({ profile }: { profile: User }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    router.patch('/profile', form, { preserveScroll: true });
+    router.patch('/profile', form, {
+      preserveScroll: true,
+      onStart: () => setIsSavingProfile(true),
+      onFinish: () => setIsSavingProfile(false),
+    });
   }
 
   function updatePassword(e: React.FormEvent) {
     e.preventDefault();
     router.patch('/profile/password', passwordForm, {
       preserveScroll: true,
+      onStart: () => setIsUpdatingPassword(true),
+      onFinish: () => setIsUpdatingPassword(false),
       onSuccess: () => setPasswordForm({ current_password: '', password: '', password_confirmation: '' }),
     });
   }
@@ -43,6 +52,8 @@ export default function Profile({ profile }: { profile: User }) {
   function toggleTwoFactor(enabled: boolean) {
     router.patch('/profile/two-factor', { enabled, current_password: twoFactorPassword }, {
       preserveScroll: true,
+      onStart: () => setIsUpdatingTwoFactor(true),
+      onFinish: () => setIsUpdatingTwoFactor(false),
       onSuccess: () => setTwoFactorPassword(''),
     });
   }
@@ -56,37 +67,37 @@ export default function Profile({ profile }: { profile: User }) {
     <AppLayout>
       <div className="space-y-6">
         {/* Premium Profile Banner Card */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-tr from-orange-600 via-orange-600 to-amber-700 p-6 text-white shadow-premium-md animate-fade-in">
+        <div className="relative overflow-hidden rounded-xl border border-neutral-200/60 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300 animate-fade-in">
           {/* Subtle background decoration */}
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/10 blur-3xl"></div>
-          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl"></div>
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/5 blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-amber-500/5 blur-3xl pointer-events-none"></div>
 
           <div className="relative flex flex-col items-center gap-5 sm:flex-row sm:items-center">
             {/* Avatar Circle */}
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 text-neutral-950 font-medium text-2xl shadow-inner border border-orange-300/20">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 font-semibold text-2xl border border-orange-200/60 shadow-premium-sm">
               {initials}
             </div>
 
             {/* User Info */}
             <div className="text-center sm:text-left">
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                <h1 className="text-2xl font-medium tracking-tight text-white">{profile.name}</h1>
-                <span className="inline-flex items-center rounded-md bg-orange-500/15 px-2 py-0.5 text-xs font-semibold text-orange-200 border border-orange-500/25">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
+                <h1 className="text-2xl font-bold tracking-tight text-neutral-800">{profile.name}</h1>
+                <span className="inline-flex items-center rounded-md bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-700 border border-orange-200/50">
                   Active Account
                 </span>
               </div>
-              <p className="mt-1.5 text-sm text-neutral-300 font-medium">
+              <p className="mt-1.5 text-sm text-neutral-500 font-medium">
                 {formatRole(profile.role)} · {profile.department?.name ?? 'Unassigned Department'}
               </p>
               
-              <div className="mt-3.5 flex flex-wrap justify-center gap-y-1.5 gap-x-4 text-sm text-neutral-300 sm:justify-start font-medium">
+              <div className="mt-3.5 flex flex-wrap justify-center gap-y-1.5 gap-x-4 text-sm text-neutral-500 sm:justify-start font-medium">
                 <span className="flex items-center gap-1.5">
-                  <Mail size={13} className="text-neutral-300/80" />
+                  <Mail size={13} className="text-neutral-400" />
                   {profile.email}
                 </span>
                 {profile.employee_code && (
                   <span className="flex items-center gap-1.5">
-                    <BriefcaseBusiness size={13} className="text-neutral-300/80" />
+                    <BriefcaseBusiness size={13} className="text-neutral-400" />
                     ID: {profile.employee_code}
                   </span>
                 )}
@@ -128,8 +139,19 @@ export default function Profile({ profile }: { profile: User }) {
               )}
 
               <div className="pt-2 md:col-span-2">
-                <button className="rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer">
-                  Save Changes
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin text-neutral-400" />
+                      Saving Changes...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>
@@ -167,8 +189,19 @@ export default function Profile({ profile }: { profile: User }) {
               <Field label="Confirm new password" type="password" value={passwordForm.password_confirmation} onChange={(value) => setPasswordForm({ ...passwordForm, password_confirmation: value })} error={errors.password_confirmation} />
               
               <div className="pt-2">
-                <button className="rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer">
-                  Update Password
+                <button
+                  type="submit"
+                  disabled={isUpdatingPassword}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+                >
+                  {isUpdatingPassword ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin text-neutral-400" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
                 </button>
               </div>
             </form>
@@ -218,21 +251,35 @@ export default function Profile({ profile }: { profile: User }) {
               <div className="flex flex-wrap gap-2 pt-2">
                 {!profile.two_factor_enabled ? (
                   <button 
-                    className="rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
                     onClick={() => toggleTwoFactor(true)} 
                     type="button"
-                    disabled={!twoFactorPassword}
+                    disabled={!twoFactorPassword || isUpdatingTwoFactor}
                   >
-                    Enable 2FA Protection
+                    {isUpdatingTwoFactor ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin text-neutral-400" />
+                        Enabling...
+                      </>
+                    ) : (
+                      'Enable 2FA Protection'
+                    )}
                   </button>
                 ) : (
                   <button 
-                    className="rounded-lg border border-rose-200 bg-white px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-rose-600 shadow-premium-sm hover:bg-rose-50 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-rose-600 shadow-premium-sm hover:bg-rose-50 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer" 
                     onClick={() => toggleTwoFactor(false)} 
                     type="button"
-                    disabled={!twoFactorPassword}
+                    disabled={!twoFactorPassword || isUpdatingTwoFactor}
                   >
-                    Disable 2FA Protection
+                    {isUpdatingTwoFactor ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin text-rose-300" />
+                        Disabling...
+                      </>
+                    ) : (
+                      'Disable 2FA Protection'
+                    )}
                   </button>
                 )}
               </div>
