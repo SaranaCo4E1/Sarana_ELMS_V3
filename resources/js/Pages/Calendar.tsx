@@ -342,7 +342,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               </div>
               <button 
                 onClick={() => setIsMobilePopupOpen(false)}
-                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-150 hover:text-neutral-700 transition-colors cursor-pointer"
+                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer"
                 aria-label="Close dialog"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

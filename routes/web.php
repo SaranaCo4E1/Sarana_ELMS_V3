@@ -57,12 +57,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
     Route::post('/ai-help/stream', [AiHelpController::class, 'stream'])->name('ai-help.stream');
+    Route::get('/approvals/attachments/{leaveAttachment}/preview', [ManagerApprovalController::class, 'previewAttachment'])->name('approvals.attachments.preview');
+    Route::get('/approvals/attachments/{leaveAttachment}/download', [ManagerApprovalController::class, 'downloadAttachment'])->name('approvals.attachments.download');
 
     Route::middleware('role:manager,hr admin,admin')->group(function () {
         Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
         Route::patch('/approvals/{leaveRequest}', [ManagerApprovalController::class, 'update'])->name('approvals.update');
-        Route::get('/approvals/attachments/{leaveAttachment}/preview', [ManagerApprovalController::class, 'previewAttachment'])->name('approvals.attachments.preview');
-        Route::get('/approvals/attachments/{leaveAttachment}/download', [ManagerApprovalController::class, 'downloadAttachment'])->name('approvals.attachments.download');
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
     });
 

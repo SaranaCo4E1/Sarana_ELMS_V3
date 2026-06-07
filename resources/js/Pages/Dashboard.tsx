@@ -1,7 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, FileText, Search, Users, X, CalendarDays } from 'lucide-react';
+import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, FileText, Search, Users, X, CalendarDays, Eye, Download, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
 import { canApproveRole, formatDays, formatShortDate } from '../utils';
@@ -257,6 +258,36 @@ export default function Dashboard({
 }
 
 function RequestTable({ requests }: { requests: LeaveRequest[] }) {
+  const [cancellingIds, setCancellingIds] = useState<Record<number, boolean>>({});
+  const [viewDetailsRequest, setViewDetailsRequest] = useState<LeaveRequest | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const handleCancel = (id: number) => {
+    router.delete(`/leave-requests/${id}`, {
+      preserveScroll: true,
+      onStart: () => setCancellingIds(prev => ({ ...prev, [id]: true })),
+      onSuccess: () => {
+        setViewDetailsRequest(null);
+        setShowCancelConfirm(false);
+      },
+      onFinish: () => setCancellingIds(prev => ({ ...prev, [id]: false })),
+    });
+  };
+
+  const isPreviewable = (attachment: any) => {
+    const mime = attachment.mime_type?.toLowerCase() ?? '';
+    return mime.startsWith('image/') || mime === 'application/pdf' || ['png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf'].includes(attachment.original_name.split('.').pop()?.toLowerCase() ?? '');
+  };
+
+  const isPdf = (attachment: any) => {
+    const mime = attachment.mime_type?.toLowerCase() ?? '';
+    return mime === 'application/pdf' || attachment.original_name.split('.').pop()?.toLowerCase() === 'pdf';
+  };
+
+  const attachmentPreviewUrl = (attachment: { id: number }) => `/approvals/attachments/${attachment.id}/preview`;
+  const attachmentDownloadUrl = (attachment: { id: number }) => `/approvals/attachments/${attachment.id}/download`;
+
   return (
     <div>
       {/* Mobile Card List View */}
@@ -288,16 +319,14 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
               </div>
             )}
 
-            {request.status === 'pending' && (
-              <div className="flex justify-end pt-1">
-                <button
-                  className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-all active:scale-95"
-                  onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
-                >
-                  Cancel Request
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end gap-3.5 pt-1">
+              <button
+                className="text-sm font-medium text-neutral-500 hover:text-neutral-800 transition-all active:scale-95 cursor-pointer"
+                onClick={() => setViewDetailsRequest(request)}
+              >
+                View Details
+              </button>
+            </div>
           </div>
         ))}
         {requests.length === 0 && (
@@ -339,14 +368,12 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
                   {request.manager_comment ?? '–'}
                 </td>
                 <td className="px-6 py-5 text-right whitespace-nowrap">
-                  {request.status === 'pending' && (
-                    <button
-                      className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-all active:scale-95"
-                      onClick={() => router.delete(`/leave-requests/${request.id}`, { preserveScroll: true })}
-                    >
-                      Cancel
-                    </button>
-                  )}
+                  <button
+                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-neutral-650 hover:border-orange-200 hover:text-orange-700 transition-all cursor-pointer bg-white"
+                    onClick={() => setViewDetailsRequest(request)}
+                  >
+                    <Eye size={13} /> Details
+                  </button>
                 </td>
               </tr>
             ))}
@@ -360,6 +387,294 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
           </tbody>
         </table>
       </div>
+
+      {/* Decided Request Details Modal */}
+      {viewDetailsRequest && createPortal(
+        <div
+          onClick={() => setViewDetailsRequest(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl rounded-2xl bg-white border border-neutral-200/85 shadow-premium-lg overflow-hidden flex flex-col max-h-[90vh] cursor-default animate-modal-enter"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-semibold text-neutral-800">
+                  Leave Request Details
+                </h3>
+                <p className="mt-1 text-sm font-medium text-neutral-500">Record details of your leave request.</p>
+              </div>
+              <button
+                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors cursor-pointer border border-neutral-200"
+                onClick={() => setViewDetailsRequest(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-6">
+              {/* Employee Info & Request details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Employee</div>
+                  <div className="text-sm font-semibold text-neutral-800 mt-1">{viewDetailsRequest.user?.name || 'My Request'}</div>
+                  {viewDetailsRequest.user?.email && <div className="text-xs font-medium text-neutral-500 mt-0.5">{viewDetailsRequest.user.email}</div>}
+                  {viewDetailsRequest.user?.department && (
+                    <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-600 border border-neutral-200/50 mt-1.5">
+                      {viewDetailsRequest.user.department.name}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Status</div>
+                  <div className="mt-1.5">
+                    {(() => {
+                      const style = statusStyles[viewDetailsRequest.status] ?? { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-655/90', dot: 'bg-neutral-400' };
+                      return (
+                        <span className={`inline-flex items-center rounded-md border ${style.border} ${style.bg} ${style.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${style.dot} mr-1.5 shrink-0`} />
+                          {viewDetailsRequest.status}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  {viewDetailsRequest.decided_at && (
+                    <div className="text-xs text-neutral-400 font-medium mt-1">
+                      Decided on: {new Date(viewDetailsRequest.decided_at).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-neutral-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Leave Type</div>
+                  <div className="mt-1">
+                    <LeaveBadge code={viewDetailsRequest.leave_type.code} name={viewDetailsRequest.leave_type.name} />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Duration & Quota</div>
+                  <div className="text-sm font-semibold text-neutral-800 mt-1">
+                    {formatShortDate(viewDetailsRequest.starts_at)} – {formatShortDate(viewDetailsRequest.ends_at)}
+                  </div>
+                  <div className="text-xs font-medium text-orange-700 mt-0.5">
+                    {formatDays(viewDetailsRequest.requested_days)} working day(s)
+                  </div>
+                </div>
+              </div>
+
+              {/* Handover / Reason */}
+              <div className="border-t border-neutral-100 pt-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Handover Notes / Reason</div>
+                {viewDetailsRequest.reason ? (
+                  <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 italic shadow-premium-sm">
+                    "{viewDetailsRequest.reason}"
+                  </p>
+                ) : (
+                  <p className="text-sm text-neutral-400 italic font-medium">No notes provided.</p>
+                )}
+              </div>
+
+              {/* Manager Comment */}
+              <div className="border-t border-neutral-100 pt-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Manager Decision Comment</div>
+                {viewDetailsRequest.manager_comment ? (
+                  <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 shadow-premium-sm">
+                    {viewDetailsRequest.manager_comment}
+                  </p>
+                ) : (
+                  <p className="text-sm text-neutral-400 italic font-medium">No comments provided by approver.</p>
+                )}
+              </div>
+
+              {/* Attachments */}
+              <div className="border-t border-neutral-100 pt-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3">Attachments</div>
+                <div className="flex flex-wrap gap-2.5">
+                  {(viewDetailsRequest.attachments ?? []).map((attachment) => {
+                    const preview = isPreviewable(attachment);
+                    const ext = attachment.original_name.split('.').pop()?.toUpperCase() ?? 'FILE';
+                    return preview ? (
+                      <button
+                        key={attachment.id}
+                        onClick={() => {
+                          setViewDetailsRequest(null);
+                          setPreviewAttachment(attachment);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm cursor-pointer"
+                        type="button"
+                      >
+                        <FileText size={13} className="text-neutral-400" />
+                        <span className="truncate max-w-44">{attachment.original_name}</span>
+                        <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
+                          {ext}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded bg-orange-50 border border-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 ml-1">
+                          <Eye size={10} /> Preview
+                        </span>
+                      </button>
+                    ) : (
+                      <a
+                        key={attachment.id}
+                        href={attachmentDownloadUrl(attachment)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FileText size={13} className="text-neutral-400" />
+                        <span className="truncate max-w-44">{attachment.original_name}</span>
+                        <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
+                          {ext}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded bg-neutral-50 border border-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 ml-1">
+                          <Download size={10} /> Download
+                        </span>
+                      </a>
+                    );
+                  })}
+                  {(viewDetailsRequest.attachments ?? []).length === 0 && (
+                    <span className="text-sm font-medium text-neutral-400">No attachments provided</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-neutral-100 px-6 py-4 bg-neutral-50/20 flex justify-between items-center">
+              <div>
+                {viewDetailsRequest.status === 'pending' && (
+                  <button
+                    className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-rose-700 transition-all hover:bg-rose-100 cursor-pointer"
+                    onClick={() => setShowCancelConfirm(true)}
+                    type="button"
+                  >
+                    Cancel Request
+                  </button>
+                )}
+              </div>
+              <button
+                className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-neutral-650 transition-all hover:bg-neutral-50 cursor-pointer"
+                onClick={() => setViewDetailsRequest(null)}
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && viewDetailsRequest && createPortal(
+        <div
+          onClick={() => setShowCancelConfirm(false)}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md rounded-2xl bg-white border border-neutral-200 shadow-premium-lg overflow-hidden flex flex-col cursor-default animate-modal-enter p-6 space-y-4"
+          >
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 border border-rose-100">
+                <AlertCircle size={20} className="text-rose-600" />
+              </div>
+              <h3 className="text-lg font-bold text-neutral-800">
+                Cancel Leave Request
+              </h3>
+            </div>
+            <p className="text-sm text-neutral-600 font-medium">
+              Are you sure you want to cancel this leave request? This action cannot be undone and the request will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-600 transition-all hover:bg-neutral-50 cursor-pointer"
+                onClick={() => setShowCancelConfirm(false)}
+                type="button"
+              >
+                No, Keep Request
+              </button>
+              <button
+                disabled={cancellingIds[viewDetailsRequest.id]}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-rose-700 disabled:bg-neutral-400 active:scale-95 cursor-pointer shadow-sm shadow-rose-500/10"
+                onClick={() => handleCancel(viewDetailsRequest.id)}
+                type="button"
+              >
+                {cancellingIds[viewDetailsRequest.id] ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-white" /> Cancelling...
+                  </>
+                ) : (
+                  'Yes, Cancel'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Attachment Preview Modal */}
+      {previewAttachment && createPortal(
+        <div
+          onClick={() => setPreviewAttachment(null)}
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-4xl rounded-2xl bg-white border border-neutral-200/85 shadow-premium-lg overflow-hidden flex flex-col max-h-[90vh] cursor-default animate-modal-enter"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <FileText size={18} className="text-orange-600" />
+                <h3 className="text-base font-semibold text-neutral-800 truncate max-w-[40vw]">
+                  {previewAttachment.original_name}
+                </h3>
+                <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600 border border-neutral-200/50 uppercase">
+                  {previewAttachment.original_name.split('.').pop() ?? 'FILE'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href={attachmentDownloadUrl(previewAttachment)}
+                  className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors shadow-premium-sm"
+                >
+                  <Download size={13} /> Download
+                </a>
+                <button
+                  onClick={() => setPreviewAttachment(null)}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 p-6 bg-neutral-50/50 flex items-center justify-center overflow-auto">
+              {isPdf(previewAttachment) ? (
+                <iframe
+                  src={attachmentPreviewUrl(previewAttachment)}
+                  title={previewAttachment.original_name}
+                  className="h-[70vh] w-full rounded-xl border border-neutral-200/60 bg-white shadow-premium-md"
+                />
+              ) : (
+                <img
+                  src={attachmentPreviewUrl(previewAttachment)}
+                  alt={previewAttachment.original_name}
+                  className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-premium-md border border-neutral-200/50 bg-white p-2"
+                />
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

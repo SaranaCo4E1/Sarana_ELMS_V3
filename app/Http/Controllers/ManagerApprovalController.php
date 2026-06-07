@@ -118,7 +118,12 @@ class ManagerApprovalController extends Controller
 
         $actor = $request->user();
 
-        abort_unless($actor->isHr() || $attachment->leaveRequest->user->manager_id === $actor->id, 403);
+        abort_unless(
+            $actor->isHr() ||
+            $attachment->leaveRequest->user->manager_id === $actor->id ||
+            $attachment->leaveRequest->user_id === $actor->id,
+            403
+        );
     }
 
     private function attachmentPath(LeaveAttachment $attachment): string
