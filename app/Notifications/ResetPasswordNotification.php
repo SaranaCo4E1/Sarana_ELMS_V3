@@ -6,9 +6,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\HtmlString;
 
-class TwoFactorCodeNotification extends Notification
+class ResetPasswordNotification extends Notification
 {
     use Queueable;
 
@@ -16,7 +15,7 @@ class TwoFactorCodeNotification extends Notification
 
     public string $userAgent = 'Unknown Browser';
 
-    public function __construct(private readonly string $code)
+    public function __construct(public readonly string $token)
     {
         try {
             $request = request();
@@ -37,17 +36,21 @@ class TwoFactorCodeNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $device = $this->getReadableDevice($this->userAgent);
+        $url = url(route('password.reset', [
+            'token' => $this->token,
+            'email' => $notifiable->getEmailForPasswordReset(),
+        ], false));
 
         return (new MailMessage)
-            ->subject('Your ELMS Verification Code: '.$this->code)
+            ->subject('Reset Your ELMS Password')
             ->greeting('Hello '.$notifiable->name.',')
-            ->line('Use the verification code below to complete your sign-in request.')
-            ->line(new HtmlString('<table class="panel" width="100%" cellpadding="0" cellspacing="0" role="presentation"><tr><td class="panel-content" style="text-align: center;"><span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #ff750f;">'.$this->code.'</span></td></tr></table>'))
-            ->line('This code expires in 10 minutes.')
+            ->line('You are receiving this email because we received a password reset request for your ELMS account.')
+            ->action('Reset Password', $url)
+            ->line('This password reset link will expire in '.config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60).' minutes.')
             ->line('### Request Details')
             ->line('**IP Address:** '.$this->ip)
             ->line('**Device/Browser:** '.$device)
-            ->line('If you did not request this verification code, please secure your account immediately.');
+            ->line('If you did not request a password reset, no further action is required. Your account remains secure.');
     }
 
     private function getReadableDevice(string $userAgent): string

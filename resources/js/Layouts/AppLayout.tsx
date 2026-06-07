@@ -36,8 +36,6 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   };
 
   const user = auth.user;
-  const canApprove = canApproveRole(user.role);
-  const canAdmin = canAdminRole(user.role);
   const unreadCount = notifications?.unread_count ?? 0;
   const notificationItems = notifications?.items ?? [];
 
@@ -52,142 +50,6 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   useEffect(() => {
     setMobileOpen(false);
   }, [url]);
-
-  const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return url === '/dashboard';
-    }
-    return url.startsWith(path);
-  };
-
-  const navItemClass = (path: string, isCollapsed = false) => {
-    const active = isActive(path);
-    return `flex items-center transition-all duration-200 rounded-lg border ${
-      isCollapsed
-        ? 'justify-center h-10 w-10 p-0 mx-auto'
-        : 'gap-3.5 px-4.5 py-3 text-sm mx-2'
-    } ${
-      active
-        ? 'bg-orange-50 bg-orange-50/50 border-orange-100/60 text-orange-800 font-medium shadow-premium-sm'
-        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/40 font-normal'
-    }`;
-  };
-
-  const NavContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
-    <div className="flex h-full flex-col justify-between py-6 bg-white">
-      <div>
-        <div className={`flex items-center gap-3 px-6 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : ''}`}>
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10 shrink-0">
-            <Bot size={16} />
-          </div>
-          {!isCollapsed && (
-            <div className="animate-fade-in whitespace-nowrap">
-              <div className="font-medium tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
-              <div className="text-xs font-normal text-neutral-400 uppercase tracking-wider mt-0.5">Workspace</div>
-            </div>
-          )}
-        </div>
-
-        <nav className="mt-8 space-y-1">
-          <Link className={navItemClass('/dashboard', isCollapsed)} href="/dashboard" title={isCollapsed ? "Dashboard" : undefined}>
-            <CalendarCheck size={16} className="shrink-0" />
-            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Dashboard</span>}
-          </Link>
-          <Link className={navItemClass('/calendar', isCollapsed)} href="/calendar" title={isCollapsed ? "Calendar" : undefined}>
-            <CalendarDays size={16} className="shrink-0" />
-            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Calendar</span>}
-          </Link>
-          <Link className={navItemClass('/apply-leave', isCollapsed)} href="/apply-leave" title={isCollapsed ? "Apply Leave" : undefined}>
-            <CalendarPlus size={16} className="shrink-0" />
-            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Apply Leave</span>}
-          </Link>
-          <Link className={navItemClass('/ai-assistant', isCollapsed)} href="/ai-assistant" title={isCollapsed ? "ELMS Copilot" : undefined}>
-            <Bot size={16} className="shrink-0" />
-            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">ELMS Copilot</span>}
-          </Link>
-          <Link className={navItemClass('/profile', isCollapsed)} href="/profile" title={isCollapsed ? "My Profile" : undefined}>
-            <IdCard size={16} className="shrink-0" />
-            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">My Profile</span>}
-          </Link>
-          
-          {(canApprove || canAdmin) && (
-            <div className={`my-5 border-t border-neutral-100 pt-5 transition-all duration-300 ${isCollapsed ? 'px-3' : 'px-6'}`}>
-              {!isCollapsed ? (
-                <span className="text-xs font-medium uppercase tracking-wider text-neutral-400 animate-fade-in whitespace-nowrap">Management</span>
-              ) : (
-                <div className="h-px bg-neutral-100 -mx-3" />
-              )}
-            </div>
-          )}
-
-          {canApprove && (
-            <Link className={navItemClass('/team', isCollapsed)} href="/team" title={isCollapsed ? "Team Center" : undefined}>
-              <Users size={16} className="shrink-0" />
-              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Team Center</span>}
-            </Link>
-          )}
-          {canApprove && (
-            <Link className={`${navItemClass('/approvals', isCollapsed)} relative ${!isCollapsed ? '!justify-between' : ''}`} href="/approvals" title={isCollapsed ? `Approvals (${auth.pending_approvals_count} pending)` : undefined}>
-              <div className="flex items-center gap-3.5">
-                <div className="relative">
-                  <ClipboardCheck size={16} className="shrink-0" />
-                  {isCollapsed && auth.pending_approvals_count > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-600 text-[8px] font-bold text-white ring-2 ring-white">
-                      {auth.pending_approvals_count}
-                    </span>
-                  )}
-                </div>
-                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Approvals</span>}
-              </div>
-              {!isCollapsed && auth.pending_approvals_count > 0 && (
-                <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange-600 px-1 text-[10px] font-semibold text-white shadow-premium-sm">
-                  {auth.pending_approvals_count}
-                </span>
-              )}
-            </Link>
-          )}
-          {canAdmin && (
-            <Link className={navItemClass('/admin', isCollapsed)} href="/admin" title={isCollapsed ? "HR Admin" : undefined}>
-              <Settings size={16} className="shrink-0" />
-              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">HR Admin</span>}
-            </Link>
-          )}
-        </nav>
-      </div>
-
-      <div className={`px-4 transition-all duration-300 ${isCollapsed ? 'px-2 flex flex-col items-center gap-4' : ''}`}>
-        {/* User Mini Profile Card */}
-        {isCollapsed ? (
-          <div 
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-premium-sm shrink-0 cursor-pointer hover:bg-orange-100/50 transition-colors"
-            title={`${user.name} (${formatRole(user.role)})`}
-          >
-            {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
-          </div>
-        ) : (
-          <div className="mb-5 flex items-center gap-4 border border-neutral-200 bg-[#fafbfa]/70 rounded-xl p-4 shadow-premium-sm animate-fade-in">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-inner shrink-0">
-              {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-normal text-neutral-800">{user.name}</div>
-              <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{formatRole(user.role)}</div>
-            </div>
-          </div>
-        )}
-
-        <button
-          className={`flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98 cursor-pointer ${
-            isCollapsed ? 'h-10 w-10 px-0 py-0 shrink-0' : 'w-full px-4 py-3 gap-2'
-          }`}
-          onClick={() => router.post('/logout')}
-          title={isCollapsed ? "Sign out" : undefined}
-        >
-          <LogOut size={14} /> {!isCollapsed && <span>Sign out</span>}
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="relative flex flex-col min-h-screen overflow-hidden bg-[#fafbfa]">
@@ -372,4 +234,152 @@ function formatRelativeDate(value: string) {
   if (diffHours < 24) return `${diffHours}h ago`;
 
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+interface NavContentProps {
+  isCollapsed?: boolean;
+}
+
+function NavContent({ isCollapsed = false }: NavContentProps) {
+  const { auth } = usePage<PageProps>().props;
+  const { url } = usePage();
+  const user = auth.user;
+  const canApprove = canApproveRole(user.role);
+  const canAdmin = canAdminRole(user.role);
+
+  const isActive = (path: string) => {
+    if (path === '/dashboard') {
+      return url === '/dashboard';
+    }
+    return url.startsWith(path);
+  };
+
+  const navItemClass = (path: string, isCollapsed = false) => {
+    const active = isActive(path);
+    return `flex items-center transition-all duration-200 rounded-lg border ${
+      isCollapsed
+        ? 'justify-center h-10 w-10 p-0 mx-auto'
+        : 'gap-3.5 px-4.5 py-3 text-sm mx-2'
+    } ${
+      active
+        ? 'bg-orange-50 bg-orange-50/50 border-orange-100/60 text-orange-800 font-medium shadow-premium-sm'
+        : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-neutral-50/40 font-normal'
+    }`;
+  };
+
+  return (
+    <div className="flex h-full flex-col justify-between py-6 bg-white">
+      <div>
+        <div className={`flex items-center gap-3 px-6 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : ''}`}>
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10 shrink-0">
+            <Bot size={16} />
+          </div>
+          {!isCollapsed && (
+            <div className="animate-fade-in whitespace-nowrap">
+              <div className="font-medium tracking-tight text-neutral-900 text-sm">NiyAI ELMS</div>
+              <div className="text-xs font-normal text-neutral-400 uppercase tracking-wider mt-0.5">Workspace</div>
+            </div>
+          )}
+        </div>
+
+        <nav className="mt-8 space-y-1">
+          <Link className={navItemClass('/dashboard', isCollapsed)} href="/dashboard" title={isCollapsed ? "Dashboard" : undefined}>
+            <CalendarCheck size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Dashboard</span>}
+          </Link>
+          <Link className={navItemClass('/calendar', isCollapsed)} href="/calendar" title={isCollapsed ? "Calendar" : undefined}>
+            <CalendarDays size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Calendar</span>}
+          </Link>
+          <Link className={navItemClass('/apply-leave', isCollapsed)} href="/apply-leave" title={isCollapsed ? "Apply Leave" : undefined}>
+            <CalendarPlus size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Apply Leave</span>}
+          </Link>
+          <Link className={navItemClass('/ai-assistant', isCollapsed)} href="/ai-assistant" title={isCollapsed ? "ELMS Copilot" : undefined}>
+            <Bot size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">ELMS Copilot</span>}
+          </Link>
+          <Link className={navItemClass('/profile', isCollapsed)} href="/profile" title={isCollapsed ? "My Profile" : undefined}>
+            <IdCard size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">My Profile</span>}
+          </Link>
+          
+          {(canApprove || canAdmin) && (
+            <div className={`my-5 border-t border-neutral-100 pt-5 transition-all duration-300 ${isCollapsed ? 'px-3' : 'px-6'}`}>
+              {!isCollapsed ? (
+                <span className="text-xs font-medium uppercase tracking-wider text-neutral-400 animate-fade-in whitespace-nowrap">Management</span>
+              ) : (
+                <div className="h-px bg-neutral-100 -mx-3" />
+              )}
+            </div>
+          )}
+
+          {canApprove && (
+            <Link className={navItemClass('/team', isCollapsed)} href="/team" title={isCollapsed ? "Team Center" : undefined}>
+              <Users size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Team Center</span>}
+            </Link>
+          )}
+          {canApprove && (
+            <Link className={`${navItemClass('/approvals', isCollapsed)} relative ${!isCollapsed ? '!justify-between' : ''}`} href="/approvals" title={isCollapsed ? `Approvals (${auth.pending_approvals_count} pending)` : undefined}>
+              <div className="flex items-center gap-3.5">
+                <div className="relative">
+                  <ClipboardCheck size={16} className="shrink-0" />
+                  {isCollapsed && auth.pending_approvals_count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-600 text-[8px] font-bold text-white ring-2 ring-white">
+                      {auth.pending_approvals_count}
+                    </span>
+                  )}
+                </div>
+                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Approvals</span>}
+              </div>
+              {!isCollapsed && auth.pending_approvals_count > 0 && (
+                <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange-600 px-1 text-[10px] font-semibold text-white shadow-premium-sm">
+                  {auth.pending_approvals_count}
+                </span>
+              )}
+            </Link>
+          )}
+          {canAdmin && (
+            <Link className={navItemClass('/admin', isCollapsed)} href="/admin" title={isCollapsed ? "HR Admin" : undefined}>
+              <Settings size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">HR Admin</span>}
+            </Link>
+          )}
+        </nav>
+      </div>
+
+      <div className={`px-4 transition-all duration-300 ${isCollapsed ? 'px-2 flex flex-col items-center gap-4' : ''}`}>
+        {/* User Mini Profile Card */}
+        {isCollapsed ? (
+          <div 
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-premium-sm shrink-0 cursor-pointer hover:bg-orange-100/50 transition-colors"
+            title={`${user.name} (${formatRole(user.role)})`}
+          >
+            {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+          </div>
+        ) : (
+          <div className="mb-5 flex items-center gap-4 border border-neutral-200 bg-[#fafbfa]/70 rounded-xl p-4 shadow-premium-sm animate-fade-in">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 border border-orange-100 font-normal text-orange-800 text-sm shadow-inner shrink-0">
+              {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-normal text-neutral-800">{user.name}</div>
+              <div className="truncate text-xs font-normal text-neutral-400 uppercase tracking-wider mt-1">{formatRole(user.role)}</div>
+            </div>
+          </div>
+        )}
+
+        <button
+          className={`flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm active:scale-98 cursor-pointer ${
+            isCollapsed ? 'h-10 w-10 px-0 py-0 shrink-0' : 'w-full px-4 py-3 gap-2'
+          }`}
+          onClick={() => router.post('/logout')}
+          title={isCollapsed ? "Sign out" : undefined}
+        >
+          <LogOut size={14} /> {!isCollapsed && <span>Sign out</span>}
+        </button>
+      </div>
+    </div>
+  );
 }
