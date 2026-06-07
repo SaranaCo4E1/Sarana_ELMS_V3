@@ -338,7 +338,7 @@ class AiHelpController extends Controller
             ->implode("\n");
 
         return implode("\n\n", array_filter([
-            "Leave draft context:",
+            'Leave draft context:',
             "Active leave types:\n".($leaveTypes ?: '- None configured'),
             "Current-year balances for {$user->name}:\n".($balances ?: '- No balances available'),
             "Upcoming active public holidays:\n".($holidays ?: '- No upcoming holidays configured'),

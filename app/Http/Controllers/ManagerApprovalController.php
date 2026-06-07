@@ -29,7 +29,7 @@ class ManagerApprovalController extends Controller
             'recentDecisions' => (clone $scope)
                 ->whereIn('status', ['approved', 'rejected'])
                 ->latest('decided_at')
-                ->limit(20)
+                ->limit(150)
                 ->get(),
             'approvalStats' => [
                 'pending' => (clone $scope)->where('status', 'pending')->count(),

@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { AlertCircle, Building2, Calculator, CalendarDays, CheckCircle2, ClipboardList, Clock, Download, Edit3, Eye, EyeOff, Plus, Search, Shield, SlidersHorizontal, ToggleLeft, ToggleRight, UserPlus, Users, X } from 'lucide-react';
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveType, PageProps, User } from '../types';
@@ -9,7 +9,16 @@ import { formatDays, formatDate, formatRole } from '../utils';
 
 type Department = { id: number; name: string; code: string; manager_id?: number; manager?: User; is_active: boolean; users_count?: number };
 type Holiday = { id: number; name: string; holiday_date: string; is_active: boolean };
-type AuditLog = { id: number; action: string; subject_type?: string | null; subject_id?: number | null; ip_address?: string | null; created_at: string };
+type AuditLog = {
+  id: number;
+  action: string;
+  subject_type?: string | null;
+  subject_id?: number | null;
+  ip_address?: string | null;
+  created_at: string;
+  actor?: User | null;
+  subject?: any | null;
+};
 type Stats = { active_users: number; inactive_users: number; pending_requests: number; approved_this_month: number; departments: number; leave_types: number };
 type AdminModal =
   | { type: 'user'; mode: 'create' | 'edit'; record?: User }
@@ -21,6 +30,194 @@ const emptyDepartmentForm = { name: '', code: '', manager_id: '' };
 const emptyLeaveTypeForm = { name: '', code: '', default_allowance_days: 0, paid: true, requires_attachment: false, deducts_balance: true };
 const emptyHolidayForm = { name: '', holiday_date: '' };
 const emptyUserForm = { name: '', email: '', password: 'password', role: 'staff', department_id: '', manager_id: '', employee_code: '', job_title: '', hire_date: '', two_factor_enabled: false };
+
+const auditColors: Record<string, string> = {
+  user: 'bg-blue-50 border-blue-100 text-blue-600',
+  department: 'bg-purple-50 border-purple-100 text-purple-600',
+  leave_type: 'bg-violet-50 border-violet-100 text-violet-600',
+  holiday: 'bg-pink-50 border-pink-100 text-pink-600',
+  security: 'bg-rose-50 border-rose-100 text-rose-600',
+  leave_request: 'bg-amber-50 border-amber-100 text-amber-600',
+  balance: 'bg-emerald-50 border-emerald-100 text-emerald-600',
+  default: 'bg-slate-50 border-slate-100 text-slate-600',
+};
+
+const AuditIcon = ({ type }: { type: string }) => {
+  switch (type) {
+    case 'user':
+      return <Users size={12} />;
+    case 'department':
+      return <Building2 size={12} />;
+    case 'leave_type':
+      return <SlidersHorizontal size={12} />;
+    case 'holiday':
+      return <CalendarDays size={12} />;
+    case 'security':
+      return <AlertCircle size={12} />;
+    case 'leave_request':
+      return <Clock size={12} />;
+    case 'balance':
+      return <Shield size={12} />;
+    default:
+      return <ClipboardList size={12} />;
+  }
+};
+
+function formatAuditLog(log: AuditLog) {
+  const actorName = log.actor?.name || 'System';
+  const actorRole = log.actor?.role ? ` (${formatRole(log.actor.role)})` : '';
+  const actorText = `${actorName}${actorRole}`;
+
+  let description = '';
+  let iconType = 'default';
+  
+  switch (log.action) {
+    // Departments
+    case 'admin.department.created':
+      description = `Created department "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'department';
+      break;
+    case 'admin.department.updated':
+      description = `Updated department details for "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'department';
+      break;
+    case 'admin.department.activated':
+      description = `Activated department "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'department';
+      break;
+    case 'admin.department.deactivated':
+      description = `Deactivated department "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'security';
+      break;
+
+    // Leave Types
+    case 'admin.leave_type.created':
+      description = `Created leave policy "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'leave_type';
+      break;
+    case 'admin.leave_type.updated':
+      description = `Updated leave policy "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'leave_type';
+      break;
+    case 'admin.leave_type.activated':
+      description = `Activated leave policy "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'leave_type';
+      break;
+    case 'admin.leave_type.deactivated':
+      description = `Deactivated leave policy "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'security';
+      break;
+
+    // Holidays
+    case 'admin.holiday.created':
+      description = `Added public holiday "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'holiday';
+      break;
+    case 'admin.holiday.updated':
+      description = `Updated public holiday "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'holiday';
+      break;
+    case 'admin.holiday.activated':
+      description = `Activated public holiday "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'holiday';
+      break;
+    case 'admin.holiday.deactivated':
+      description = `Deactivated public holiday "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'security';
+      break;
+
+    // Users
+    case 'admin.user.created':
+      description = `Created user account for "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'user';
+      break;
+    case 'admin.user.updated':
+      description = `Updated user account details for "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'user';
+      break;
+    case 'admin.user.activated':
+      description = `Activated user account for "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'user';
+      break;
+    case 'admin.user.deactivated':
+      description = `Deactivated user account for "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'security';
+      break;
+
+    // Balance Override
+    case 'admin.balance.overridden':
+      {
+        const userBalName = log.subject?.user?.name || 'Unknown User';
+        const leaveTypeName = log.subject?.leave_type?.name || 'Leave Type';
+        const allowance = log.subject?.allowance_days ?? '0';
+        description = `Overrode ${leaveTypeName} balance for ${userBalName} to ${allowance} days`;
+        iconType = 'balance';
+      }
+      break;
+
+    // Leave Requests
+    case 'leave.request.submitted':
+      {
+        const leaveTypeName = log.subject?.leave_type?.name || 'Leave Type';
+        const days = log.subject?.requested_days || '—';
+        const requesterName = log.subject?.user?.name || log.actor?.name || 'Employee';
+        description = `${requesterName} submitted a request for ${leaveTypeName} (${days} days)`;
+        iconType = 'leave_request';
+      }
+      break;
+    case 'leave.request.cancelled':
+      {
+        const leaveTypeName = log.subject?.leave_type?.name || 'Leave Type';
+        const days = log.subject?.requested_days || '—';
+        const requesterName = log.subject?.user?.name || log.actor?.name || 'Employee';
+        description = `${requesterName} cancelled request for ${leaveTypeName} (${days} days)`;
+        iconType = 'leave_request';
+      }
+      break;
+    case 'leave.request.approved':
+      {
+        const leaveTypeName = log.subject?.leave_type?.name || 'Leave Type';
+        const days = log.subject?.requested_days || '—';
+        const employeeName = log.subject?.user?.name || 'Employee';
+        description = `Approved leave request for ${employeeName} (${leaveTypeName}, ${days} days)`;
+        iconType = 'leave_request';
+      }
+      break;
+    case 'leave.request.rejected':
+      {
+        const leaveTypeName = log.subject?.leave_type?.name || 'Leave Type';
+        const days = log.subject?.requested_days || '—';
+        const employeeName = log.subject?.user?.name || 'Employee';
+        description = `Rejected leave request for ${employeeName} (${leaveTypeName}, ${days} days)`;
+        iconType = 'security';
+      }
+      break;
+
+    // Profile
+    case 'profile.updated':
+      description = `Updated personal profile details`;
+      iconType = 'user';
+      break;
+    case 'profile.password.updated':
+      description = `Updated login password`;
+      iconType = 'security';
+      break;
+    case 'profile.two_factor.enabled':
+      description = `Enabled Two-Factor Authentication`;
+      iconType = 'security';
+      break;
+    case 'profile.two_factor.disabled':
+      description = `Disabled Two-Factor Authentication`;
+      iconType = 'security';
+      break;
+
+    default:
+      description = `${log.action} on ${log.subject_type || 'System'} #${log.subject_id || '—'}`;
+      iconType = 'default';
+  }
+
+  return { actorText, description, iconType };
+}
 
 export default function Admin({ departments, leaveTypes, holidays, users, auditLogs, stats }: { departments: Department[]; leaveTypes: LeaveType[]; holidays: Holiday[]; users: User[]; auditLogs: AuditLog[]; stats: Stats }) {
   const { errors } = usePage<PageProps>().props;
@@ -355,11 +552,40 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
   }, [userSearchQuery, users]);
 
   const [auditQuery, setAuditQuery] = useState('');
+  const [auditPage, setAuditPage] = useState(1);
+  const auditItemsPerPage = 10;
+
+  useEffect(() => {
+    setAuditPage(1);
+  }, [auditQuery]);
 
   const filteredAuditLogs = useMemo(() => auditLogs.filter((item) => {
-    const haystack = `${item.action} ${item.subject_type ?? ''} ${item.ip_address ?? ''}`.toLowerCase();
+    const formatted = formatAuditLog(item);
+    const haystack = `${item.action} ${item.subject_type ?? ''} ${item.ip_address ?? ''} ${item.actor?.name ?? ''} ${formatted.description}`.toLowerCase();
     return haystack.includes(auditQuery.toLowerCase());
   }), [auditQuery, auditLogs]);
+
+  const auditTotalPages = Math.ceil(filteredAuditLogs.length / auditItemsPerPage);
+
+  const paginatedAuditLogs = useMemo(() => {
+    const start = (auditPage - 1) * auditItemsPerPage;
+    return filteredAuditLogs.slice(start, start + auditItemsPerPage);
+  }, [filteredAuditLogs, auditPage]);
+
+  const getPageNumbers = (current: number, total: number) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  };
 
   const reportingManagers = useMemo(() => users.filter((user) => ['manager', 'admin'].includes(user.role)), [users]);
 
@@ -1172,18 +1398,113 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     </div>
                   </div>
                 </div>
-                <div className="divide-y divide-neutral-100">
-                  {filteredAuditLogs.map((log) => (
-                    <div key={log.id} className="grid gap-2.5 py-4.5 text-sm md:grid-cols-[1fr_200px_180px] hover:bg-neutral-50/50 px-4 transition-all rounded-lg">
-                      <span className="font-medium text-slate-800">{log.action}</span>
-                      <span className="text-slate-500 font-medium">{log.subject_type ?? 'System'} #{log.subject_id ?? '—'}</span>
-                      <span className="text-slate-400 font-medium text-right">{new Date(log.created_at).toLocaleString()}</span>
-                    </div>
-                  ))}
+                <div className="relative pl-10 space-y-5 before:absolute before:inset-y-0 before:left-3 before:w-0.5 before:bg-neutral-100">
+                  {paginatedAuditLogs.map((log) => {
+                    const { description, iconType } = formatAuditLog(log);
+                    const initials = log.actor?.name
+                      ? log.actor.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                      : 'SYS';
+
+                    return (
+                      <div key={log.id} className="relative flex items-start gap-4 p-4.5 rounded-xl border border-neutral-100/80 hover:border-neutral-200 hover:bg-neutral-50/30 hover:shadow-premium-sm transition-all group">
+                        {/* Timeline Circle Node */}
+                        <div className={`absolute -left-10 top-[26px] -translate-y-1/2 z-10 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm ${auditColors[iconType] || auditColors.default}`}>
+                          <AuditIcon type={iconType} />
+                        </div>
+
+                        {/* Actor Avatar Initials */}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-[11px] font-bold shadow-premium-sm uppercase">
+                          {initials}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                            <span className="font-semibold text-neutral-800 text-sm">
+                              {log.actor?.name || 'System'}
+                            </span>
+                            <span className="text-[10px] font-bold text-neutral-400">
+                              {new Date(log.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          
+                          <p className="text-sm text-neutral-600 font-medium leading-relaxed">
+                            {description}
+                          </p>
+
+                          {/* Secondary Metadata */}
+                          <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-neutral-400 font-semibold tracking-wide">
+                            <span className="flex items-center gap-1 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-100/60">
+                              <span className="h-1.5 w-1.5 rounded-full bg-neutral-400"></span>
+                              IP: {log.ip_address || '—'}
+                            </span>
+                            {log.subject_type && (
+                              <span className="flex items-center gap-1 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-100/60 font-mono text-[10px]">
+                                {log.subject_type.split('\\').pop()} #{log.subject_id}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
                   {filteredAuditLogs.length === 0 && (
-                    <p className="py-8 text-center text-sm text-neutral-500 font-medium">No matching logs found.</p>
+                    <div className="py-12 text-center rounded-xl border border-dashed border-neutral-200">
+                      <p className="text-sm text-neutral-500 font-semibold">No matching logs found.</p>
+                      <p className="text-xs text-neutral-400 mt-1">Try adjusting your search query.</p>
+                    </div>
                   )}
                 </div>
+
+                {/* Pagination Controls */}
+                {auditTotalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-100 pt-5 mt-5">
+                    <div className="text-xs font-semibold text-neutral-500">
+                      Showing <span className="font-bold text-neutral-700">{Math.min(filteredAuditLogs.length, (auditPage - 1) * auditItemsPerPage + 1)}</span> to{' '}
+                      <span className="font-bold text-neutral-700">{Math.min(filteredAuditLogs.length, auditPage * auditItemsPerPage)}</span> of{' '}
+                      <span className="font-bold text-neutral-700">{filteredAuditLogs.length}</span> results
+                    </div>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <button
+                        disabled={auditPage === 1}
+                        onClick={() => setAuditPage(prev => Math.max(1, prev - 1))}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-650 hover:bg-neutral-50 hover:text-neutral-800 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer shadow-premium-sm"
+                      >
+                        Previous
+                      </button>
+                      {getPageNumbers(auditPage, auditTotalPages).map((page, index) => {
+                        if (page === '...') {
+                          return (
+                            <span key={`dots-${index}`} className="px-2 py-1.5 text-xs font-bold text-neutral-400">
+                              ...
+                            </span>
+                          );
+                        }
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setAuditPage(page as number)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              auditPage === page
+                                ? 'bg-orange-600 border-orange-600 text-white shadow-sm'
+                                : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                      <button
+                        disabled={auditPage === auditTotalPages}
+                        onClick={() => setAuditPage(prev => Math.min(auditTotalPages, prev + 1))}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-650 hover:bg-neutral-50 hover:text-neutral-800 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer shadow-premium-sm"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </section>
             </div>
           )}

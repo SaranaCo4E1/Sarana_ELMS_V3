@@ -11,9 +11,7 @@ class LeaveRequestDecided extends Notification
 {
     use Queueable;
 
-    public function __construct(private readonly LeaveRequest $leaveRequest)
-    {
-    }
+    public function __construct(private readonly LeaveRequest $leaveRequest) {}
 
     public function via(object $notifiable): array
     {

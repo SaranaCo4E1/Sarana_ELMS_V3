@@ -32,7 +32,15 @@ class AdminController extends Controller
                 ])
                 ->orderBy('name')
                 ->get(),
-            'auditLogs' => AuditLog::query()->latest()->limit(25)->get(),
+            'auditLogs' => AuditLog::with([
+                'actor',
+                'subject' => function ($morphTo) {
+                    $morphTo->morphWith([
+                        LeaveRequest::class => ['user', 'leaveType'],
+                        LeaveBalance::class => ['user', 'leaveType'],
+                    ]);
+                },
+            ])->latest()->limit(250)->get(),
             'stats' => [
                 'active_users' => User::query()->where('is_active', true)->count(),
                 'inactive_users' => User::query()->where('is_active', false)->count(),
