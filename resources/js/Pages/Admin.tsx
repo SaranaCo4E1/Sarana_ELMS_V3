@@ -297,14 +297,89 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
 
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [deptFilter, setDeptFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const filteredUsers = useMemo(() => users.filter((item) => {
     const matchesRole = roleFilter === 'all' || item.role === roleFilter;
+    const matchesDept = deptFilter === 'all' || String(item.department?.id) === String(deptFilter);
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? item.is_active : !item.is_active);
     const haystack = `${item.name} ${item.email} ${item.employee_code ?? ''} ${item.department?.name ?? ''} ${item.job_title ?? ''}`.toLowerCase();
-    return matchesRole && haystack.includes(query.toLowerCase());
-  }), [query, roleFilter, users]);
+    return matchesRole && matchesDept && matchesStatus && haystack.includes(query.toLowerCase());
+  }), [query, roleFilter, deptFilter, statusFilter, users]);
+
+  const [deptQuery, setDeptQuery] = useState('');
+  const [deptStatusFilter, setDeptStatusFilter] = useState('all');
+
+  const filteredDepartments = useMemo(() => departments.filter((item) => {
+    const matchesStatus = deptStatusFilter === 'all' || (deptStatusFilter === 'active' ? item.is_active : !item.is_active);
+    const haystack = `${item.name} ${item.code}`.toLowerCase();
+    return matchesStatus && haystack.includes(deptQuery.toLowerCase());
+  }), [deptQuery, deptStatusFilter, departments]);
+
+  const [leaveTypeQuery, setLeaveTypeQuery] = useState('');
+  const [leaveTypeStatusFilter, setLeaveTypeStatusFilter] = useState('all');
+  const [leaveTypePaidFilter, setLeaveTypePaidFilter] = useState('all');
+
+  const filteredLeaveTypes = useMemo(() => leaveTypes.filter((item) => {
+    const matchesStatus = leaveTypeStatusFilter === 'all' || (leaveTypeStatusFilter === 'active' ? item.is_active : !item.is_active);
+    const matchesPaid = leaveTypePaidFilter === 'all' || (leaveTypePaidFilter === 'paid' ? item.paid : !item.paid);
+    const haystack = `${item.name} ${item.code}`.toLowerCase();
+    return matchesStatus && matchesPaid && haystack.includes(leaveTypeQuery.toLowerCase());
+  }), [leaveTypeQuery, leaveTypeStatusFilter, leaveTypePaidFilter, leaveTypes]);
+
+  const [holidayQuery, setHolidayQuery] = useState('');
+  const [holidayStatusFilter, setHolidayStatusFilter] = useState('all');
+  const [holidayYearFilter, setHolidayYearFilter] = useState('all');
+
+  const holidayYears = useMemo(() => {
+    const years = holidays.map(h => new Date(h.holiday_date).getFullYear());
+    return Array.from(new Set(years)).sort((a, b) => b - a);
+  }, [holidays]);
+
+  const filteredHolidays = useMemo(() => holidays.filter((item) => {
+    const matchesStatus = holidayStatusFilter === 'all' || (holidayStatusFilter === 'active' ? item.is_active : !item.is_active);
+    const matchesYear = holidayYearFilter === 'all' || String(new Date(item.holiday_date).getFullYear()) === String(holidayYearFilter);
+    const haystack = `${item.name}`.toLowerCase();
+    return matchesStatus && matchesYear && haystack.includes(holidayQuery.toLowerCase());
+  }), [holidayQuery, holidayStatusFilter, holidayYearFilter, holidays]);
+
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  const balanceUsers = useMemo(() => {
+    return users.filter((u) => {
+      if (!userSearchQuery) return true;
+      const haystack = `${u.name} ${u.email} ${u.employee_code ?? ''}`.toLowerCase();
+      return haystack.includes(userSearchQuery.toLowerCase());
+    });
+  }, [userSearchQuery, users]);
+
+  const [auditQuery, setAuditQuery] = useState('');
+
+  const filteredAuditLogs = useMemo(() => auditLogs.filter((item) => {
+    const haystack = `${item.action} ${item.subject_type ?? ''} ${item.ip_address ?? ''}`.toLowerCase();
+    return haystack.includes(auditQuery.toLowerCase());
+  }), [auditQuery, auditLogs]);
 
   const reportingManagers = useMemo(() => users.filter((user) => ['manager', 'admin'].includes(user.role)), [users]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setQuery('');
+    setRoleFilter('all');
+    setDeptFilter('all');
+    setStatusFilter('all');
+    setDeptQuery('');
+    setDeptStatusFilter('all');
+    setLeaveTypeQuery('');
+    setLeaveTypeStatusFilter('all');
+    setLeaveTypePaidFilter('all');
+    setHolidayQuery('');
+    setHolidayStatusFilter('all');
+    setHolidayYearFilter('all');
+    setUserSearchQuery('');
+    setAuditQuery('');
+  };
 
   const tabs = [
     { id: 'users', label: 'Users', icon: <Users size={16} /> },
@@ -335,7 +410,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
             return (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setQuery(''); }}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-2 px-4.5 py-4 text-sm font-medium uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                   active
                     ? 'border-orange-600 text-orange-700'
@@ -377,9 +452,30 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     >
                       {['all', 'staff', 'manager', 'hr admin', 'admin'].map((role) => (
                         <option key={role} value={role}>
-                          {role === 'all' ? 'All' : formatRole(role)}
+                          {role === 'all' ? 'All Roles' : formatRole(role)}
                         </option>
                       ))}
+                    </select>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={deptFilter}
+                      onChange={(e) => setDeptFilter(e.target.value)}
+                    >
+                      <option value="all">All Departments</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
                     </select>
                     <button
                       className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
@@ -492,20 +588,40 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
             <div className="grid gap-8 items-start">
               {/* Departments List */}
               <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5 mb-5">
                   <div>
                     <h3 className="text-base font-medium text-neutral-800">Departments Directory</h3>
                     <p className="text-sm text-neutral-500 font-medium mt-1">Active organizational groupings and management</p>
                   </div>
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
-                    onClick={() => openCreateModal('department')}
-                    type="button"
-                  >
-                    <Plus size={14} /> Add Department
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
+                      <input
+                        className="w-52 rounded-lg border border-neutral-200 py-2.5 pl-9 pr-3.5 text-sm bg-white font-medium text-neutral-800 placeholder-neutral-400 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                        placeholder="Search departments..."
+                        value={deptQuery}
+                        onChange={(e) => setDeptQuery(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={deptStatusFilter}
+                      onChange={(e) => setDeptStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+                      onClick={() => openCreateModal('department')}
+                      type="button"
+                    >
+                      <Plus size={14} /> Add Department
+                    </button>
+                  </div>
                 </div>
-                <DataList rows={departments.map((item) => ({
+                <DataList rows={filteredDepartments.map((item) => ({
                   id: item.id,
                   title: `${item.code} · ${item.name}`,
                   meta: `${item.users_count ?? 0} active employees · Manager: ${item.manager?.name ?? 'Unassigned'}`,
@@ -513,6 +629,11 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   toggle: () => handleToggleDepartment(item),
                   edit: () => openEditDepartment(item),
                 }))} />
+                {filteredDepartments.length === 0 && (
+                  <div className="p-8 text-center text-sm text-neutral-400 font-medium">
+                    No matching departments found.
+                  </div>
+                )}
               </section>
             </div>
           )}
@@ -521,20 +642,49 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
             <div className="grid gap-8 items-start">
               {/* Leave Types List */}
               <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5 mb-5">
                   <div>
                     <h3 className="text-base font-semibold text-neutral-800">Leave Policies</h3>
                     <p className="text-sm text-neutral-500 font-medium mt-1">Configured time-off types, limits, and rules</p>
                   </div>
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
-                    onClick={() => openCreateModal('leaveType')}
-                    type="button"
-                  >
-                    <Plus size={14} /> Add Leave Type
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
+                      <input
+                        className="w-52 rounded-lg border border-neutral-200 py-2.5 pl-9 pr-3.5 text-sm bg-white font-medium text-neutral-800 placeholder-neutral-400 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                        placeholder="Search leave types..."
+                        value={leaveTypeQuery}
+                        onChange={(e) => setLeaveTypeQuery(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={leaveTypeStatusFilter}
+                      onChange={(e) => setLeaveTypeStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={leaveTypePaidFilter}
+                      onChange={(e) => setLeaveTypePaidFilter(e.target.value)}
+                    >
+                      <option value="all">All Payment Types</option>
+                      <option value="paid">Paid</option>
+                      <option value="unpaid">Unpaid</option>
+                    </select>
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+                      onClick={() => openCreateModal('leaveType')}
+                      type="button"
+                    >
+                      <Plus size={14} /> Add Leave Type
+                    </button>
+                  </div>
                 </div>
-                <DataList rows={leaveTypes.map((item) => ({
+                <DataList rows={filteredLeaveTypes.map((item) => ({
                   id: item.id,
                   title: `${item.code} · ${item.name}`,
                   meta: `${formatDays(item.default_allowance_days)} default · ${item.paid ? 'Paid' : 'Unpaid'} · ${item.requires_attachment ? 'Attachment required' : 'No attachment'} · ${item.balances_count ?? 0} active balances`,
@@ -542,6 +692,11 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   toggle: () => handleToggleLeaveType(item),
                   edit: () => openEditLeaveType(item),
                 }))} />
+                {filteredLeaveTypes.length === 0 && (
+                  <div className="p-8 text-center text-sm text-neutral-400 font-medium">
+                    No matching leave types found.
+                  </div>
+                )}
               </section>
             </div>
           )}
@@ -550,20 +705,52 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
             <div className="grid gap-8 items-start">
               {/* Holidays List */}
               <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5 mb-5">
                   <div>
                     <h3 className="text-base font-medium text-neutral-800">Public Holidays</h3>
                     <p className="text-sm text-neutral-500 font-medium mt-1">Ignored dates for calculation of request working days</p>
                   </div>
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
-                    onClick={() => openCreateModal('holiday')}
-                    type="button"
-                  >
-                    <Plus size={14} /> Add Holiday
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
+                      <input
+                        className="w-52 rounded-lg border border-neutral-200 py-2.5 pl-9 pr-3.5 text-sm bg-white font-medium text-neutral-800 placeholder-neutral-400 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                        placeholder="Search holidays..."
+                        value={holidayQuery}
+                        onChange={(e) => setHolidayQuery(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={holidayStatusFilter}
+                      onChange={(e) => setHolidayStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                    <select
+                      className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                      value={holidayYearFilter}
+                      onChange={(e) => setHolidayYearFilter(e.target.value)}
+                    >
+                      <option value="all">All Years</option>
+                      {holidayYears.map((year) => (
+                        <option key={year} value={String(year)}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer"
+                      onClick={() => openCreateModal('holiday')}
+                      type="button"
+                    >
+                      <Plus size={14} /> Add Holiday
+                    </button>
+                  </div>
                 </div>
-                <DataList rows={holidays.slice(0, 12).map((item) => ({
+                <DataList rows={filteredHolidays.map((item) => ({
                   id: item.id,
                   title: `${formatDate(item.holiday_date)} · ${item.name}`,
                   meta: item.is_active ? 'Excluded from working-day calculations' : 'Currently ignored',
@@ -571,6 +758,11 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   toggle: () => handleToggleHoliday(item),
                   edit: () => openEditHoliday(item),
                 }))} />
+                {filteredHolidays.length === 0 && (
+                  <div className="p-8 text-center text-sm text-neutral-400 font-medium">
+                    No matching public holidays found.
+                  </div>
+                )}
               </section>
             </div>
           )}
@@ -601,14 +793,24 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
                       Select Employee
+                      <div className="mt-1.5 relative">
+                        <Search className="absolute left-3.5 top-3 text-neutral-400" size={13} />
+                        <input
+                          type="text"
+                          className="w-full rounded-lg border border-neutral-200/70 bg-white pl-9 pr-3.5 py-2.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium mb-2"
+                          placeholder="Type to filter employees..."
+                          value={userSearchQuery}
+                          onChange={(e) => setUserSearchQuery(e.target.value)}
+                        />
+                      </div>
                       <select 
-                        className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" 
+                        className="w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" 
                         value={balanceForm.user_id} 
                         onChange={(e) => handleBalanceSelectionChange({ user_id: e.target.value })} 
                         required
                       >
                         <option value="">Choose User</option>
-                        {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        {balanceUsers.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.employee_code ?? 'No Code'})</option>)}
                       </select>
                     </label>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
@@ -950,23 +1152,36 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
 
               {/* Audit Trail list */}
               <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
-                <div className="border-b border-neutral-100 pb-4 mb-4 flex items-center gap-2">
-                  <Shield size={16} className="text-orange-600" />
-                  <div>
-                    <h3 className="text-base font-semibold text-neutral-800">Recent Audit Trail Logs</h3>
-                    <p className="text-sm text-neutral-500 font-medium mt-1">Live timeline of administrative actions and policy adjustments</p>
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5 mb-5">
+                  <div className="flex items-center gap-2">
+                    <Shield size={16} className="text-orange-600" />
+                    <div>
+                      <h3 className="text-base font-semibold text-neutral-800">Recent Audit Trail Logs</h3>
+                      <p className="text-sm text-neutral-500 font-medium mt-1">Live timeline of administrative actions and policy adjustments</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
+                      <input
+                        className="w-52 rounded-lg border border-neutral-200 py-2.5 pl-9 pr-3.5 text-sm bg-white font-medium text-neutral-800 placeholder-neutral-400 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                        placeholder="Search audit trail..."
+                        value={auditQuery}
+                        onChange={(e) => setAuditQuery(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="divide-y divide-neutral-100">
-                  {auditLogs.map((log) => (
+                  {filteredAuditLogs.map((log) => (
                     <div key={log.id} className="grid gap-2.5 py-4.5 text-sm md:grid-cols-[1fr_200px_180px] hover:bg-neutral-50/50 px-4 transition-all rounded-lg">
                       <span className="font-medium text-slate-800">{log.action}</span>
                       <span className="text-slate-500 font-medium">{log.subject_type ?? 'System'} #{log.subject_id ?? '—'}</span>
                       <span className="text-slate-400 font-medium text-right">{new Date(log.created_at).toLocaleString()}</span>
                     </div>
                   ))}
-                  {auditLogs.length === 0 && (
-                    <p className="py-8 text-center text-sm text-neutral-500 font-medium">No logs registered yet.</p>
+                  {filteredAuditLogs.length === 0 && (
+                    <p className="py-8 text-center text-sm text-neutral-500 font-medium">No matching logs found.</p>
                   )}
                 </div>
               </section>

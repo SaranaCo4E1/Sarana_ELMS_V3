@@ -28,7 +28,9 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
   const [comments, setComments] = useState<Record<number, string>>({});
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('all');
+  const [pendingLeaveType, setPendingLeaveType] = useState('all');
   const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
+  const [viewDetailsRequest, setViewDetailsRequest] = useState<LeaveRequest | null>(null);
 
   const isPreviewable = (attachment: any) => {
     const mime = attachment.mime_type?.toLowerCase() ?? '';
@@ -49,12 +51,31 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
   };
 
   const departments = useMemo(() => Array.from(new Set(requests.map((request) => request.user?.department?.name).filter(Boolean))) as string[], [requests]);
+  const pendingLeaveTypes = useMemo(() => Array.from(new Set(requests.map((request) => request.leave_type.name).filter(Boolean))) as string[], [requests]);
   
   const filtered = requests.filter((request) => {
     const matchesDepartment = department === 'all' || request.user?.department?.name === department;
+    const matchesLeaveType = pendingLeaveType === 'all' || request.leave_type.name === pendingLeaveType;
     const haystack = `${request.user?.name ?? ''} ${request.user?.department?.name ?? ''} ${request.leave_type.name} ${request.reason}`.toLowerCase();
-    return matchesDepartment && haystack.includes(query.toLowerCase());
+    return matchesDepartment && matchesLeaveType && haystack.includes(query.toLowerCase());
   });
+
+  const [decisionsQuery, setDecisionsQuery] = useState('');
+  const [decisionsType, setDecisionsType] = useState('all');
+  const [decisionsStatus, setDecisionsStatus] = useState('all');
+
+  const leaveTypes = useMemo(() => {
+    return Array.from(new Set(recentDecisions.map((request) => request.leave_type.name).filter(Boolean))) as string[];
+  }, [recentDecisions]);
+
+  const filteredDecisions = useMemo(() => {
+    return recentDecisions.filter((request) => {
+      const matchesType = decisionsType === 'all' || request.leave_type.name === decisionsType;
+      const matchesStatus = decisionsStatus === 'all' || request.status === decisionsStatus;
+      const haystack = `${request.user?.name ?? ''} ${request.leave_type.name} ${request.manager_comment ?? ''}`.toLowerCase();
+      return matchesType && matchesStatus && haystack.includes(decisionsQuery.toLowerCase());
+    });
+  }, [decisionsQuery, decisionsType, decisionsStatus, recentDecisions]);
 
   const decide = (id: number, decision: 'approved' | 'rejected') => {
     router.patch(`/approvals/${id}`, { decision, manager_comment: comments[id] ?? '' }, { preserveScroll: true });
@@ -80,9 +101,9 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
             </div>
             <div className="flex flex-wrap gap-3">
               <div className="relative">
-                <Search className="absolute left-3.5 top-3 text-neutral-400" size={14} />
+                <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
                 <input
-                  className="w-52 rounded-lg border border-neutral-200/70 bg-white py-2.5 pl-9 pr-3.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                  className="w-52 rounded-lg border border-neutral-200/70 bg-white py-2.5 pl-9 pr-3.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none flex items-center"
                   placeholder="Search requests..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -95,6 +116,18 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
               >
                 <option value="all">All departments</option>
                 {departments.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-lg border border-neutral-200/70 px-4 py-2.5 text-sm bg-white font-medium text-neutral-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none cursor-pointer"
+                value={pendingLeaveType}
+                onChange={(e) => setPendingLeaveType(e.target.value)}
+              >
+                <option value="all">All leave types</option>
+                {pendingLeaveTypes.map((item) => (
                   <option key={item} value={item}>
                     {item}
                   </option>
@@ -214,14 +247,48 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
         </div>
         {/* Recent decisions log */}
         <div className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
-          <div className="border-b border-neutral-200/60 px-6 py-5 bg-neutral-50/20">
-            <h2 className="text-base font-medium text-neutral-800">Recent Decisions</h2>
-            <p className="text-sm font-medium text-neutral-500 mt-1.5">Log of recently approved or rejected leave requests</p>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200/60 px-6 py-5 bg-neutral-50/20">
+            <div>
+              <h2 className="text-base font-medium text-neutral-800">Recent Decisions</h2>
+              <p className="text-sm font-medium text-neutral-500 mt-1.5">Log of recently approved or rejected leave requests</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
+                <input
+                  className="w-52 rounded-lg border border-neutral-200/70 bg-white py-2.5 pl-9 pr-3.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                  placeholder="Search decisions..."
+                  value={decisionsQuery}
+                  onChange={(e) => setDecisionsQuery(e.target.value)}
+                />
+              </div>
+              <select
+                className="rounded-lg border border-neutral-200/70 px-4 py-2.5 text-sm bg-white font-medium text-neutral-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                value={decisionsType}
+                onChange={(e) => setDecisionsType(e.target.value)}
+              >
+                <option value="all">All leave types</option>
+                {leaveTypes.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-lg border border-neutral-200/70 px-4 py-2.5 text-sm bg-white font-medium text-neutral-600 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                value={decisionsStatus}
+                onChange={(e) => setDecisionsStatus(e.target.value)}
+              >
+                <option value="all">All decisions</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
           
           {/* Mobile Card List View */}
           <div className="divide-y divide-neutral-100 sm:hidden">
-            {recentDecisions.map((request) => {
+            {filteredDecisions.map((request) => {
               const statusStyle = statusStyles[request.status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' };
               return (
                 <div key={request.id} className="p-5 space-y-4 bg-white">
@@ -233,7 +300,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-500">
+                  <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-505">
                     <div>
                       <div className="text-xs text-neutral-400 uppercase font-medium tracking-wider">Leave Type</div>
                       <div className="mt-1">
@@ -255,10 +322,18 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                       <span className="font-medium text-neutral-600">Comment:</span> {request.manager_comment}
                     </div>
                   )}
+
+                  <button
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-650 hover:border-orange-200 hover:text-orange-700 transition-all mt-2 cursor-pointer bg-white"
+                    onClick={() => setViewDetailsRequest(request)}
+                    type="button"
+                  >
+                    <Eye size={13} /> View Details
+                  </button>
                 </div>
               );
             })}
-            {recentDecisions.length === 0 && (
+            {filteredDecisions.length === 0 && (
               <div className="p-8 text-center text-sm text-neutral-400 font-medium">
                 No decision history found.
               </div>
@@ -276,11 +351,12 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   <th className="px-4 py-5">Days</th>
                   <th className="px-4 py-5">Status</th>
                   <th className="px-6 py-5">Manager Comment</th>
+                  <th className="px-6 py-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100/60">
-                {recentDecisions.map((request) => {
-                  const statusStyle = statusStyles[request.status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-500' };
+                {filteredDecisions.map((request) => {
+                  const statusStyle = statusStyles[request.status] ?? { bg: 'bg-neutral-50/60', border: 'border-neutral-200/70', text: 'text-neutral-550' };
                   return (
                     <tr key={request.id} className="transition-all hover:bg-neutral-50/40">
                       <td className="px-6 py-4.5 font-medium text-neutral-800">{request.user?.name}</td>
@@ -297,15 +373,24 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                           {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4.5 max-w-80 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
+                      <td className="px-6 py-4.5 max-w-60 truncate text-neutral-500 font-medium" title={request.manager_comment ?? ''}>
                         {request.manager_comment ?? '–'}
+                      </td>
+                      <td className="px-6 py-4.5 text-right whitespace-nowrap">
+                        <button
+                          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-neutral-600 hover:border-orange-200 hover:text-orange-700 transition-all cursor-pointer bg-white"
+                          onClick={() => setViewDetailsRequest(request)}
+                          type="button"
+                        >
+                          <Eye size={13} /> Details
+                        </button>
                       </td>
                     </tr>
                   );
                 })}
-                {recentDecisions.length === 0 && (
+                {filteredDecisions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-neutral-400 font-medium">
+                    <td colSpan={7} className="px-6 py-12 text-center text-neutral-400 font-medium">
                       No decision history found.
                     </td>
                   </tr>
@@ -368,6 +453,176 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-premium-md border border-neutral-200/50 bg-white p-2"
                 />
               )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Decided Request Details Modal */}
+      {viewDetailsRequest && createPortal(
+        <div
+          onClick={() => setViewDetailsRequest(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl rounded-2xl bg-white border border-neutral-200/85 shadow-premium-lg overflow-hidden flex flex-col max-h-[90vh] cursor-default"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-semibold text-neutral-800">
+                  Leave Request Details
+                </h3>
+                <p className="mt-1 text-sm font-medium text-neutral-500">Decided leave request archival record.</p>
+              </div>
+              <button
+                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors cursor-pointer border border-neutral-200"
+                onClick={() => setViewDetailsRequest(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-6">
+              {/* Employee Info & Request details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Employee</div>
+                  <div className="text-sm font-semibold text-neutral-800 mt-1">{viewDetailsRequest.user?.name}</div>
+                  <div className="text-xs font-medium text-neutral-500 mt-0.5">{viewDetailsRequest.user?.email}</div>
+                  {viewDetailsRequest.user?.department && (
+                    <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-600 border border-neutral-200/50 mt-1.5">
+                      {viewDetailsRequest.user.department.name}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Status</div>
+                  <div className="mt-1.5">
+                    {(() => {
+                      const style = statusStyles[viewDetailsRequest.status] ?? { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-655/90', dot: 'bg-neutral-400' };
+                      return (
+                        <span className={`inline-flex items-center rounded-md border ${style.border} ${style.bg} ${style.text} px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${style.dot} mr-1.5 shrink-0`} />
+                          {viewDetailsRequest.status}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  {viewDetailsRequest.decided_at && (
+                    <div className="text-xs text-neutral-400 font-medium mt-1">
+                      Decided on: {new Date(viewDetailsRequest.decided_at).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-neutral-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Leave Type</div>
+                  <div className="mt-1">
+                    <LeaveBadge code={viewDetailsRequest.leave_type.code} name={viewDetailsRequest.leave_type.name} />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Duration & Quota</div>
+                  <div className="text-sm font-semibold text-neutral-800 mt-1">
+                    {formatShortDate(viewDetailsRequest.starts_at)} – {formatShortDate(viewDetailsRequest.ends_at)}
+                  </div>
+                  <div className="text-xs font-medium text-orange-700 mt-0.5">
+                    {formatDays(viewDetailsRequest.requested_days)} working day(s)
+                  </div>
+                </div>
+              </div>
+
+              {/* Handover / Reason */}
+              <div className="border-t border-neutral-100 pt-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Handover Notes / Reason</div>
+                {viewDetailsRequest.reason ? (
+                  <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 italic shadow-premium-sm">
+                    "{viewDetailsRequest.reason}"
+                  </p>
+                ) : (
+                  <p className="text-sm text-neutral-400 italic font-medium">No notes provided by employee.</p>
+                )}
+              </div>
+
+              {/* Manager Comment */}
+              <div className="border-t border-neutral-100 pt-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Manager Decision Comment</div>
+                {viewDetailsRequest.manager_comment ? (
+                  <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 shadow-premium-sm">
+                    {viewDetailsRequest.manager_comment}
+                  </p>
+                ) : (
+                  <p className="text-sm text-neutral-400 italic font-medium">No comments provided by approver.</p>
+                )}
+              </div>
+
+              {/* Attachments */}
+              <div className="border-t border-neutral-100 pt-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3">Attachments</div>
+                <div className="flex flex-wrap gap-2.5">
+                  {(viewDetailsRequest.attachments ?? []).map((attachment) => {
+                    const preview = isPreviewable(attachment);
+                    const ext = attachment.original_name.split('.').pop()?.toUpperCase() ?? 'FILE';
+                    return preview ? (
+                      <button
+                        key={attachment.id}
+                        onClick={() => {
+                          setViewDetailsRequest(null);
+                          setPreviewAttachment(attachment);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm cursor-pointer"
+                        type="button"
+                      >
+                        <FileText size={13} className="text-neutral-400" />
+                        <span className="truncate max-w-44">{attachment.original_name}</span>
+                        <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
+                          {ext}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded bg-orange-50 border border-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 ml-1">
+                          <Eye size={10} /> Preview
+                        </span>
+                      </button>
+                    ) : (
+                      <a
+                        key={attachment.id}
+                        href={attachmentDownloadUrl(attachment)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FileText size={13} className="text-neutral-400" />
+                        <span className="truncate max-w-44">{attachment.original_name}</span>
+                        <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
+                          {ext}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded bg-neutral-50 border border-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 ml-1">
+                          <Download size={10} /> Download
+                        </span>
+                      </a>
+                    );
+                  })}
+                  {(viewDetailsRequest.attachments ?? []).length === 0 && (
+                    <span className="text-sm font-medium text-neutral-400">No attachments provided</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="border-t border-neutral-100 px-6 py-4 bg-neutral-50/20 flex justify-end">
+              <button
+                className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-neutral-600 transition-all hover:bg-neutral-50 cursor-pointer"
+                onClick={() => setViewDetailsRequest(null)}
+                type="button"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>,

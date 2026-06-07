@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
-import { CalendarClock, ClipboardCheck, UserCheck, Users } from 'lucide-react';
+import { CalendarClock, ClipboardCheck, UserCheck, Users, Search } from 'lucide-react';
 import type React from 'react';
+import { useState, useMemo } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest, User } from '../types';
 import { formatDays, formatRole, formatShortDate } from '../utils';
@@ -14,6 +15,22 @@ type Props = {
 };
 
 export default function Team({ members, leaveCalendar, pendingRequests, teamStats }: Props) {
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [deptFilter, setDeptFilter] = useState('all');
+
+  const departments = useMemo(() => {
+    return Array.from(new Set(members.map((m) => m.department?.name).filter(Boolean))) as string[];
+  }, [members]);
+
+  const filteredMembers = useMemo(() => {
+    return members.filter((member) => {
+      const matchesRole = roleFilter === 'all' || member.role === roleFilter;
+      const matchesDept = deptFilter === 'all' || member.department?.name === deptFilter;
+      const haystack = `${member.name} ${member.employee_code ?? ''} ${member.job_title ?? ''} ${member.email} ${member.department?.name ?? ''}`.toLowerCase();
+      return matchesRole && matchesDept && haystack.includes(query.toLowerCase());
+    });
+  }, [query, roleFilter, deptFilter, members]);
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
@@ -33,17 +50,52 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                 <h2 className="text-base font-medium text-neutral-800">Team Roster</h2>
                 <p className="text-sm font-medium text-neutral-500 mt-1.5">List of colleagues and staff in your active department scope</p>
               </div>
-              <Link
-                className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-3 text-sm font-medium text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 transition-all duration-200 active:scale-98"
-                href="/approvals"
-              >
-                Review approvals
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3.5 text-neutral-400" size={14} />
+                  <input
+                    className="w-52 rounded-lg border border-neutral-200 py-2.5 pl-9 pr-3.5 text-sm bg-white font-medium text-neutral-850 placeholder-neutral-400 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm"
+                    placeholder="Search roster..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm cursor-pointer"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                >
+                  <option value="all">All Roles</option>
+                  {['staff', 'manager', 'hr admin', 'admin'].map((role) => (
+                    <option key={role} value={role}>
+                      {formatRole(role)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded-lg border border-neutral-200 px-4 py-2.5 text-sm bg-white font-medium text-neutral-700 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-premium-sm cursor-pointer"
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+                <Link
+                  className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-3 text-sm font-medium text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 transition-all duration-200 active:scale-98"
+                  href="/approvals"
+                >
+                  Review approvals
+                </Link>
+              </div>
             </div>
             
             {/* Mobile Card List View */}
             <div className="divide-y divide-neutral-100 sm:hidden">
-              {members.map((member) => (
+              {filteredMembers.map((member) => (
                 <div key={member.id} className="p-5 space-y-4 bg-white">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-neutral-50 to-neutral-100 font-medium text-neutral-600 text-sm shrink-0 border border-neutral-200 shadow-premium-sm">
@@ -92,9 +144,9 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   </div>
                 </div>
               ))}
-              {members.length === 0 && (
+              {filteredMembers.length === 0 && (
                 <div className="p-8 text-center text-sm text-neutral-400 font-medium">
-                  No team members in your current organizational scope.
+                  No matching team members found.
                 </div>
               )}
             </div>
@@ -113,7 +165,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100/60">
-                  {members.map((member) => (
+                  {filteredMembers.map((member) => (
                     <tr key={member.id} className="transition-all hover:bg-neutral-50/40">
                       <td className="px-6 py-4.5">
                         <div className="flex items-center gap-3.5">
@@ -152,10 +204,10 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                       </td>
                     </tr>
                   ))}
-                  {members.length === 0 && (
+                  {filteredMembers.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-neutral-400 font-medium">
-                        No team members in your current organizational scope.
+                        No matching team members found.
                       </td>
                     </tr>
                   )}
