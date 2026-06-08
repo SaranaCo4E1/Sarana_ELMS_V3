@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -29,7 +30,7 @@ class ReportController extends Controller
         $endDate = Carbon::parse($endMonth)->endOfMonth();
 
         $rows = LeaveRequest::query()
-            ->with(['user.department', 'leaveType', 'approver'])
+            ->with(['user.department', 'leaveType', 'approver', 'attachments'])
             ->whereBetween('starts_at', [$startDate, $endDate])
             ->orderBy('starts_at')
             ->get();
@@ -56,6 +57,7 @@ class ReportController extends Controller
                 'Approver Name',
                 'Reason',
                 'Manager Comment',
+                'Attachments',
                 'Submitted At',
                 'Decided At',
                 'Created At',
@@ -63,6 +65,10 @@ class ReportController extends Controller
             ]);
 
             foreach ($rows as $row) {
+                $days = (float) $row->requested_days;
+                $daysFormatted = ($days == (int) $days) ? (int) $days : $days;
+                $attachmentsList = $row->attachments->pluck('original_name')->implode(', ');
+
                 fputcsv($out, [
                     $row->id,
                     $row->user_id,
@@ -73,12 +79,13 @@ class ReportController extends Controller
                     $row->leaveType?->name,
                     $row->starts_at?->toDateString(),
                     $row->ends_at?->toDateString(),
-                    $row->requested_days,
-                    $row->status,
+                    $daysFormatted,
+                    ucfirst($row->status),
                     $row->approver_id,
                     $row->approver?->name,
                     $row->reason,
                     $row->manager_comment,
+                    $attachmentsList,
                     $row->submitted_at?->toDateTimeString(),
                     $row->decided_at?->toDateTimeString(),
                     $row->created_at?->toDateTimeString(),
@@ -108,7 +115,15 @@ class ReportController extends Controller
         $endDate = Carbon::parse($endMonth)->endOfMonth();
 
         $rows = AuditLog::query()
-            ->with('actor')
+            ->with([
+                'actor',
+                'subject' => function ($morphTo) {
+                    $morphTo->morphWith([
+                        LeaveRequest::class => ['user', 'leaveType'],
+                        LeaveBalance::class => ['user', 'leaveType'],
+                    ]);
+                },
+            ])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at')
             ->get();
@@ -125,8 +140,11 @@ class ReportController extends Controller
                 'Actor ID',
                 'Actor Name',
                 'Actor Email',
+                'Actor Role',
                 'Action',
+                'Description',
                 'Subject Type',
+                'Subject Type Short',
                 'Subject ID',
                 'IP Address',
                 'Metadata',
@@ -139,8 +157,11 @@ class ReportController extends Controller
                     $row->actor_id,
                     $row->actor?->name,
                     $row->actor?->email,
+                    $row->actor?->getFormattedRole() ?? 'System',
                     $row->action,
+                    $row->formatDescription(),
                     $row->subject_type,
+                    $row->subject_type ? class_basename($row->subject_type) : '',
                     $row->subject_id,
                     $row->ip_address,
                     $row->metadata ? json_encode($row->metadata) : '',

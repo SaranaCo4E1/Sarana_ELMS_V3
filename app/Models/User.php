@@ -83,6 +83,15 @@ class User extends Authenticatable
         return in_array($this->role, ['manager', 'hr admin', 'admin'], true);
     }
 
+    public function getFormattedRole(): string
+    {
+        if ($this->role === 'hr admin') {
+            return 'HR Admin';
+        }
+
+        return ucfirst($this->role);
+    }
+
     /**
      * Send the password reset notification.
      *
