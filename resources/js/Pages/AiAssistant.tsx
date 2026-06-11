@@ -220,7 +220,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
         <div className="grid gap-4 lg:grid-cols-[1fr_22rem] flex-1 min-h-0">
           {/* Main Chat Interface */}
           <section className={`min-h-0 flex-col overflow-hidden border border-neutral-200/50 bg-white rounded-xl shadow-premium-sm ${
-            activeTab === 'chat' ? 'flex h-[calc(100svh-14rem)]' : 'hidden'
+            activeTab === 'chat' ? 'flex h-full' : 'hidden'
           } lg:flex lg:h-full`}>
             {/* Chat Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50/20 px-6 py-4">
@@ -266,10 +266,10 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   </div>
 
                   <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                    {suggestedPrompts.map((suggestion) => (
+                    {suggestedPrompts.map((suggestion, index) => (
                       <button
                         key={suggestion}
-                        className="group flex items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-600 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer"
+                        className={`group ${index >= 2 ? 'hidden sm:flex' : 'flex'} items-center justify-between border border-neutral-200 bg-white p-4.5 text-left text-sm font-medium text-neutral-600 hover:border-orange-300 hover:bg-orange-50/5 active:scale-[0.99] transition-all rounded-xl shadow-premium-sm cursor-pointer`}
                         type="button"
                         onClick={() => setExternalPrompt(suggestion)}
                       >
@@ -326,7 +326,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
           {/* Sidebar panels */}
           <aside className={`min-h-0 flex-col gap-4 lg:flex ${
-            activeTab !== 'chat' ? 'flex h-[calc(100svh-14rem)]' : 'hidden'
+            activeTab !== 'chat' ? 'flex h-full' : 'hidden'
           }`}>
             {/* History Panel */}
             {leaveDraft && (

@@ -6,6 +6,7 @@ services:
       context: ..
       dockerfile: docker/prod/app.Dockerfile
     container_name: elms-prod-app
+    restart: unless-stopped
     env_file:
       - ../.env
     environment:
@@ -18,6 +19,9 @@ services:
       DB_DATABASE: ${DB_DATABASE:-elms_leave}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-change-me}
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
     volumes:
       - app-storage:/var/www/html/storage
@@ -30,6 +34,7 @@ services:
       context: ..
       dockerfile: docker/prod/nginx.Dockerfile
     container_name: elms-prod-nginx
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
@@ -42,6 +47,7 @@ services:
       context: ..
       dockerfile: docker/prod/app.Dockerfile
     container_name: elms-prod-queue
+    restart: unless-stopped
     command: php artisan queue:work --tries=3 --timeout=90
     env_file:
       - ../.env
@@ -55,6 +61,9 @@ services:
       DB_DATABASE: ${DB_DATABASE:-elms_leave}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-change-me}
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
     volumes:
       - app-storage:/var/www/html/storage
     depends_on:
@@ -64,6 +73,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: elms-prod-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE:-elms_leave}
       POSTGRES_USER: ${DB_USERNAME:-postgres}

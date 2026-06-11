@@ -59,6 +59,7 @@ class AiHelpController extends Controller
             $answer = '';
             $emittedError = false;
             $buffer = '';
+            $upstreamBody = '';
             $intent = $this->classifyPromptIntent($data['prompt'], $apiKey);
             $data['intent'] = $intent;
             $payload = $this->buildGeminiPayload($request, $data);
@@ -79,7 +80,8 @@ class AiHelpController extends Controller
                 CURLOPT_POSTFIELDS => json_encode($payload),
                 CURLOPT_TIMEOUT => 90,
                 CURLOPT_CONNECTTIMEOUT => 10,
-                CURLOPT_WRITEFUNCTION => function ($curl, string $chunk) use (&$buffer, &$answer) {
+                CURLOPT_WRITEFUNCTION => function ($curl, string $chunk) use (&$buffer, &$answer, &$upstreamBody) {
+                    $upstreamBody .= $chunk;
                     $buffer .= $chunk;
 
                     while (($lineEnd = strpos($buffer, "\n")) !== false) {
@@ -121,7 +123,7 @@ class AiHelpController extends Controller
 
             if (($ok === false || $status >= 400) && $answer === '') {
                 $emittedError = true;
-                $message = $error ?: 'The AI service could not complete the request.';
+                $message = $error ?: $this->extractGeminiErrorMessage($upstreamBody) ?: 'The AI service could not complete the request.';
                 echo 'data: '.json_encode(['error' => $message])."\n\n";
             }
 
@@ -146,6 +148,14 @@ class AiHelpController extends Controller
             'Cache-Control' => 'no-cache, no-transform',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    private function extractGeminiErrorMessage(string $response): ?string
+    {
+        $decoded = json_decode($response, true);
+        $message = $decoded['error']['message'] ?? null;
+
+        return is_string($message) && $message !== '' ? $message : null;
     }
 
     /**
