@@ -126,7 +126,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                 href="/ai-assistant"
                 className="hidden items-center gap-2 rounded-lg border border-orange-100 bg-orange-50/70 px-4 py-1.5 text-sm font-medium text-orange-800 shadow-premium-sm transition-all hover:bg-orange-50 sm:inline-flex"
               >
-                <Sparkles size={14} /> Ask Copilot
+                <Sparkles size={14} /> Ask AI Assistant
               </Link>
               <Link
                 href="/apply-leave"
@@ -295,9 +295,9 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
             <CalendarPlus size={16} className="shrink-0" />
             {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Apply Leave</span>}
           </Link>
-          <Link className={navItemClass('/ai-assistant', isCollapsed)} href="/ai-assistant" title={isCollapsed ? "ELMS Copilot" : undefined}>
+          <Link className={navItemClass('/ai-assistant', isCollapsed)} href="/ai-assistant" title={isCollapsed ? "ELMS AI Assistant" : undefined}>
             <Bot size={16} className="shrink-0" />
-            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">ELMS Copilot</span>}
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">AI Assistant</span>}
           </Link>
           <Link className={navItemClass('/profile', isCollapsed)} href="/profile" title={isCollapsed ? "My Profile" : undefined}>
             <IdCard size={16} className="shrink-0" />

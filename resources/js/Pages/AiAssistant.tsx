@@ -233,7 +233,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">ELMS Copilot</h2>
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">ELMS AI Assistant</h2>
                   <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-500 mt-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
                     <span>Powered by Gemini 3.5 flash</span>
@@ -501,7 +501,7 @@ function ChatInput({ onSubmit, loading, onStop, externalPrompt, onExternalPrompt
               handleSubmit();
             }
           }}
-          placeholder="Ask ELMS Copilot anything..."
+          placeholder="Ask ELMS AI Assistant anything..."
           rows={1}
         />
         <div className="flex items-center gap-2 pr-1 pb-1">

@@ -72,10 +72,10 @@ export default function Terms() {
           <section className="space-y-3">
             <h2 className="text-base font-semibold text-neutral-900 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-orange-50 text-orange-700 font-medium text-xs">4</span>
-              AI Copilot & Advisory
+              AI Assistant & Advisory
             </h2>
             <p className="text-sm font-medium text-neutral-500 leading-relaxed pl-8">
-              NiyAI ELMS incorporates smart conversational models (AI Copilot) designed to summarize leave rules, draft applications, and outline calendar policies. While we strive to maintain absolute parity with corporate policy documents, AI-drafted prompts should be carefully reviewed before final submission. NiyAI is not liable for administrative overlaps or discrepancies resulting from automated summaries.
+              NiyAI ELMS incorporates smart conversational models (ELMS AI Assistant) designed to summarize leave rules, draft applications, and outline calendar policies. While we strive to maintain absolute parity with corporate policy documents, AI-drafted prompts should be carefully reviewed before final submission. NiyAI is not liable for administrative overlaps or discrepancies resulting from automated summaries.
             </p>
           </section>
 

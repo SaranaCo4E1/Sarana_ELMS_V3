@@ -54,8 +54,8 @@ export default function Landing() {
 
   const faqs = [
     {
-      q: "How does ELMS Copilot draft requests?",
-      a: "ELMS Copilot uses natural language processing. Simply chat with it to check your balances, explain leave policies, or request a leave draft. Once ready, it generates a pre-filled submission form ready for your approval."
+      q: "How does ELMS AI Assistant draft requests?",
+      a: "ELMS AI Assistant uses natural language processing. Simply chat with it to check your balances, explain leave policies, or request a leave draft. Once ready, it generates a pre-filled submission form ready for your approval."
     },
     {
       q: "Can managers see team coverage before approving leave?",
@@ -181,7 +181,7 @@ export default function Landing() {
             <div className="hidden sm:block h-8 w-px bg-neutral-200"></div>
             <div className="flex-1">
               <div className="text-2xl font-medium text-neutral-900">Active</div>
-              <div className="text-[10px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">ELMS Copilot</div>
+              <div className="text-[10px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">ELMS AI Assistant</div>
             </div>
           </div>
         </div>
@@ -241,7 +241,7 @@ export default function Landing() {
                 <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
                   <div className="flex items-center gap-2">
                     <Bot size={14} className="text-orange-600" />
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-700">ELMS Copilot</span>
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-700">ELMS AI Assistant</span>
                   </div>
                   <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
                 </div>
@@ -403,7 +403,7 @@ export default function Landing() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500 text-white shadow-md shadow-orange-500/10 group-hover:scale-105 transition-all">
                 <Bot size={20} />
               </div>
-              <h3 className="mt-5 text-sm font-medium text-neutral-900">ELMS Copilot Integration</h3>
+              <h3 className="mt-5 text-sm font-medium text-neutral-900">ELMS AI Assistant Integration</h3>
               <p className="mt-2.5 text-xs font-medium leading-relaxed text-neutral-500">
                 Verify complex company policy rules, calculate prorated allowances, and construct drafts through conversational prompts.
               </p>
@@ -504,17 +504,17 @@ export default function Landing() {
                       <div className="text-xl font-medium text-neutral-800 mt-1">25.0 days</div>
                       <div className="text-[10px] font-medium text-neutral-400 mt-1">Fiscal Year 2026</div>
                     </div>
-                    <div className="rounded-lg border border-neutral-100 bg-[#fafbfa]/80 p-4">
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-green-800">Approved Leave</div>
-                      <div className="text-xl font-medium text-green-700 mt-1">10.5 days</div>
-                      <div className="text-[10px] font-medium text-green-500 mt-1">Calculated instantly</div>
+                    <div className="rounded-lg border border-green-100/70 bg-green-50/40 p-4">
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-green-700">Approved Leave</div>
+                      <div className="text-xl font-medium text-green-900 mt-1">10.5 days</div>
+                      <div className="text-[10px] font-medium text-green-600/80 mt-1">Calculated instantly</div>
                     </div>
-                    <div className="rounded-lg border border-neutral-100 bg-[#fafbfa]/80 p-4">
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-amber-800">Pending Approval</div>
-                      <div className="text-xl font-medium text-amber-700 mt-1">
+                    <div className="rounded-lg border border-amber-100/80 bg-amber-50/45 p-4">
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-amber-700">Pending Approval</div>
+                      <div className="text-xl font-medium text-amber-900 mt-1">
                         {mockRequestApproved ? '0.0 days' : '3.0 days'}
                       </div>
-                      <div className="text-[10px] font-medium text-amber-500 mt-1">
+                      <div className="text-[10px] font-medium text-amber-600/80 mt-1">
                         {mockRequestApproved ? 'Queue clear' : "Awaiting Manager's review"}
                       </div>
                     </div>
@@ -537,7 +537,7 @@ export default function Landing() {
                       <div className="space-y-1">
                         <div className="font-medium text-neutral-800">Sick Leave (Medical recovery)</div>
                         <div>Schedule: May 25 – May 28 (3.0 requested days)</div>
-                        <div className="text-[10px] font-medium text-neutral-450">Submitted: Today · Handled via ELMS Copilot</div>
+                        <div className="text-[10px] font-medium text-neutral-450">Submitted: Today · Handled via ELMS AI Assistant</div>
                       </div>
 
                       {!mockRequestApproved && (

@@ -39,6 +39,7 @@ return [
         'key' => env('GOOGLE_GENERATIVE_AI_API_KEY'),
         'model' => env('GOOGLE_GENERATIVE_AI_MODEL', 'gemini-3.1-flash-lite'),
         'classifier_model' => env('GOOGLE_GENERATIVE_AI_CLASSIFIER_MODEL', 'gemini-2.5-flash-lite'),
+        'proxy' => env('GOOGLE_GENERATIVE_AI_PROXY'),
     ],
 
 ];

@@ -115,6 +115,7 @@ class AiHelpController extends Controller
                     return strlen($chunk);
                 },
             ]);
+            $this->applyGeminiProxyOptions($curl);
 
             $ok = curl_exec($curl);
             $error = curl_error($curl);
@@ -260,6 +261,7 @@ class AiHelpController extends Controller
             CURLOPT_TIMEOUT => 15,
             CURLOPT_CONNECTTIMEOUT => 5,
         ]);
+        $this->applyGeminiProxyOptions($curl);
 
         $response = curl_exec($curl);
         $status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
@@ -273,6 +275,27 @@ class AiHelpController extends Controller
         $label = strtolower(trim((string) ($decoded['candidates'][0]['content']['parts'][0]['text'] ?? '')));
 
         return str_contains($label, 'leave_draft') ? 'leave_draft' : 'general';
+    }
+
+    /**
+     * @param  \CurlHandle|resource  $curl
+     */
+    private function applyGeminiProxyOptions($curl): void
+    {
+        $proxy = config('services.google_generative_ai.proxy');
+
+        if (! is_string($proxy) || trim($proxy) === '') {
+            return;
+        }
+
+        $proxy = trim($proxy);
+        curl_setopt($curl, CURLOPT_PROXY, $proxy);
+
+        if (str_starts_with($proxy, 'socks5h://')) {
+            curl_setopt($curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
+        } elseif (str_starts_with($proxy, 'socks5://')) {
+            curl_setopt($curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+        }
     }
 
     private function buildLeaveBalanceContext(Request $request): string
