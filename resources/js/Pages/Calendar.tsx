@@ -127,7 +127,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               {/* Day headers */}
               <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50/10 text-center text-sm font-medium uppercase tracking-wider text-neutral-500">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <div key={day} className="py-4">
+                  <div key={day} className={`py-4 ${day === 'Sun' ? 'text-red-700' : ''}`}>
                     {day}
                   </div>
                 ))}
@@ -176,7 +176,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
                               key={item.id}
                               className={`truncate rounded-md px-2 py-1 text-xs font-medium border transition-colors ${
                                 isHoliday
-                                  ? 'bg-rose-50/60 border-rose-100 text-rose-800'
+                                  ? 'bg-red-100/80 border-red-200 text-red-800'
                                   : `${statusStyle?.bg ?? 'bg-neutral-50'} ${statusStyle?.border ?? 'border-neutral-200'} ${statusStyle?.text ?? 'text-neutral-700'}`
                                 }`}
                             >

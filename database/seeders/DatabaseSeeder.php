@@ -7,7 +7,6 @@ use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
-use App\Models\PublicHoliday;
 use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\LeaveBalanceService;
@@ -279,7 +278,7 @@ class DatabaseSeeder extends Seeder
             $code => LeaveType::query()->updateOrCreate(['code' => $code], $type),
         ]);
 
-        $this->seedPublicHolidays();
+        $this->call(PublicHolidaySeeder::class);
 
         $allUsers = collect([$ceo, $admin])->merge($users);
         $balanceService = app(LeaveBalanceService::class);
@@ -426,29 +425,6 @@ class DatabaseSeeder extends Seeder
         }
 
         return $date;
-    }
-
-    private function seedPublicHolidays(): void
-    {
-        // Holiday fixtures live outside seeder code so new years can be added as data only.
-        foreach (glob(database_path('data/holidays/*.json')) ?: [] as $path) {
-            $data = json_decode((string) file_get_contents($path), true);
-
-            if (! is_array($data) || ! isset($data['holidays']) || ! is_array($data['holidays'])) {
-                continue;
-            }
-
-            foreach ($data['holidays'] as $holiday) {
-                if (! isset($holiday['date'], $holiday['name'])) {
-                    continue;
-                }
-
-                PublicHoliday::query()->updateOrCreate(
-                    ['holiday_date' => $holiday['date']],
-                    ['name' => $holiday['name'], 'is_active' => true]
-                );
-            }
-        }
     }
 
     private function seedNotification(
