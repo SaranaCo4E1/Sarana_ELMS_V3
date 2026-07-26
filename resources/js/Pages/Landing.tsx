@@ -108,14 +108,14 @@ export default function Landing() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1.5 rounded-lg bg-neutral-800 px-4.5 py-2 text-xs font-medium text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
+                className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-4.5 py-2 text-xs font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
               >
-                Go to Dashboard <ArrowUpRight size={14} className="text-orange-400" />
+                Go to Dashboard <ArrowUpRight size={14} className="text-white" />
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="flex items-center gap-1 rounded-lg bg-neutral-800 px-4.5 py-2.5 text-xs font-medium text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
+                className="flex items-center gap-1 rounded-lg bg-orange-600 px-4.5 py-2.5 text-xs font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
               >
                 Sign In
               </Link>
@@ -146,16 +146,16 @@ export default function Landing() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="flex h-12 items-center justify-center gap-2 rounded-lg bg-neutral-800 px-6 font-medium text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
+                className="flex h-12 items-center justify-center gap-2 rounded-lg bg-orange-600 px-6 font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
               >
-                Access Dashboard <ArrowRight size={15} className="text-orange-400" />
+                Access Dashboard <ArrowRight size={15} className="text-white" />
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="flex h-12 items-center justify-center gap-2 rounded-lg bg-neutral-800 px-6 font-medium text-white hover:bg-neutral-700 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
+                className="flex h-12 items-center justify-center gap-2 rounded-lg bg-orange-600 px-6 font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-lg active:scale-98 transition-all"
               >
-                Access Leave Portal <ArrowRight size={15} className="text-orange-400" />
+                Access Leave Portal <ArrowRight size={15} className="text-white" />
               </Link>
             )}
             <a 
