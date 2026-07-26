@@ -358,7 +358,8 @@ export default function Landing() {
                          <div className="text-[10px] font-medium text-neutral-400">Jun 15 - Jun 19 (5 days)</div>
                        </div>
                     </div>
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-medium text-amber-700 border border-amber-100">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold text-amber-800 border border-amber-500/20">
+                      <span className="h-1 w-1 rounded-full bg-amber-500" />
                       Pending Approval
                     </span>
                   </div>
@@ -372,7 +373,8 @@ export default function Landing() {
                       <div className="text-[10px] font-medium text-neutral-400">Jun 14 - Jun 18 (5 days)</div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-[9px] font-medium text-green-700 border border-green-100">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold text-emerald-800 border border-emerald-500/20">
+                    <span className="h-1 w-1 rounded-full bg-emerald-500" />
                     Approved
                   </span>
                 </div>
@@ -495,20 +497,26 @@ export default function Landing() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="rounded-lg border border-neutral-100 bg-[#fafbfa]/80 p-4">
                       <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-400">Total Allowance</div>
-                      <div className="text-xl font-medium text-neutral-800 mt-1">25.0 days</div>
+                      <div className="text-xl font-medium text-neutral-800 mt-1">18.0 days</div>
                       <div className="text-[10px] font-medium text-neutral-400 mt-1">Fiscal Year 2026</div>
                     </div>
-                    <div className="rounded-lg border border-green-100/70 bg-green-50/40 p-4">
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-green-700">Approved Leave</div>
-                      <div className="text-xl font-medium text-green-900 mt-1">10.5 days</div>
-                      <div className="text-[10px] font-medium text-green-600/80 mt-1">Calculated instantly</div>
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 transition-all hover:border-emerald-500/30">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800">Approved Leave</div>
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      </div>
+                      <div className="text-xl font-semibold text-neutral-900 mt-1.5">10.5 days</div>
+                      <div className="text-[10px] font-medium text-neutral-500 mt-1">Calculated instantly</div>
                     </div>
-                    <div className="rounded-lg border border-amber-100/80 bg-amber-50/45 p-4">
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-amber-700">Pending Approval</div>
-                      <div className="text-xl font-medium text-amber-900 mt-1">
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.03] p-4 transition-all hover:border-amber-500/30">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">Pending Approval</div>
+                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+                      </div>
+                      <div className="text-xl font-semibold text-neutral-900 mt-1.5">
                         {mockRequestApproved ? '0.0 days' : '3.0 days'}
                       </div>
-                      <div className="text-[10px] font-medium text-amber-600/80 mt-1">
+                      <div className="text-[10px] font-medium text-neutral-500 mt-1">
                         {mockRequestApproved ? 'Queue clear' : "Awaiting Manager's review"}
                       </div>
                     </div>
@@ -518,11 +526,12 @@ export default function Landing() {
                   <div className="rounded-lg border border-neutral-200/60 bg-white p-4.5 shadow-premium-sm">
                     <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 border-b border-neutral-100 pb-3 mb-3">
                       <span className="text-xs font-medium text-neutral-800">Recent Leave Request Submission</span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium border transition-colors ${
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold border transition-all ${
                         mockRequestApproved 
-                          ? 'bg-green-50 text-green-700 border-green-100'
-                          : 'bg-amber-50 text-amber-700 border-amber-100'
+                          ? 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-800 border-amber-500/20'
                       }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${mockRequestApproved ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                         {mockRequestApproved ? 'Approved' : 'Pending Approval'}
                       </span>
                     </div>
@@ -590,7 +599,8 @@ export default function Landing() {
                             <div className="text-[10px] font-medium text-neutral-400">Engineering Dept</div>
                           </div>
                         </div>
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-medium text-amber-700 border border-amber-100 self-start xs:self-center">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 text-amber-800 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-semibold self-start xs:self-center">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                           Needs Decision
                         </span>
                       </div>
