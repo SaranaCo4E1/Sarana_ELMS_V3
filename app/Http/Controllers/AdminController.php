@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -137,13 +138,28 @@ class AdminController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', Rule::in(['staff', 'manager', 'hr admin', 'admin'])],
-            'employee_code' => ['nullable', 'string', 'max:50', 'unique:users,employee_code'],
             'job_title' => ['nullable', 'string', 'max:255'],
             'hire_date' => ['nullable', 'date'],
             'two_factor_enabled' => ['boolean'],
         ]);
         $data['password'] = Hash::make($data['password']);
-        $user = User::query()->create($data);
+
+        $user = DB::transaction(function () use ($data): User {
+            $department = filled($data['department_id'] ?? null)
+                ? Department::query()->findOrFail($data['department_id'])
+                : null;
+
+            $data['employee_code'] = null;
+            $user = User::query()->create($data);
+
+            $user->update([
+                'employee_code' => $department
+                    ? User::formatEmployeeCode($department, $user->id)
+                    : null,
+            ]);
+
+            return $user;
+        });
         Audit::record($request, 'admin.user.created', $user);
 
         return back()->with('success', 'User created.');
@@ -158,7 +174,6 @@ class AdminController extends Controller
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user)],
             'password' => ['nullable', 'string', 'min:8'],
             'role' => ['required', Rule::in(['staff', 'manager', 'hr admin', 'admin'])],
-            'employee_code' => ['nullable', 'string', 'max:50', Rule::unique('users', 'employee_code')->ignore($user)],
             'job_title' => ['nullable', 'string', 'max:255'],
             'hire_date' => ['nullable', 'date'],
             'two_factor_enabled' => ['boolean'],
@@ -169,6 +184,13 @@ class AdminController extends Controller
         } else {
             unset($data['password']);
         }
+
+        $department = filled($data['department_id'] ?? null)
+            ? Department::query()->findOrFail($data['department_id'])
+            : null;
+        $data['employee_code'] = $department
+            ? User::formatEmployeeCode($department, $user->id)
+            : null;
 
         $user->update($data);
         Audit::record($request, 'admin.user.updated', $user);

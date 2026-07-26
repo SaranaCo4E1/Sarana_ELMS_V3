@@ -92,6 +92,15 @@ class User extends Authenticatable
         return ucfirst($this->role);
     }
 
+    public static function formatEmployeeCode(Department $department, int $userId): string
+    {
+        return sprintf(
+            '%s-%03d',
+            mb_strtoupper(trim($department->code)),
+            $userId,
+        );
+    }
+
     /**
      * Send the password reset notification.
      *

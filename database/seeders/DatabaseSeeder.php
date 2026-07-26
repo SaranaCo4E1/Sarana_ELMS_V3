@@ -31,8 +31,29 @@ class DatabaseSeeder extends Seeder
         ]);
         Department::query()->whereIn('code', ['ENG', 'OPS'])->update(['is_active' => false]);
 
+        User::query()->whereIn('email', [
+            'ceo@niy.ai',
+            'admin@niy.ai',
+            'admin@elms.test',
+            'hr@niy.ai',
+            'hr@elms.test',
+            'it@niy.ai',
+            'manager@elms.test',
+            'sales@niy.ai',
+            'hr.staff@niy.ai',
+            'it.engineer@niy.ai',
+            'staff@elms.test',
+            'it.support@niy.ai',
+            'sreynimsamuser@gmail.com',
+            'samuelsinat11@gmail.com',
+            'hakkimhengg@gmail.com',
+            'sean.sophearom77@gmail.com',
+            'sales.rep@niy.ai',
+            'sales.ops@niy.ai',
+        ])->update(['employee_code' => null]);
+
         // Seed the reporting root first so department managers can reference the CEO.
-        $ceo = $this->seedUser('ceo@niy.ai', 'CEO-001', [
+        $ceo = $this->seedUser('ceo@niy.ai', [
             'name' => 'Sophea Sok',
             'password' => $password,
             'role' => 'admin',
@@ -49,7 +70,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $admin = $this->seedUser('admin@niy.ai', 'ADM-001', [
+        $admin = $this->seedUser('admin@niy.ai', [
             'name' => 'Davy Keo',
             'password' => $password,
             'role' => 'admin',
@@ -74,7 +95,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'hr admin',
                 'department' => 'HR',
                 'manager' => $ceo,
-                'employee_code' => 'HR-001',
                 'job_title' => 'HR Manager',
                 'phone' => '011 234 503',
                 'emergency_contact_phone' => '097 234 5903',
@@ -87,7 +107,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'manager',
                 'department' => 'IT',
                 'manager' => $ceo,
-                'employee_code' => 'IT-001',
                 'job_title' => 'IT Manager',
                 'phone' => '017 234 504',
                 'emergency_contact_phone' => '010 234 904',
@@ -100,7 +119,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'manager',
                 'department' => 'SALES',
                 'manager' => $ceo,
-                'employee_code' => 'SALES-001',
                 'job_title' => 'Sales Manager',
                 'phone' => '098 234 505',
                 'emergency_contact_phone' => '015 234 905',
@@ -113,7 +131,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'HR',
                 'manager' => null,
-                'employee_code' => 'HR-101',
                 'job_title' => 'People Operations Specialist',
                 'phone' => '016 234 506',
                 'emergency_contact_phone' => '099 234 906',
@@ -126,7 +143,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-101',
                 'job_title' => 'Backend Engineer',
                 'phone' => '069 234 507',
                 'emergency_contact_phone' => '078 234 907',
@@ -139,7 +155,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-102',
                 'job_title' => 'IT Support Specialist',
                 'phone' => '070 234 508',
                 'emergency_contact_phone' => '085 234 908',
@@ -152,7 +167,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-103',
                 'job_title' => 'IT Staff',
                 'phone' => '086 234 511',
                 'emergency_contact_phone' => '090 234 911',
@@ -165,7 +179,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-104',
                 'job_title' => 'IT Staff',
                 'phone' => '089 234 512',
                 'emergency_contact_phone' => '060 234 912',
@@ -178,7 +191,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-105',
                 'job_title' => 'IT Staff',
                 'phone' => '066 234 513',
                 'emergency_contact_phone' => '067 234 913',
@@ -191,7 +203,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-106',
                 'job_title' => 'IT Staff',
                 'phone' => '068 234 514',
                 'emergency_contact_phone' => '077 234 914',
@@ -204,7 +215,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'SALES',
                 'manager' => null,
-                'employee_code' => 'SALES-101',
                 'job_title' => 'Account Executive',
                 'phone' => '081 234 509',
                 'emergency_contact_phone' => '088 234 5909',
@@ -217,7 +227,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'SALES',
                 'manager' => null,
-                'employee_code' => 'SALES-102',
                 'job_title' => 'Sales Operations Analyst',
                 'phone' => '087 234 510',
                 'emergency_contact_phone' => '095 234 910',
@@ -227,7 +236,7 @@ class DatabaseSeeder extends Seeder
         ])->map(function (array $user) use ($departments, $password) {
             $department = $departments[$user['department']];
 
-            return $this->seedUser($user['email'], $user['employee_code'], [
+            return $this->seedUser($user['email'], [
                 'name' => $user['name'],
                 'password' => $password,
                 'role' => $user['role'],
@@ -463,29 +472,30 @@ class DatabaseSeeder extends Seeder
         );
     }
 
-    /**
-     * Keep the seeder rerunnable when older demo accounts used the same employee codes.
-     */
-    private function seedUser(string $email, string $employeeCode, array $attributes, array $legacyEmails = []): User
+    private function seedUser(string $email, array $attributes, array $legacyEmails = []): User
     {
         $user = User::query()
             ->where('email', $email)
-            ->orWhere('employee_code', $employeeCode)
             ->orWhereIn('email', $legacyEmails)
             ->first();
 
         if (! $user) {
-            return User::query()->create($attributes + [
+            $user = User::query()->create($attributes + [
                 'email' => $email,
-                'employee_code' => $employeeCode,
+                'employee_code' => null,
             ]);
+        } else {
+            $user->fill($attributes + [
+                'email' => $email,
+                'employee_code' => null,
+            ]);
+            $user->save();
         }
 
-        $user->fill($attributes + [
-            'email' => $email,
-            'employee_code' => $employeeCode,
+        $department = Department::query()->findOrFail($attributes['department_id']);
+        $user->update([
+            'employee_code' => User::formatEmployeeCode($department, $user->id),
         ]);
-        $user->save();
 
         return $user;
     }

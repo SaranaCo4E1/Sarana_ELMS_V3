@@ -7,7 +7,7 @@ import AppLayout from '../Layouts/AppLayout';
 import type { LeaveType, PageProps, User } from '../types';
 import { formatDays, formatDate, formatRole } from '../utils';
 
-type Department = { id: number; name: string; code: string; manager_id?: number; manager?: User; is_active: boolean; users_count?: number };
+type Department = { id: number; name: string; code: string; manager_id?: number | null; manager?: User; is_active: boolean; users_count?: number };
 type Holiday = { id: number; name: string; holiday_date: string; is_active: boolean };
 type AuditLog = {
   id: number;
@@ -30,6 +30,12 @@ const emptyDepartmentForm = { name: '', code: '', manager_id: '' };
 const emptyLeaveTypeForm = { name: '', code: '', default_allowance_days: 0, paid: true, requires_attachment: false, deducts_balance: true };
 const emptyHolidayForm = { name: '', holiday_date: '' };
 const emptyUserForm = { name: '', email: '', password: 'password', role: 'staff', department_id: '', manager_id: '', employee_code: '', job_title: '', hire_date: '', two_factor_enabled: false };
+const roleOptions = [
+  { value: 'staff', label: 'Staff' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'hr admin', label: 'HR Admin' },
+  { value: 'admin', label: 'Admin' },
+] as const;
 
 const auditColors: Record<string, string> = {
   user: 'bg-blue-50 border-blue-100 text-blue-600',
@@ -595,6 +601,33 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
   };
 
   const reportingManagers = useMemo(() => users.filter((user) => ['manager', 'admin'].includes(user.role)), [users]);
+  const existingJobTitles = useMemo(
+    () => Array.from(new Set(users.map((user) => user.job_title?.trim()).filter((title): title is string => Boolean(title))))
+      .sort((first, second) => first.localeCompare(second)),
+    [users],
+  );
+
+  const calculateEmployeeCode = (departmentId: string, userId?: number) => {
+    const department = departments.find((item) => String(item.id) === departmentId);
+    if (!department) return '';
+
+    const prefix = department.code.trim().toUpperCase();
+    const nextUserId = userId ?? users.reduce((highest, user) => Math.max(highest, user.id), 0) + 1;
+
+    return `${prefix}-${String(nextUserId).padStart(3, '0')}`;
+  };
+
+  const handleUserDepartmentChange = (departmentId: string) => {
+    const department = departments.find((item) => String(item.id) === departmentId);
+    const userId = modal?.type === 'user' && modal.mode === 'edit' ? modal.record?.id : undefined;
+
+    setUserForm((current) => ({
+      ...current,
+      department_id: departmentId,
+      manager_id: department?.manager_id ? String(department.manager_id) : '',
+      employee_code: calculateEmployeeCode(departmentId, userId),
+    }));
+  };
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -1561,32 +1594,40 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                     </FieldError>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <FieldError label="Employee Code" error={errors.employee_code}>
-                      <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" placeholder="EMP-01" value={userForm.employee_code} onChange={(e) => setUserForm({ ...userForm, employee_code: e.target.value })} />
-                    </FieldError>
                     <FieldError label="Job Title" error={errors.job_title}>
-                      <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" placeholder="Title" value={userForm.job_title} onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })} />
+                      <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" list="existing-job-titles" placeholder="Select or enter a title" value={userForm.job_title} onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })} />
+                      <datalist id="existing-job-titles">
+                        {existingJobTitles.map((title) => <option key={title} value={title} />)}
+                      </datalist>
+                    </FieldError>
+                    <FieldError label="Role" error={errors.role}>
+                      <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value as typeof userForm.role })}>
+                        {roleOptions.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+                      </select>
                     </FieldError>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <FieldError label="Role" error={errors.role}>
-                      <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value as typeof userForm.role })}>
-                        <option>staff</option>
-                        <option>manager</option>
-                        <option>hr admin</option>
-                        <option>admin</option>
-                      </select>
-                    </FieldError>
                     <FieldError label="Hire Date" error={errors.hire_date}>
                       <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-500 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" type="date" value={userForm.hire_date} onChange={(e) => setUserForm({ ...userForm, hire_date: e.target.value })} />
                     </FieldError>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FieldError label="Department" error={errors.department_id}>
-                      <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.department_id} onChange={(e) => setUserForm({ ...userForm, department_id: e.target.value })}>
+                      <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.department_id} onChange={(e) => handleUserDepartmentChange(e.target.value)}>
                         <option value="">None</option>
                         {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                       </select>
+                    </FieldError>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FieldError label="Employee Code" error={errors.employee_code}>
+                      <div className="relative mt-1.5">
+                        <input
+                          className="w-full cursor-not-allowed rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 pr-10 text-sm font-semibold tracking-wide text-neutral-600 outline-none"
+                          placeholder="Select a department"
+                          value={userForm.employee_code}
+                          readOnly
+                        />
+                        <Shield className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+                      </div>
                     </FieldError>
                     <FieldError label="Reporting Manager" error={errors.manager_id}>
                       <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.manager_id} onChange={(e) => setUserForm({ ...userForm, manager_id: e.target.value })}>

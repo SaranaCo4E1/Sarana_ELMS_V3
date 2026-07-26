@@ -2,10 +2,35 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class DatabaseSeederTest extends TestCase
 {
+    use RefreshDatabase;
+
+    public function test_database_seeder_assigns_global_id_based_employee_codes(): void
+    {
+        $this->seed();
+
+        $ceo = User::query()->where('email', 'ceo@niy.ai')->firstOrFail();
+
+        $this->assertSame(1, $ceo->id);
+        $this->assertSame('HR-001', $ceo->employee_code);
+
+        User::query()
+            ->with('department')
+            ->whereNotNull('employee_code')
+            ->each(function (User $user): void {
+                $this->assertNotNull($user->department);
+                $this->assertSame(
+                    User::formatEmployeeCode($user->department, $user->id),
+                    $user->employee_code,
+                );
+            });
+    }
+
     public function test_database_seeder_contains_localized_demo_data_without_placeholder_text(): void
     {
         $source = file_get_contents(database_path('seeders/DatabaseSeeder.php'));
