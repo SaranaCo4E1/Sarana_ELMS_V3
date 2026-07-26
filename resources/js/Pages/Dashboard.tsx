@@ -471,7 +471,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
               <div className="border-t border-neutral-100 pt-4">
                 <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Handover Notes / Reason</div>
                 {viewDetailsRequest.reason ? (
-                  <p className="pre-wrap-anywhere rounded-lg border border-neutral-200/60 bg-neutral-50/40 p-3.5 text-sm leading-relaxed text-neutral-600 italic shadow-premium-sm">
+                  <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 italic shadow-premium-sm">
                     "{viewDetailsRequest.reason}"
                   </p>
                 ) : (
@@ -497,7 +497,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
                 <div className="flex flex-wrap gap-2.5">
                   {(viewDetailsRequest.attachments ?? []).map((attachment) => {
                     const preview = isPreviewable(attachment);
-                    const ext = attachment.original_name.split('.').pop()?.slice(0, 10).toUpperCase() ?? 'FILE';
+                    const ext = attachment.original_name.split('.').pop()?.toUpperCase() ?? 'FILE';
                     return preview ? (
                       <button
                         key={attachment.id}
@@ -505,11 +505,11 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
                           setViewDetailsRequest(null);
                           setPreviewAttachment(attachment);
                         }}
-                        className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm cursor-pointer"
                         type="button"
                       >
                         <FileText size={13} className="text-neutral-400" />
-                        <span className="wrap-anywhere min-w-0 max-w-44 whitespace-normal">{attachment.original_name}</span>
+                        <span className="truncate max-w-44">{attachment.original_name}</span>
                         <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
                           {ext}
                         </span>
@@ -521,12 +521,12 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
                       <a
                         key={attachment.id}
                         href={attachmentDownloadUrl(attachment)}
-                        className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3.5 py-1.5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-800 shadow-premium-sm"
                         target="_blank"
                         rel="noreferrer"
                       >
                         <FileText size={13} className="text-neutral-400" />
-                        <span className="wrap-anywhere min-w-0 max-w-44 whitespace-normal">{attachment.original_name}</span>
+                        <span className="truncate max-w-44">{attachment.original_name}</span>
                         <span className="inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 uppercase border border-neutral-200/40">
                           {ext}
                         </span>
@@ -632,11 +632,11 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
             <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
               <div className="flex items-center gap-2.5">
                 <FileText size={18} className="text-orange-600" />
-                <h3 className="wrap-anywhere min-w-0 max-w-[40vw] text-base font-semibold text-neutral-800">
+                <h3 className="text-base font-semibold text-neutral-800 truncate max-w-[40vw]">
                   {previewAttachment.original_name}
                 </h3>
                 <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600 border border-neutral-200/50 uppercase">
-                  {previewAttachment.original_name.split('.').pop()?.slice(0, 10) ?? 'FILE'}
+                  {previewAttachment.original_name.split('.').pop() ?? 'FILE'}
                 </span>
               </div>
               <div className="flex items-center gap-3">

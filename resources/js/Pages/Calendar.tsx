@@ -460,7 +460,7 @@ function LeaveRow({ event, compact = false }: { event: LeaveRequest; compact?: b
               <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">
                 Reason & Notes
               </div>
-              <p className="pre-wrap-anywhere mt-1 line-clamp-3 text-xs font-normal text-neutral-500 italic">
+              <p className="mt-1 text-xs text-neutral-500 font-normal line-clamp-3 italic">
                 {event.reason || 'No handover notes provided.'}
               </p>
             </div>
@@ -525,7 +525,7 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
             <span>{formatDays(item.event.requested_days)} day(s)</span>
           </div>
       {item.event.reason && (
-        <div className="pre-wrap-anywhere mt-2.5 rounded-md border border-neutral-100/60 bg-neutral-50/50 p-3 text-sm leading-relaxed text-neutral-600 italic">
+        <div className="mt-2.5 rounded-md bg-neutral-50/50 p-3 text-sm text-neutral-600 leading-relaxed italic border border-neutral-100/60">
           "{item.event.reason}"
         </div>
       )}

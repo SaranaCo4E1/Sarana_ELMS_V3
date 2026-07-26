@@ -353,7 +353,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   {leaveDraft.reason && (
                     <div className="rounded-lg border border-orange-100 bg-white/80 p-3.5 shadow-premium-sm">
                       <div className="text-xs font-medium uppercase tracking-wider text-orange-700">Application note</div>
-                      <div className="pre-wrap-anywhere mt-1.5 text-sm leading-relaxed text-orange-950">{leaveDraft.reason}</div>
+                      <div className="mt-1.5 text-sm leading-relaxed text-orange-950">{leaveDraft.reason}</div>
                     </div>
                   )}
                   <Link
@@ -557,7 +557,7 @@ function LeaveDraftMessage({ draft }: { draft: LeaveDraft }) {
 
       <div className="rounded-lg border border-neutral-200 bg-white p-3.5 shadow-premium-sm">
         <div className="text-xs font-medium uppercase tracking-wider text-neutral-400">Application note</div>
-        <div className="pre-wrap-anywhere mt-1.5 text-sm font-medium leading-relaxed text-neutral-700">
+        <div className="mt-1.5 text-sm font-medium leading-relaxed text-neutral-700">
           {draft.reason || 'No note generated yet.'}
         </div>
       </div>
