@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, IdCard, LogOut, Menu, Settings, Sparkles, Users, X } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, IdCard, LogOut, Menu, MessageSquareText, Settings, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
@@ -338,6 +338,12 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
                   {auth.pending_approvals_count}
                 </span>
               )}
+            </Link>
+          )}
+          {canAdmin && (
+            <Link className={navItemClass('/support-tickets', isCollapsed)} href="/support-tickets" title={isCollapsed ? "Support Tickets" : undefined}>
+              <MessageSquareText size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Support Tickets</span>}
             </Link>
           )}
           {canAdmin && (

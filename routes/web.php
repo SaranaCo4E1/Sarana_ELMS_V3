@@ -68,6 +68,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:hr admin,admin')->group(function () {
         Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+        Route::get('/support-tickets', [SupportController::class, 'tickets'])->name('support.tickets');
         Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
         Route::post('/admin/leave-types', [AdminController::class, 'storeLeaveType'])->name('admin.leave-types.store');
         Route::post('/admin/holidays', [AdminController::class, 'storeHoliday'])->name('admin.holidays.store');

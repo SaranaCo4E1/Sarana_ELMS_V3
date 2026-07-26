@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Bot, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import type { PageProps } from '../../types';
 
 export default function ForgotPassword() {
@@ -18,9 +18,13 @@ export default function ForgotPassword() {
         <div className="rounded-xl border border-neutral-200/50 bg-white p-8 shadow-premium-md">
           {/* Header & Logo */}
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-600 text-white shadow-md shadow-orange-600/10 mb-4">
-              <Bot size={22} className="text-white" />
-            </div>
+            <Link
+              href="/"
+              aria-label="Go to NiyAI ELMS home page"
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-orange-100 bg-white shadow-md shadow-orange-600/10 transition-all hover:border-orange-200 hover:shadow-premium-md active:scale-95"
+            >
+              <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-9" />
+            </Link>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-800">Reset Password</h1>
             <p className="mt-2 text-sm font-medium text-neutral-500 leading-relaxed">
               Enter your email address and we will send you a secure link to reset your account password.
@@ -99,4 +103,3 @@ export default function ForgotPassword() {
     </main>
   );
 }
-

@@ -20,6 +20,27 @@ class SupportController extends Controller
     }
 
     /**
+     * Show submitted support tickets to HR administrators.
+     */
+    public function tickets(): Response
+    {
+        $tickets = SupportMessage::query()
+            ->with('user:id,name,email')
+            ->latest()
+            ->get();
+
+        return Inertia::render('SupportTickets', [
+            'tickets' => $tickets,
+            'stats' => [
+                'total' => $tickets->count(),
+                'today' => $tickets->where('created_at', '>=', now()->startOfDay())->count(),
+                'registered' => $tickets->whereNotNull('user_id')->count(),
+                'guest' => $tickets->whereNull('user_id')->count(),
+            ],
+        ]);
+    }
+
+    /**
      * Persist a new support desk submission.
      */
     public function store(Request $request): RedirectResponse

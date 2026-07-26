@@ -14,7 +14,8 @@ import {
   Users,
   Compass,
   ArrowUpRight,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 import type { PageProps } from '../types';
 
@@ -25,6 +26,7 @@ export default function Landing() {
   // Interactive dashboard mock state
   const [activeTab, setActiveTab] = useState<'staff' | 'manager'>('staff');
   const [mockRequestApproved, setMockRequestApproved] = useState(false);
+  const [showRejectNotice, setShowRejectNotice] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
   const [chatStep, setChatStep] = useState<'initial' | 'draft' | 'submitted'>('initial');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -99,10 +101,6 @@ export default function Landing() {
             <a href="#features" className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">Features</a>
             <a href="#preview" className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">Interactive Demo</a>
             <a href="#faq" className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">Policies & FAQ</a>
-            <div className="flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-medium text-orange-700 border border-orange-100/60 shadow-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-              Platform Active
-            </div>
           </nav>
 
           {/* Dynamic CTA */}
@@ -475,10 +473,6 @@ export default function Landing() {
                 </button>
               </div>
 
-              <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider flex items-center gap-1.5 w-full sm:w-auto justify-center sm:justify-start">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-ping" />
-                Live simulator
-              </div>
             </div>
 
             {/* TAB CONTENTS */}
@@ -575,6 +569,7 @@ export default function Landing() {
                       <button
                         onClick={() => {
                           setMockRequestApproved(false);
+                          setShowRejectNotice(false);
                           setActiveTab('staff');
                           setChatStep('initial');
                         }}
@@ -611,21 +606,49 @@ export default function Landing() {
 
                         <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
                           <button
-                            onClick={() => setMockRequestApproved(true)}
+                            onClick={() => {
+                              setShowRejectNotice(false);
+                              setMockRequestApproved(true);
+                            }}
                             className="rounded-md bg-orange-600 hover:bg-orange-700 px-3.5 py-2 text-[11px] font-medium text-white shadow-premium-sm select-none active:scale-97 transition-all"
                           >
                             Approve
                           </button>
                           <button
-                            onClick={() => {
-                              alert("In the live platform, this rejects the leave request and triggers a comment prompt.");
-                            }}
+                            onClick={() => setShowRejectNotice(true)}
                             className="rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 px-3.5 py-2 text-[11px] font-medium text-neutral-600 shadow-premium-sm"
                           >
                             Reject
                           </button>
                         </div>
                       </div>
+
+                      {showRejectNotice && (
+                        <div
+                          role="status"
+                          className="flex items-start justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50/70 p-3.5 text-rose-900 shadow-premium-sm animate-fade-in"
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-rose-600 shadow-xs">
+                              <ShieldAlert size={14} />
+                            </div>
+                            <div>
+                              <div className="text-xs font-medium">A rejection comment is required</div>
+                              <p className="mt-1 text-[11px] font-normal leading-relaxed text-rose-700">
+                                In the live platform, rejecting this request opens a comment prompt before notifying the employee.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowRejectNotice(false)}
+                            aria-label="Dismiss rejection notice"
+                            className="rounded-md p-1 text-rose-500 hover:bg-rose-100 hover:text-rose-700 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
