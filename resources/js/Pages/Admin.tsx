@@ -3,6 +3,7 @@ import { AlertCircle, Building2, Calculator, CalendarDays, CheckCircle2, Clipboa
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Select from 'react-select';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveType, PageProps, User } from '../types';
 import { formatDays, formatDate, formatRole } from '../utils';
@@ -18,8 +19,10 @@ type AuditLog = {
   created_at: string;
   actor?: User | null;
   subject?: any | null;
+  metadata?: Record<string, unknown> | null;
 };
 type Stats = { active_users: number; inactive_users: number; pending_requests: number; approved_this_month: number; departments: number; leave_types: number };
+type EmployeeOption = { value: string; label: string };
 type AdminModal =
   | { type: 'user'; mode: 'create' | 'edit'; record?: User }
   | { type: 'department'; mode: 'create' | 'edit'; record?: Department }
@@ -155,8 +158,9 @@ function formatAuditLog(log: AuditLog) {
       {
         const userBalName = log.subject?.user?.name || 'Unknown User';
         const leaveTypeName = log.subject?.leave_type?.name || 'Leave Type';
-        const allowance = log.subject?.allowance_days ?? '0';
-        description = `Overrode ${leaveTypeName} balance for ${userBalName} to ${allowance} days`;
+        const delta = Number(log.metadata?.delta_days ?? 0);
+        const formattedDelta = delta > 0 ? `+${formatDays(delta)}` : formatDays(delta);
+        description = `Adjusted ${leaveTypeName} balance for ${userBalName} by ${formattedDelta} days`;
         iconType = 'balance';
       }
       break;
@@ -301,7 +305,13 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
   const [leaveTypeForm, setLeaveTypeForm] = useState(emptyLeaveTypeForm);
   const [holidayForm, setHolidayForm] = useState(emptyHolidayForm);
   const [userForm, setUserForm] = useState(emptyUserForm);
-  const [balanceForm, setBalanceForm] = useState({ user_id: '', leave_type_id: '', year: new Date().getFullYear(), allowance_days: 0, adjustment_days: 0, override_reason: '' });
+  const currentYear = new Date().getFullYear();
+  const [balanceForm, setBalanceForm] = useState<{ user_id: string; leave_type_id: string; delta_days: number | ''; override_reason: string }>({
+    user_id: '',
+    leave_type_id: '',
+    delta_days: '',
+    override_reason: '',
+  });
 
   const selectedUser = useMemo(() => {
     return users.find(u => String(u.id) === String(balanceForm.user_id));
@@ -314,9 +324,9 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
   const currentBalance = useMemo(() => {
     if (!selectedUser || !selectedLeaveType) return null;
     return selectedUser.leaveBalances?.find(
-      b => String(b.leave_type_id) === String(selectedLeaveType.id) && Number(b.year) === Number(balanceForm.year)
+      b => String(b.leave_type_id) === String(selectedLeaveType.id) && Number(b.year) === currentYear
     ) || null;
-  }, [selectedUser, selectedLeaveType, balanceForm.year]);
+  }, [selectedUser, selectedLeaveType, currentYear]);
 
   const currentDetails = useMemo(() => {
     const defaultAllowance = selectedLeaveType ? Number(selectedLeaveType.default_allowance_days) : 0;
@@ -327,69 +337,23 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
       const adjustment = Number(currentBalance.adjustment_days || 0);
       const used = Number(currentBalance.used_days || 0);
       const pending = Number(currentBalance.pending_days || 0);
-      const available = allowance + carried + adjustment - used - pending;
       
-      return {
-        allowance,
-        carried,
-        adjustment,
-        used,
-        pending,
-        available,
-        isCustomAllowance: allowance !== defaultAllowance,
-        hasOverride: true
-      };
+      return { available: allowance + carried + adjustment - used - pending };
     }
     
-    return {
-      allowance: defaultAllowance,
-      carried: 0,
-      adjustment: 0,
-      used: 0,
-      pending: 0,
-      available: defaultAllowance,
-      isCustomAllowance: false,
-      hasOverride: false
-    };
+    return { available: defaultAllowance };
   }, [selectedLeaveType, currentBalance]);
 
   const projectedAvailable = useMemo(() => {
-    const allowance = Number(balanceForm.allowance_days || 0);
-    const adjustment = Number(balanceForm.adjustment_days || 0);
-    const carried = currentDetails.carried;
-    const used = currentDetails.used;
-    const pending = currentDetails.pending;
-    return allowance + carried + adjustment - used - pending;
-  }, [balanceForm.allowance_days, balanceForm.adjustment_days, currentDetails]);
+    return currentDetails.available + Number(balanceForm.delta_days || 0);
+  }, [balanceForm.delta_days, currentDetails.available]);
 
-  const handleBalanceSelectionChange = (updates: Partial<typeof balanceForm>) => {
-    const nextForm = { ...balanceForm, ...updates };
-    
-    const userId = nextForm.user_id;
-    const leaveTypeId = nextForm.leave_type_id;
-    const year = Number(nextForm.year);
-    
-    if (userId && leaveTypeId) {
-      const u = users.find(user => String(user.id) === String(userId));
-      const t = leaveTypes.find(type => String(type.id) === String(leaveTypeId));
-      
-      const balance = u?.leaveBalances?.find(
-        b => String(b.leave_type_id) === String(leaveTypeId) && Number(b.year) === year
-      );
-      
-      if (balance) {
-        nextForm.allowance_days = Number(balance.allowance_days);
-        nextForm.adjustment_days = Number(balance.adjustment_days);
-        nextForm.override_reason = balance.override_reason ?? '';
-      } else if (t) {
-        nextForm.allowance_days = Number(t.default_allowance_days);
-        nextForm.adjustment_days = 0;
-        nextForm.override_reason = '';
-      }
-    }
-    
-    setBalanceForm(nextForm as typeof balanceForm);
-  };
+  const isBalanceFormReady = Boolean(
+    balanceForm.user_id
+    && balanceForm.leave_type_id
+    && Number(balanceForm.delta_days) !== 0
+    && balanceForm.override_reason.trim()
+  );
 
   const closeModal = () => {
     setIsModalClosing(true);
@@ -554,15 +518,10 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
     return matchesStatus && matchesYear && haystack.includes(holidayQuery.toLowerCase());
   }), [holidayQuery, holidayStatusFilter, holidayYearFilter, holidays]);
 
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-
-  const balanceUsers = useMemo(() => {
-    return users.filter((u) => {
-      if (!userSearchQuery) return true;
-      const haystack = `${u.name} ${u.email} ${u.employee_code ?? ''}`.toLowerCase();
-      return haystack.includes(userSearchQuery.toLowerCase());
-    });
-  }, [userSearchQuery, users]);
+  const employeeOptions = useMemo<EmployeeOption[]>(() => users.map((user) => ({
+    value: String(user.id),
+    label: `${user.name} (${user.employee_code ?? user.email})`,
+  })), [users]);
 
   const [auditQuery, setAuditQuery] = useState('');
   const [auditPage, setAuditPage] = useState(1);
@@ -643,7 +602,6 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
     setHolidayQuery('');
     setHolidayStatusFilter('all');
     setHolidayYearFilter('all');
-    setUserSearchQuery('');
     setAuditQuery('');
   };
 
@@ -1042,7 +1000,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   </div>
                   <div>
                     <h3 className="text-base font-medium text-neutral-800">Balance Override</h3>
-                    <p className="text-sm text-neutral-500 font-medium mt-1">Directly adjust or set quota values for specific staff members</p>
+                    <p className="text-sm text-neutral-500 font-medium mt-1">Add or subtract days from an employee's current {currentYear} balance</p>
                   </div>
                 </div>
                 
@@ -1050,76 +1008,77 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   className="space-y-5"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    if (!isBalanceFormReady) return;
+
                     router.post('/admin/balances', balanceForm, {
                       preserveScroll: true,
                       onStart: () => setIsSubmittingBalance(true),
                       onFinish: () => setIsSubmittingBalance(false),
-                      onSuccess: () => setBalanceForm({ user_id: '', leave_type_id: '', year: new Date().getFullYear(), allowance_days: 0, adjustment_days: 0, override_reason: '' })
+                      onSuccess: () => setBalanceForm({ user_id: '', leave_type_id: '', delta_days: '', override_reason: '' })
                     });
                   }}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
                       Select Employee
-                      <div className="mt-1.5 relative">
-                        <Search className="absolute left-3.5 top-3 text-neutral-400" size={13} />
-                        <input
-                          type="text"
-                          className="w-full rounded-lg border border-neutral-200/70 bg-white pl-9 pr-3.5 py-2.5 text-sm text-neutral-700 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium mb-2"
-                          placeholder="Type to filter employees..."
-                          value={userSearchQuery}
-                          onChange={(e) => setUserSearchQuery(e.target.value)}
-                        />
-                      </div>
-                      <select 
-                        className="w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" 
-                        value={balanceForm.user_id} 
-                        onChange={(e) => handleBalanceSelectionChange({ user_id: e.target.value })} 
-                        required
-                      >
-                        <option value="">Choose User</option>
-                        {balanceUsers.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.employee_code ?? 'No Code'})</option>)}
-                      </select>
+                      <Select<EmployeeOption>
+                        inputId="balance-employee"
+                        className="mt-1.5 normal-case tracking-normal"
+                        unstyled
+                        isClearable
+                        options={employeeOptions}
+                        placeholder="Search by name, code, or email..."
+                        value={employeeOptions.find((option) => option.value === balanceForm.user_id) ?? null}
+                        onChange={(option) => setBalanceForm({ ...balanceForm, user_id: option?.value ?? '' })}
+                        classNames={{
+                          control: ({ isFocused }) => `h-12 rounded-lg border bg-white px-3.5 text-sm shadow-premium-sm transition-all ${isFocused ? 'border-orange-600 ring-4 ring-orange-500/5' : 'border-neutral-200/70'}`,
+                          valueContainer: () => 'gap-1 py-1',
+                          placeholder: () => 'text-neutral-400 font-medium',
+                          singleValue: () => 'text-neutral-800 font-medium',
+                          input: () => 'text-neutral-800',
+                          indicatorsContainer: () => 'gap-1 text-neutral-400',
+                          indicatorSeparator: () => 'bg-neutral-200',
+                          dropdownIndicator: () => 'p-1',
+                          clearIndicator: () => 'p-1 hover:text-neutral-700',
+                          menu: () => 'z-50 mt-1 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-premium-lg',
+                          menuList: () => 'max-h-64 p-1',
+                          option: ({ isFocused, isSelected }) => `cursor-pointer rounded-md px-3 py-2.5 text-sm font-medium ${isSelected ? 'bg-orange-600 text-white' : isFocused ? 'bg-orange-50 text-orange-900' : 'text-neutral-700'}`,
+                          noOptionsMessage: () => 'px-3 py-4 text-sm text-neutral-400',
+                        }}
+                      />
+                      {errors.user_id && <span className="mt-1 block text-xs font-medium normal-case tracking-normal text-red-600">{errors.user_id}</span>}
                     </label>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
                       Leave Type
                       <select 
-                        className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer" 
+                        className="mt-1.5 h-12 w-full rounded-lg border border-neutral-200/70 bg-white px-4 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium cursor-pointer"
                         value={balanceForm.leave_type_id} 
-                        onChange={(e) => handleBalanceSelectionChange({ leave_type_id: e.target.value })} 
+                        onChange={(e) => setBalanceForm({ ...balanceForm, leave_type_id: e.target.value })}
                         required
                       >
                         <option value="">Choose Type</option>
                         {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
+                      {errors.leave_type_id && <span className="mt-1 block text-xs font-medium normal-case tracking-normal text-red-600">{errors.leave_type_id}</span>}
                     </label>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Calendar Year
-                      <input 
-                        className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" 
-                        type="number" 
-                        value={balanceForm.year} 
-                        onChange={(e) => handleBalanceSelectionChange({ year: Number(e.target.value) })} 
-                        required 
-                      />
-                    </label>
-
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Manual Balance Adjustment (Days)
-                      <span className="block text-[10px] text-neutral-400 normal-case font-normal mt-0.5">Add (+) or subtract (-) days from quota</span>
-                      <input 
-                        className="mt-1 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium" 
-                        type="number" 
-                        step="0.5" 
-                        placeholder="e.g. +2.0 or -1.5" 
-                        value={balanceForm.adjustment_days} 
-                        onChange={(e) => setBalanceForm({ ...balanceForm, adjustment_days: Number(e.target.value) })} 
-                      />
-                    </label>
-                  </div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                    Change Balance By (Days)
+                    <span className="block text-[10px] text-neutral-400 normal-case font-normal mt-0.5">Use a positive number to add days or a negative number to subtract them</span>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 placeholder-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 shadow-premium-sm transition-all outline-none font-medium"
+                      type="number"
+                      step="0.5"
+                      min="-366"
+                      max="366"
+                      placeholder="e.g. 2 or -1.5"
+                      value={balanceForm.delta_days}
+                      onChange={(e) => setBalanceForm({ ...balanceForm, delta_days: e.target.value === '' ? '' : Number(e.target.value) })}
+                      required
+                    />
+                    {errors.delta_days && <span className="mt-1 block text-xs font-medium normal-case tracking-normal text-red-600">{errors.delta_days}</span>}
+                  </label>
 
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Override Reason & Audit Note
@@ -1130,10 +1089,11 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                       onChange={(e) => setBalanceForm({ ...balanceForm, override_reason: e.target.value })} 
                       required 
                     />
+                    {errors.override_reason && <span className="mt-1 block text-xs font-medium normal-case tracking-normal text-red-600">{errors.override_reason}</span>}
                   </label>
 
                   <div className="pt-2">
-                    <Submit label="Apply Balance Override" processing={isSubmittingBalance} />
+                    <Submit label="Apply Balance Change" processing={isSubmittingBalance} disabled={!isBalanceFormReady} />
                   </div>
                 </form>
               </div>
@@ -1147,7 +1107,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                         <Clock size={14} className="text-orange-600" /> Current Balance Status
                       </h4>
                       <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-2xs font-semibold uppercase tracking-wider text-neutral-600">
-                        {balanceForm.year}
+                        {currentYear}
                       </span>
                     </div>
 
@@ -1161,47 +1121,9 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                         <span className="font-semibold text-neutral-800">{selectedLeaveType.name}</span>
                       </div>
 
-                      <div className="border-t border-dashed border-neutral-100 my-2 pt-3 space-y-2.5">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Base Annual Quota:</span>
-                          <div className="flex items-center gap-1.5 font-semibold text-neutral-800">
-                            <span>{currentDetails.allowance} days</span>
-                            {currentDetails.isCustomAllowance ? (
-                              <span className="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/10">Overridden</span>
-                            ) : (
-                              <span className="inline-flex items-center rounded bg-neutral-50 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600 ring-1 ring-inset ring-neutral-500/10">Standard</span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Carried Forward:</span>
-                          <span className="font-semibold text-neutral-700">{currentDetails.carried} days</span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Active Adjustment:</span>
-                          <span className="font-semibold text-neutral-700">
-                            {currentDetails.adjustment > 0 ? `+${currentDetails.adjustment}` : currentDetails.adjustment} days
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Used / Taken:</span>
-                          <span className="font-semibold text-neutral-700">{currentDetails.used} days</span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Pending Approval:</span>
-                          <span className="font-semibold text-neutral-700">{currentDetails.pending} days</span>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-neutral-100 pt-3 flex justify-between items-center">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Current Available:</span>
-                        <span className="text-base font-bold text-neutral-800 bg-neutral-50 px-2.5 py-1.5 rounded-lg border border-neutral-200">
-                          {currentDetails.available} days
-                        </span>
+                      <div className="border-t border-neutral-100 pt-4 text-center">
+                        <div className="text-2xs font-bold uppercase tracking-wider text-neutral-400">Current Available Balance</div>
+                        <div className="mt-2 text-3xl font-bold text-neutral-800">{formatDays(currentDetails.available)} days</div>
                       </div>
                     </div>
                   </div>
@@ -1209,45 +1131,30 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                   {/* Projection Visualizer */}
                   <div className="rounded-xl border border-orange-100 bg-orange-50/[0.04] p-5 shadow-premium-sm space-y-4 animate-fade-in">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-orange-850 flex items-center gap-1.5">
-                      <Calculator size={14} className="text-orange-600" /> Real-time Projected Balance
+                      <Calculator size={14} className="text-orange-600" /> Updated Balance
                     </h4>
 
                     <div className="bg-white rounded-lg p-4 border border-orange-100/50 space-y-3 shadow-premium-xs">
-                      <div className="text-2xs font-bold uppercase tracking-wider text-neutral-400">Formula Calculation</div>
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-600 font-semibold leading-relaxed">
-                        <span className="bg-neutral-50 text-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200" title="New Base Quota">
-                          {balanceForm.allowance_days}
-                        </span>
-                        <span className="text-neutral-400 font-normal">+</span>
-                        <span className="text-neutral-700" title="Carried Forward">
-                          {currentDetails.carried}
-                        </span>
-                        <span className="text-neutral-400 font-normal">+</span>
-                        <span className="bg-neutral-50 text-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200" title="New Adjustment">
-                          {balanceForm.adjustment_days >= 0 ? `+${balanceForm.adjustment_days}` : balanceForm.adjustment_days}
-                        </span>
-                        <span className="text-neutral-400 font-normal">-</span>
-                        <span className="text-neutral-700" title="Used Days">
-                          {currentDetails.used}
-                        </span>
-                        <span className="text-neutral-400 font-normal">-</span>
-                        <span className="text-neutral-700" title="Pending Days">
-                          {currentDetails.pending}
-                        </span>
+                      <div className="flex items-center justify-center gap-2 text-sm font-semibold text-neutral-700">
+                        <span>{formatDays(currentDetails.available)}</span>
+                        <span className="text-neutral-400">{Number(balanceForm.delta_days || 0) >= 0 ? '+' : '−'}</span>
+                        <span>{formatDays(Math.abs(Number(balanceForm.delta_days || 0)))}</span>
+                        <span className="text-neutral-400">=</span>
+                        <span className="text-orange-700">{formatDays(projectedAvailable)} days</span>
                       </div>
 
                       <div className="border-t border-dashed border-neutral-100 pt-3.5 flex justify-between items-center">
-                        <span className="text-xs font-semibold text-neutral-600">Projected Available Balance:</span>
+                        <span className="text-xs font-semibold text-neutral-600">Updated Balance:</span>
                         <span className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500/10 px-3 py-1.5 text-sm font-bold text-orange-700 border border-orange-500/10 transition-all duration-200">
                           <CheckCircle2 size={14} className="text-orange-600" />
-                          {projectedAvailable} days
+                          {formatDays(projectedAvailable)} days
                         </span>
                       </div>
                     </div>
 
                     <div className="text-2xs text-neutral-400 font-medium leading-relaxed flex gap-2">
                       <AlertCircle size={14} className="text-neutral-400 shrink-0 mt-0.5" />
-                      <span>Saving this override will commit this balance breakdown as the official audit record for {balanceForm.year}.</span>
+                      <span>This change applies to the employee's {currentYear} balance and is recorded in the audit log.</span>
                     </div>
                   </div>
                 </div>
@@ -1804,11 +1711,11 @@ function Metric({ label, value, variant }: { label: string; value: number; varia
   );
 }
 
-function Submit({ label, processing = false }: { label: string; processing?: boolean }) {
+function Submit({ label, processing = false, disabled = false }: { label: string; processing?: boolean; disabled?: boolean }) {
   return (
     <button
       type="submit"
-      disabled={processing}
+      disabled={processing || disabled}
       className="w-full inline-flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-3.5 text-sm font-medium uppercase tracking-wide text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all duration-200 cursor-pointer"
     >
       {processing ? (

@@ -75,10 +75,11 @@ class AuditLog extends Model
             case 'admin.balance.overridden':
                 $leaveTypeName = $subject?->leaveType?->name ?? 'Leave Type';
                 $userBalName = $subject?->user?->name ?? 'Unknown User';
-                $allowance = $subject?->allowance_days ?? '0';
-                $allowanceFormatted = (float) $allowance == (int) $allowance ? (int) $allowance : (float) $allowance;
+                $delta = (float) ($this->metadata['delta_days'] ?? 0);
+                $deltaFormatted = $delta == (int) $delta ? (int) $delta : $delta;
+                $signedDelta = $delta > 0 ? "+{$deltaFormatted}" : (string) $deltaFormatted;
 
-                return "Overrode {$leaveTypeName} balance for {$userBalName} to {$allowanceFormatted} days";
+                return "Adjusted {$leaveTypeName} balance for {$userBalName} by {$signedDelta} days";
 
                 // Leave Requests
             case 'leave.request.submitted':

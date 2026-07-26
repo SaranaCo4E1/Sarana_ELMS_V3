@@ -203,17 +203,32 @@ class AdminController extends Controller
         $data = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
             'leave_type_id' => ['required', 'exists:leave_types,id'],
-            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
-            'allowance_days' => ['required', 'numeric', 'min:0', 'max:366'],
-            'adjustment_days' => ['required', 'numeric', 'min:-366', 'max:366'],
+            'delta_days' => ['required', 'numeric', 'min:-366', 'max:366', 'not_in:0'],
             'override_reason' => ['required', 'string', 'max:1000'],
         ]);
 
-        $balance = LeaveBalance::query()->updateOrCreate(
-            ['user_id' => $data['user_id'], 'leave_type_id' => $data['leave_type_id'], 'year' => $data['year']],
-            $data
-        );
-        Audit::record($request, 'admin.balance.overridden', $balance);
+        $currentYear = now()->year;
+
+        DB::transaction(function () use ($currentYear, $data, $request) {
+            $leaveType = LeaveType::query()->findOrFail($data['leave_type_id']);
+            $balance = LeaveBalance::query()->firstOrCreate(
+                ['user_id' => $data['user_id'], 'leave_type_id' => $leaveType->id, 'year' => $currentYear],
+                ['allowance_days' => $leaveType->default_allowance_days]
+            );
+            $balance = LeaveBalance::query()->lockForUpdate()->findOrFail($balance->id);
+            $previousAvailableDays = $balance->available_days;
+            $balance->adjustment_days = (float) $balance->adjustment_days + (float) $data['delta_days'];
+            $balance->override_reason = $data['override_reason'];
+            $balance->save();
+
+            Audit::record($request, 'admin.balance.overridden', $balance, [
+                'delta_days' => (float) $data['delta_days'],
+                'year' => $currentYear,
+                'previous_available_days' => $previousAvailableDays,
+                'new_available_days' => $balance->available_days,
+                'reason' => $data['override_reason'],
+            ]);
+        });
 
         return back()->with('success', 'Leave balance updated.');
     }
