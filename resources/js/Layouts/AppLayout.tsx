@@ -3,7 +3,7 @@ import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, Chev
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
-import { canAdminRole, canApproveRole, formatRole } from '../utils';
+import { canAdminRole, canApproveRole, formatRole, formatShortDate } from '../utils';
 
 export default function AppLayout({ children, fullHeight }: { children: React.ReactNode; fullHeight?: boolean }) {
   const { auth, flash, notifications } = usePage<PageProps>().props;
@@ -233,7 +233,7 @@ function formatRelativeDate(value: string) {
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
 
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatShortDate(date);
 }
 
 interface NavContentProps {

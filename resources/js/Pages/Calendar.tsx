@@ -627,7 +627,15 @@ function dateKey(date: Date) {
 }
 
 function formatSelectedDay(value: string) {
-  return parseDateKey(value).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const date = parseDateKey(value);
+  const currentYear = new Date().getFullYear();
+  const includeYear = date.getFullYear() !== currentYear;
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
+  });
 }
 
 function toDateKey(value: string) {

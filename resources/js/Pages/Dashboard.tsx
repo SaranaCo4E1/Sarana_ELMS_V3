@@ -290,6 +290,7 @@ export default function Dashboard({
                     <div className="truncate font-medium text-neutral-800 group-hover:text-orange-600 transition-colors">{holiday.name}</div>
                     <div className="text-[10px] font-medium text-neutral-400 mt-0.5">
                       {new Date(holiday.holiday_date).toLocaleDateString(undefined, { weekday: 'long' })}
+                      {new Date(holiday.holiday_date).getFullYear() !== new Date().getFullYear() ? `, ${new Date(holiday.holiday_date).getFullYear()}` : ''}
                     </div>
                   </div>
                 </Link>
