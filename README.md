@@ -70,6 +70,10 @@ Default seeded accounts all use password `testing123`:
 - `hr.staff@niy.ai`
 - `it.engineer@niy.ai`
 - `it.support@niy.ai`
+- `sreynimsamuser@gmail.com`
+- `samuelsinat11@gmail.com`
+- `hakkimhengg@gmail.com`
+- `sean.sophearom77@gmail.com`
 - `sales.rep@niy.ai`
 - `sales.ops@niy.ai`
 

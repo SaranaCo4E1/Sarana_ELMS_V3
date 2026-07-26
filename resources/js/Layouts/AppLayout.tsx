@@ -246,6 +246,7 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
   const user = auth.user;
   const canApprove = canApproveRole(user.role);
   const canAdmin = canAdminRole(user.role);
+  const canViewSupportTickets = user.role === 'admin';
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -340,7 +341,7 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
               )}
             </Link>
           )}
-          {canAdmin && (
+          {canViewSupportTickets && (
             <Link className={navItemClass('/support-tickets', isCollapsed)} href="/support-tickets" title={isCollapsed ? "Support Tickets" : undefined}>
               <MessageSquareText size={16} className="shrink-0" />
               {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Support Tickets</span>}

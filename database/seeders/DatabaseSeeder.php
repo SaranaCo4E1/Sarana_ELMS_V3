@@ -146,6 +146,58 @@ class DatabaseSeeder extends Seeder
                 'hire_date' => $today->copy()->subMonths(10),
                 'legacy_emails' => [],
             ],
+            'it_sreynim' => [
+                'name' => 'Sam Sreynim',
+                'email' => 'sreynimsamuser@gmail.com',
+                'role' => 'staff',
+                'department' => 'IT',
+                'manager' => null,
+                'employee_code' => 'IT-103',
+                'job_title' => 'IT Staff',
+                'phone' => '086 234 511',
+                'emergency_contact_phone' => '090 234 911',
+                'hire_date' => $today,
+                'legacy_emails' => [],
+            ],
+            'it_sinat' => [
+                'name' => 'Sinat Samuel',
+                'email' => 'samuelsinat11@gmail.com',
+                'role' => 'staff',
+                'department' => 'IT',
+                'manager' => null,
+                'employee_code' => 'IT-104',
+                'job_title' => 'IT Staff',
+                'phone' => '089 234 512',
+                'emergency_contact_phone' => '060 234 912',
+                'hire_date' => $today,
+                'legacy_emails' => [],
+            ],
+            'it_kimheng' => [
+                'name' => 'Hak Kimheng',
+                'email' => 'hakkimhengg@gmail.com',
+                'role' => 'staff',
+                'department' => 'IT',
+                'manager' => null,
+                'employee_code' => 'IT-105',
+                'job_title' => 'IT Staff',
+                'phone' => '066 234 513',
+                'emergency_contact_phone' => '067 234 913',
+                'hire_date' => $today,
+                'legacy_emails' => [],
+            ],
+            'it_sophearom' => [
+                'name' => 'Sean Sophearom',
+                'email' => 'sean.sophearom77@gmail.com',
+                'role' => 'staff',
+                'department' => 'IT',
+                'manager' => null,
+                'employee_code' => 'IT-106',
+                'job_title' => 'IT Staff',
+                'phone' => '068 234 514',
+                'emergency_contact_phone' => '077 234 914',
+                'hire_date' => $today,
+                'legacy_emails' => [],
+            ],
             'sales_rep' => [
                 'name' => 'Vicheka Nhim',
                 'email' => 'sales.rep@niy.ai',
@@ -197,6 +249,10 @@ class DatabaseSeeder extends Seeder
         $users['hr_specialist']->update(['manager_id' => $users['hr_manager']->id]);
         $users['it_engineer']->update(['manager_id' => $users['it_manager']->id]);
         $users['it_support']->update(['manager_id' => $users['it_manager']->id]);
+        $users['it_sreynim']->update(['manager_id' => $users['it_manager']->id]);
+        $users['it_sinat']->update(['manager_id' => $users['it_manager']->id]);
+        $users['it_kimheng']->update(['manager_id' => $users['it_manager']->id]);
+        $users['it_sophearom']->update(['manager_id' => $users['it_manager']->id]);
         $users['sales_rep']->update(['manager_id' => $users['sales_manager']->id]);
         $users['sales_ops']->update(['manager_id' => $users['sales_manager']->id]);
 
@@ -238,25 +294,25 @@ class DatabaseSeeder extends Seeder
 
         // Relative offsets keep demo requests useful whenever the seeder runs.
         $requests = [
-            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Family ceremony in Kampong Cham.'],
-            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'Flu recovery and clinic visit.'],
-            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Short break after payroll rollout.'],
-            [$users['sales_ops'], 'unpaid', -161, -160, 'approved', $users['sales_manager'], 'Personal paperwork appointment.'],
-            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Travel to visit family in Siem Reap.'],
-            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Medical appointment and rest.'],
-            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Personal recharge after policy review.'],
-            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Planned vacation after release milestone.'],
-            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Clinic follow-up appointment.'],
-            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip planned before the sprint handoff.'],
-            [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and clinic visit.'],
-            [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Personal appointment and travel time.'],
-            [$users['sales_ops'], 'unpaid', -1, -1, 'rejected', $users['sales_manager'], 'Unpaid personal errand requested at short notice.'],
-            [$users['hr_specialist'], 'annual', 2, 4, 'pending', $users['hr_manager'], 'Short break after onboarding cycle.'],
-            [$users['it_support'], 'annual', 6, 8, 'pending', $users['it_manager'], 'Planned long weekend with family.'],
-            [$users['sales_rep'], 'sick', 1, 1, 'pending', $users['sales_manager'], 'Medical checkup follow-up.'],
-            [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Regional sales planning retreat.'],
-            [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Doctor advised rest.'],
-            [$ceo, 'annual', 20, 21, 'pending', null, 'Board travel buffer.'],
+            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Travelling to Kampong Cham for my cousin wedding.'],
+            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'High fever and body aches, clinic advised me rest two days.'],
+            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Spending few days with my parents while they visiting Phnom Penh.'],
+            [$users['sales_ops'], 'unpaid', -161, -160, 'approved', $users['sales_manager'], 'Need handle family land transfer at district office.'],
+            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Visiting my grandparents in Siem Reap for a few days.'],
+            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Have dental procedure and need some recovery time after.'],
+            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Taking short family trip we planned few months ago.'],
+            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Taking trip with friends that already booked before release.'],
+            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Migraine came back and have clinic appointement this afternoon.'],
+            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday.'],
+            [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and sore throat since last night.'],
+            [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Need accompany my mother for specialist appointment.'],
+            [$users['sales_ops'], 'unpaid', -1, -1, 'rejected', $users['sales_manager'], 'Urgent bank issue, need go resolve it in person.'],
+            [$users['hr_specialist'], 'annual', 2, 4, 'pending', $users['hr_manager'], 'Going to close friend wedding in Kep.'],
+            [$users['it_support'], 'annual', 6, 8, 'pending', $users['it_manager'], 'Taking my parents to Kampot for short family break.'],
+            [$users['sales_rep'], 'sick', 1, 1, 'pending', $users['sales_manager'], 'Follow up appointment for stomach pain still not better.'],
+            [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Family holiday already booked before current sales cycle.'],
+            [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Respiratory infection, doctor advised to rest two days.'],
+            [$ceo, 'annual', 20, 21, 'pending', null, 'Short personal trip Singapore before next leadership meeting.'],
         ];
 
         // Create matching in-app notifications so demo accounts show realistic unread state.

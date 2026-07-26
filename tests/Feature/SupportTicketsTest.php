@@ -12,9 +12,9 @@ class SupportTicketsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_hr_admin_can_view_submitted_support_tickets(): void
+    public function test_admin_can_view_submitted_support_tickets(): void
     {
-        $hrAdmin = User::factory()->create(['role' => 'hr admin']);
+        $admin = User::factory()->create(['role' => 'admin']);
         $submitter = User::factory()->create();
 
         SupportMessage::query()->create([
@@ -26,7 +26,7 @@ class SupportTicketsTest extends TestCase
         ]);
 
         $this
-            ->actingAs($hrAdmin)
+            ->actingAs($admin)
             ->get(route('support.tickets'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -36,6 +36,16 @@ class SupportTicketsTest extends TestCase
                 ->where('stats.total', 1)
                 ->where('stats.registered', 1)
             );
+    }
+
+    public function test_hr_admin_cannot_view_support_tickets(): void
+    {
+        $hrAdmin = User::factory()->create(['role' => 'hr admin']);
+
+        $this
+            ->actingAs($hrAdmin)
+            ->get(route('support.tickets'))
+            ->assertForbidden();
     }
 
     public function test_staff_cannot_view_support_tickets(): void

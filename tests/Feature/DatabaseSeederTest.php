@@ -16,6 +16,15 @@ class DatabaseSeederTest extends TestCase
         $this->assertStringNotContainsString('Seeded employee profile', $source);
         $this->assertStringNotContainsString('seeded demo data', $source);
 
+        foreach ([
+            'sreynimsamuser@gmail.com',
+            'samuelsinat11@gmail.com',
+            'hakkimhengg@gmail.com',
+            'sean.sophearom77@gmail.com',
+        ] as $staffEmail) {
+            $this->assertStringContainsString("'email' => '{$staffEmail}'", $source);
+        }
+
         preg_match_all("/'(?:phone|emergency_contact_phone)' => '([^']+)'/", $source, $phoneMatches);
         $this->assertGreaterThanOrEqual(20, count($phoneMatches[1]));
 
