@@ -51,6 +51,11 @@ export default function Dashboard({
     return matchesStatus && haystack.includes(query.toLowerCase());
   });
 
+  const scrollToRequests = (status: string) => {
+    setStatusFilter(status);
+    document.getElementById('recent-requests')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <AppLayout>
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -58,10 +63,34 @@ export default function Dashboard({
         <section className="space-y-6">
           {/* Metrics section */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-            <Metric icon={<Clock3 size={15} />} label="Pending" value={requestStats.pending} variant="amber" />
-            <Metric icon={<CheckCircle2 size={15} />} label="Approved" value={requestStats.approved} variant="green" />
-            <Metric icon={<AlertCircle size={15} />} label="Rejected" value={requestStats.rejected} variant="rose" />
-            <Metric icon={<CalendarClock size={15} />} label="Scheduled" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
+            <Metric
+              icon={<Clock3 size={15} />}
+              label="Pending"
+              value={requestStats.pending}
+              variant="amber"
+              href="/apply-leave"
+            />
+            <Metric
+              icon={<CheckCircle2 size={15} />}
+              label="Approved"
+              value={requestStats.approved}
+              variant="green"
+              href="/apply-leave"
+            />
+            <Metric
+              icon={<AlertCircle size={15} />}
+              label="Rejected"
+              value={requestStats.rejected}
+              variant="rose"
+              href="/apply-leave"
+            />
+            <Metric
+              icon={<CalendarClock size={15} />}
+              label="Scheduled"
+              value={formatDays(requestStats.scheduled_days)}
+              variant="indigo"
+              href="/apply-leave"
+            />
           </div>
 
           {/* Leave Balances Cards Grid */}
@@ -74,17 +103,21 @@ export default function Dashboard({
               {balances.map((balance) => {
                 const avail = Number(balance.available_days);
                 const allowance = Math.max(1, Number(balance.allowance_days));
-                const used = Number(balance.used_days);
                 const percent = Math.min(100, (avail / allowance) * 100);
                 const color = getLeaveStyle(balance.leave_type.code);
 
                 return (
-                  <div key={balance.id} className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-premium-sm hover:shadow-premium-md transition-all duration-300">
+                  <Link
+                    key={balance.id}
+                    href={`/apply-leave?leave_type_id=${balance.leave_type_id}`}
+                    className="block rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-premium-sm hover:shadow-premium-md hover:border-orange-200/80 transition-all duration-300 group cursor-pointer"
+                    title={`Apply for ${balance.leave_type.name}`}
+                  >
                     {/* Top Row */}
                     <div className="flex items-center justify-between gap-2 mb-4">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`h-3 w-3 rounded-full shrink-0 ${color.dot}`} />
-                        <span className="font-medium text-neutral-800 text-sm sm:text-base truncate">
+                        <span className="font-medium text-neutral-800 text-sm sm:text-base truncate group-hover:text-orange-600 transition-colors">
                           {balance.leave_type.name}
                         </span>
                       </div>
@@ -106,7 +139,7 @@ export default function Dashboard({
                       <span>Used: {formatDays(balance.used_days)}</span>
                       <span>Pending: {formatDays(balance.pending_days)}</span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -131,10 +164,15 @@ export default function Dashboard({
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 {canViewTeamLeave
                   ? teamUpcomingLeaves.map((leave) => (
-                      <div key={leave.id} className="rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3.5 sm:p-4.5 flex items-center justify-between gap-3">
+                      <Link
+                        key={leave.id}
+                        href="/team"
+                        className="rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3.5 sm:p-4.5 flex items-center justify-between gap-3 hover:bg-white hover:border-neutral-200 hover:shadow-premium-sm transition-all cursor-pointer group"
+                        title="View in Team Center"
+                      >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2.5">
-                            <span className="text-sm font-medium text-neutral-800 truncate">{leave.user?.name}</span>
+                            <span className="text-sm font-medium text-neutral-800 truncate group-hover:text-orange-600 transition-colors">{leave.user?.name}</span>
                             <LeaveBadge code={leave.leave_type.code} name={leave.leave_type.name} useShortCode />
                           </div>
                           <p className="text-sm text-neutral-500 font-medium mt-2">
@@ -145,10 +183,15 @@ export default function Dashboard({
                           <span className="text-sm font-medium text-neutral-800">{formatDays(leave.requested_days)}</span>
                           <span className="block text-xs font-medium text-neutral-400 mt-0.5">days</span>
                         </div>
-                      </div>
+                      </Link>
                     ))
                   : myUpcomingLeaves.map((leave) => (
-                      <div key={leave.id} className="rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3.5 sm:p-4.5 flex items-center justify-between gap-3">
+                      <Link
+                        key={leave.id}
+                        href="/calendar"
+                        className="rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3.5 sm:p-4.5 flex items-center justify-between gap-3 hover:bg-white hover:border-neutral-200 hover:shadow-premium-sm transition-all cursor-pointer group"
+                        title="View on Calendar"
+                      >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2.5">
                             <LeaveBadge code={leave.leave_type.code} name={leave.leave_type.name} />
@@ -161,14 +204,14 @@ export default function Dashboard({
                           <span className="text-sm font-medium text-neutral-800">{formatDays(leave.requested_days)}</span>
                           <span className="block text-xs font-medium text-neutral-400 mt-0.5">days</span>
                         </div>
-                      </div>
+                      </Link>
                     ))}
               </div>
             </div>
           )}
 
           {/* Recent Requests list */}
-          <div className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden">
+          <div id="recent-requests" className="rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm overflow-hidden scroll-mt-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100/60 px-4 py-4 sm:px-6 sm:py-5 bg-neutral-50/20">
               <div className="min-w-0">
                 <h2 className="text-base font-medium text-neutral-800">Recent Leave Requests</h2>
@@ -229,8 +272,13 @@ export default function Dashboard({
             </div>
             <div className="space-y-3.5">
               {upcomingHolidays.map((holiday) => (
-                <div key={holiday.id} className="flex items-center gap-3 rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3 sm:p-3.5 text-sm transition-all hover:bg-neutral-50/60 min-w-0">
-                  <div className="flex h-11 w-11 flex-col items-center justify-center rounded-md bg-red-50 text-red-800 border border-red-100 font-medium shadow-premium-sm shrink-0">
+                <Link
+                  key={holiday.id}
+                  href="/calendar"
+                  className="flex items-center gap-3 rounded-lg border border-neutral-100 bg-[#fafbfa]/40 p-3 sm:p-3.5 text-sm transition-all hover:bg-white hover:border-neutral-200 hover:shadow-premium-sm cursor-pointer min-w-0 group"
+                  title="View on Calendar"
+                >
+                  <div className="flex h-11 w-11 flex-col items-center justify-center rounded-md bg-red-50 text-red-800 border border-red-100 font-medium shadow-premium-sm shrink-0 group-hover:scale-105 transition-transform">
                     <span className="text-[10px] uppercase font-medium tracking-tight text-red-700">
                       {new Date(holiday.holiday_date).toLocaleDateString(undefined, { month: 'short' })}
                     </span>
@@ -239,12 +287,12 @@ export default function Dashboard({
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-neutral-800">{holiday.name}</div>
+                    <div className="truncate font-medium text-neutral-800 group-hover:text-orange-600 transition-colors">{holiday.name}</div>
                     <div className="text-[10px] font-medium text-neutral-400 mt-0.5">
                       {new Date(holiday.holiday_date).toLocaleDateString(undefined, { weekday: 'long' })}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
               {upcomingHolidays.length === 0 && (
                 <p className="py-5 text-center text-sm text-neutral-400 font-medium">No upcoming holidays.</p>
@@ -679,7 +727,21 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
   );
 }
 
-function Metric({ label, value, icon, variant }: { label: string; value: string | number; icon: React.ReactNode; variant: 'amber' | 'orange' | 'rose' | 'indigo' | 'green' }) {
+function Metric({
+  label,
+  value,
+  icon,
+  variant,
+  href,
+  onClick,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  variant: 'amber' | 'orange' | 'rose' | 'indigo' | 'green';
+  href?: string;
+  onClick?: () => void;
+}) {
   const themes = {
     amber: {
       border: 'border-amber-100/60',
@@ -710,17 +772,33 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
 
   const theme = themes[variant];
 
-  return (
-    <div className={`rounded-xl border ${theme.border} p-4 sm:p-6 bg-white shadow-premium-sm hover:shadow-premium-md transition-all duration-300 relative overflow-hidden group`}>
+  const content = (
+    <>
       <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${theme.bg} blur-2xl -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500`} />
       <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-neutral-400 relative z-10">
-        <span>{label}</span>
+        <span className="group-hover:text-neutral-700 transition-colors">{label}</span>
         <div className={`flex h-8 w-8 items-center justify-center rounded-md border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
           {icon}
         </div>
       </div>
       <div className="mt-5 text-2xl sm:text-3xl font-medium tracking-tight text-neutral-800 relative z-10">{value}</div>
-    </div>
+    </>
+  );
+
+  const cardClassName = `block rounded-xl border ${theme.border} p-4 sm:p-6 bg-white shadow-premium-sm hover:shadow-premium-md hover:border-neutral-300/80 transition-all duration-300 relative overflow-hidden group cursor-pointer text-left w-full`;
+
+  if (href) {
+    return (
+      <Link href={href} onClick={onClick} className={cardClassName}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={cardClassName}>
+      {content}
+    </button>
   );
 }
 

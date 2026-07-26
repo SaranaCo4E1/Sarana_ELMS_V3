@@ -17,13 +17,33 @@ class LeaveRequestController extends Controller
 {
     public function store(Request $request, LeaveBalanceService $balances): RedirectResponse
     {
+        if ($request->hasFile('attachments')) {
+            foreach ((array) $request->file('attachments') as $file) {
+                if ($file && ! $file->isValid()) {
+                    $fileName = $file->getClientOriginalName() ?: 'Attachment';
+                    $errorCode = $file->getError();
+                    if ($errorCode === UPLOAD_ERR_INI_SIZE || $errorCode === UPLOAD_ERR_FORM_SIZE) {
+                        return back()->withErrors(['attachments' => "File '{$fileName}' exceeds the maximum server upload size limit."]);
+                    }
+
+                    return back()->withErrors(['attachments' => "File '{$fileName}' failed to upload. Please select a valid file and try again."]);
+                }
+            }
+        }
+
         $data = $request->validate([
             'leave_type_id' => ['required', 'exists:leave_types,id'],
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
             'duration' => ['required', 'in:full_day,half_day'],
             'reason' => ['nullable', 'string', 'max:2000'],
-            'attachments.*' => ['file', 'max:5120', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx'],
+            'attachments.*' => ['file', 'max:20480', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx'],
+        ], [
+            'attachments.*.file' => 'One of your attachments failed to upload. Please ensure the file is valid and try again.',
+            'attachments.*.max' => 'Each attachment must not exceed 20 MB in size.',
+            'attachments.*.mimes' => 'Attachments must be a PDF, image (JPG, PNG, WEBP), or Word document (DOC, DOCX).',
+        ], [
+            'attachments.*' => 'attachment file',
         ]);
 
         $type = LeaveType::findOrFail($data['leave_type_id']);

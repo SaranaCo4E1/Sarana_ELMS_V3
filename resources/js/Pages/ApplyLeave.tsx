@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, Bot, Calendar, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Sparkles, X, Loader2, Eye, Download, FileText } from 'lucide-react';
+import { AlertCircle, Bot, Calendar, CalendarClock, CalendarPlus, CheckCircle2, Clock3, Paperclip, Send, Sparkles, X, Loader2, Eye, Download, FileText, UploadCloud } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import AppLayout from '../Layouts/AppLayout';
@@ -30,6 +30,8 @@ const statusStyles: Record<string, { bg: string; border: string; text: string; d
 export default function ApplyLeave({ leaveTypes, balances, requests, requestStats, holidays }: Props) {
   const { errors } = usePage<PageProps>().props;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
   const [form, setForm] = useState({
     leave_type_id: leaveTypes[0]?.id ?? '',
     starts_at: '',
@@ -97,6 +99,11 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const typeParam = params.get('leave_type_id');
+    if (typeParam && leaveTypes.some((t) => t.id === Number(typeParam))) {
+      setForm((prev) => ({ ...prev, leave_type_id: Number(typeParam) }));
+    }
+
     if (params.get('source') !== 'ai') return;
 
     const leaveTypeHint = params.get('leave_type')?.toLowerCase() ?? '';
@@ -111,7 +118,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
 
     setForm((prev) => ({
       ...prev,
-      leave_type_id: matchedType?.id ?? prev.leave_type_id,
+      leave_type_id: matchedType?.id ?? (typeParam ? Number(typeParam) : prev.leave_type_id),
       starts_at: startsAt,
       ends_at: duration === 'half_day' ? startsAt : endsAt,
       duration,
@@ -175,9 +182,79 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     });
   }
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+
+  const addAttachments = (incomingFiles: File[]) => {
+    const validFiles: File[] = [];
+    let err: string | null = null;
+
+    for (const file of incomingFiles) {
+      if (file.size > 20 * 1024 * 1024) {
+        err = `"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Attachments must not exceed 20 MB each.`;
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (err) {
+      setAttachmentError(err);
+    } else {
+      setAttachmentError(null);
+    }
+
+    if (validFiles.length > 0) {
+      setForm((prev) => ({
+        ...prev,
+        attachments: [...prev.attachments, ...validFiles],
+      }));
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addAttachments(Array.from(e.dataTransfer.files));
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+      <div
+        className="relative min-h-full"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         {/* Main section */}
         <section className="space-y-6 animate-fade-in">
           {aiDraftImported && (
@@ -309,9 +386,12 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                     className="hidden"
                     type="file"
                     multiple
-                    onChange={(e) => setForm({ ...form, attachments: [...form.attachments, ...Array.from(e.target.files ?? [])] })}
+                    onChange={(e) => addAttachments(Array.from(e.target.files ?? []))}
                   />
                 </label>
+                <span className="text-xs text-neutral-400 font-medium hidden sm:inline-block ml-1">
+                  or drag & drop files here
+                </span>
 
                 {form.attachments.map((file, index) => (
                   <span key={index} className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-sm font-normal text-neutral-600 animate-fade-in">
@@ -322,6 +402,9 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                   </span>
                 ))}
               </div>
+              {attachmentError && (
+                <p className="mt-2 text-xs font-medium text-rose-600 w-full animate-fade-in">{attachmentError}</p>
+              )}
 
               <button
                 className="flex items-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 px-4.5 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:hover:translate-y-0 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200 cursor-pointer"
@@ -426,6 +509,28 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
             <Metric icon={<CalendarClock size={15} />} label="Scheduled" value={formatDays(requestStats.scheduled_days)} variant="indigo" />
           </div>
         </aside>
+      </div>
+
+      {/* Drag & Drop Indicator Overlay */}
+      {isDragging && createPortal(
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-neutral-900/60 backdrop-blur-md animate-fade-in p-6 pointer-events-none">
+          <div className="flex flex-col items-center justify-center max-w-md w-full rounded-2xl border-2 border-dashed border-orange-400 bg-white/95 p-8 text-center shadow-premium-lg space-y-4 animate-modal-enter">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 border border-orange-100 shadow-premium-sm animate-bounce">
+              <UploadCloud size={32} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-neutral-800">Drop files to attach</h3>
+              <p className="text-sm font-medium text-neutral-500 mt-1">
+                Release your files anywhere to attach them to your leave request
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3.5 py-1.5 text-xs font-semibold text-orange-700 border border-orange-200/60">
+              <Paperclip size={13} /> Supports medical notes, certificates & documents
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
       </div>
     </AppLayout>
   );
