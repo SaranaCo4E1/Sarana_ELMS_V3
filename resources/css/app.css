@@ -49,6 +49,18 @@ body {
   color: #1a1a1a; /* soft carbon neutral */
 }
 
+/* Keep user-entered notes and long filenames inside responsive containers. */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pre-wrap-anywhere {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Enforce font family globally with !important to prevent overrides, while protecting monospace/code blocks */
 *, ::before, ::after {
   font-family: var(--font-sans) !important;
@@ -376,5 +388,4 @@ input[type="radio"] + label {
 .animate-modal-leave {
   animation: modalContentLeave 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 
