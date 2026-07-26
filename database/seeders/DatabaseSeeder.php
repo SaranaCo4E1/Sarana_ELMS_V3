@@ -13,9 +13,12 @@ use App\Services\LeaveBalanceService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
+    private const WORKDAY_MINUTES = 9 * 60;
+
     public function run(): void
     {
         $today = now()->startOfDay();
@@ -302,40 +305,44 @@ class DatabaseSeeder extends Seeder
 
         // Relative offsets keep demo requests useful whenever the seeder runs.
         $requests = [
-            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Travelling to Kampong Cham for my cousin wedding.'],
-            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'High fever and body aches, clinic advised me rest two days.'],
-            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Spending few days with my parents while they visiting Phnom Penh.'],
-            [$users['sales_ops'], 'annual', -161, -160, 'approved', $users['sales_manager'], 'Need handle family land transfer at district office.'],
-            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Visiting my grandparents in Siem Reap for a few days.'],
-            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Have dental procedure and need some recovery time after.'],
-            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Taking short family trip we planned few months ago.'],
-            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Taking trip with friends that already booked before release.'],
-            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Migraine came back and have clinic appointement this afternoon.'],
-            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday.'],
-            [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and sore throat since last night.'],
-            [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Need accompany my mother for specialist appointment.'],
-            [$users['sales_ops'], 'annual', -1, -1, 'rejected', $users['sales_manager'], 'Urgent bank issue, need go resolve it in person.'],
-            [$users['hr_specialist'], 'annual', 2, 4, 'pending', $users['hr_manager'], 'Going to close friend wedding in Kep.'],
-            [$users['it_support'], 'annual', 6, 8, 'pending', $users['it_manager'], 'Taking my parents to Kampot for short family break.'],
-            [$users['sales_rep'], 'sick', 1, 1, 'pending', $users['sales_manager'], 'Follow up appointment for stomach pain still not better.'],
-            [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Family holiday already booked before current sales cycle.'],
-            [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Respiratory infection, doctor advised to rest two days.'],
-            [$ceo, 'annual', 20, 21, 'pending', null, 'Short personal trip Singapore before next leadership meeting.'],
+            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Travelling to Kampong Cham for my cousin wedding'],
+            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'High fever and body aches, clinic advised me rest two days'],
+            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Spending few days with my parents while they visiting Phnom Penh'],
+            [$users['sales_ops'], 'annual', -161, -160, 'approved', $users['sales_manager'], 'Need handle family land transfer at district office'],
+            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Visiting my grandparents in Siem Reap for a few days'],
+            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Have dental procedure and need some recovery time after'],
+            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Taking short family trip we planned few months ago'],
+            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Taking trip with friends that already booked before release'],
+            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Migraine came back and have clinic appointement this afternoon'],
+            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday'],
+            [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and sore throat since last night'],
+            [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Need accompany my mother for specialist appointment'],
+            [$users['sales_ops'], 'annual', -1, -1, 'rejected', $users['sales_manager'], 'Urgent bank issue, need go resolve it in person'],
+            [$users['hr_specialist'], 'annual', 2, 4, 'pending', $users['hr_manager'], 'Going to close friend wedding in Kep'],
+            [$users['it_support'], 'annual', 6, 8, 'pending', $users['it_manager'], 'Taking my parents to Kampot for short family break'],
+            [$users['sales_rep'], 'sick', 1, 1, 'pending', $users['sales_manager'], 'Follow up appointment for stomach pain still not better'],
+            [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Family holiday already booked'],
+            [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Stomache problem, doctor advised to rest two days'],
+            [$ceo, 'annual', 20, 21, 'pending', null, 'Short personal trip before next meeting'],
         ];
 
         // Create matching in-app notifications so demo accounts show realistic unread state.
         foreach ($requests as [$user, $typeCode, $startOffset, $endOffset, $status, $approver, $reason]) {
             $startsAt = $this->businessDay($today->copy()->addDays($startOffset));
             $endsAt = $this->businessDay($today->copy()->addDays($endOffset));
+            $fixtureKey = "{$user->email}:{$typeCode}:{$startOffset}:{$endOffset}";
 
             if ($endsAt->lt($startsAt)) {
                 $endsAt = $startsAt->copy();
             }
 
             $requestedDays = max(1, $balanceService->workingDays($startsAt->toDateString(), $endsAt->toDateString()));
-            $submittedAt = $startsAt->copy()->subDays($status === 'pending' ? 2 : 10)->setTime(9, 0);
+            $submittedAt = $this->workingTime(
+                $startsAt->copy()->subDays($status === 'pending' ? 2 : 10),
+                "submitted:{$fixtureKey}",
+            );
             $decidedAt = in_array($status, ['approved', 'rejected'], true)
-                ? $submittedAt->copy()->addDay()->setTime(15, 30)
+                ? $this->workingTime($submittedAt->copy()->addDay(), "decided:{$fixtureKey}")
                 : null;
 
             $leaveRequest = LeaveRequest::query()->updateOrCreate(
@@ -382,7 +389,12 @@ class DatabaseSeeder extends Seeder
                     'Leave request '.$status,
                     'Your '.$types[$typeCode]->name.' request was '.$status.'.',
                     '/dashboard',
-                    $leaveRequest->decided_at ? Carbon::parse($leaveRequest->decided_at)->addHour() : null
+                    $leaveRequest->decided_at
+                        ? $this->workingTime(
+                            Carbon::parse($leaveRequest->decided_at)->addDay(),
+                            "notification-read:{$fixtureKey}",
+                        )
+                        : null,
                 );
             }
         }
@@ -425,6 +437,14 @@ class DatabaseSeeder extends Seeder
         }
 
         return $date;
+    }
+
+    private function workingTime(Carbon $date, string $fixtureKey): Carbon
+    {
+        $hashPrefix = Str::substr(hash('sha256', $fixtureKey), 0, 8);
+        $minuteOffset = (int) (hexdec($hashPrefix) % self::WORKDAY_MINUTES);
+
+        return $date->copy()->startOfDay()->addHours(8)->addMinutes($minuteOffset);
     }
 
     private function seedNotification(

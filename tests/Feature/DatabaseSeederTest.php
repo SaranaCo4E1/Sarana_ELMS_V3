@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\LeaveRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class DatabaseSeederTest extends TestCase
@@ -63,5 +65,51 @@ class DatabaseSeederTest extends TestCase
         $this->assertGreaterThanOrEqual(19, count($startOffsets));
         $this->assertLessThanOrEqual(-236, min($startOffsets));
         $this->assertGreaterThanOrEqual(20, max($startOffsets));
+    }
+
+    public function test_database_seeder_distributes_timestamps_across_working_hours_deterministically(): void
+    {
+        $this->seed();
+
+        $requests = LeaveRequest::query()->orderBy('id')->get();
+
+        $this->assertGreaterThan(1, $requests->pluck('submitted_at')->map->format('H:i')->unique()->count());
+        $this->assertGreaterThan(1, $requests->pluck('decided_at')->filter()->map->format('H:i')->unique()->count());
+
+        foreach ($requests as $request) {
+            $this->assertWorkingTime($request->submitted_at);
+
+            if ($request->decided_at) {
+                $this->assertWorkingTime($request->decided_at);
+                $this->assertTrue($request->decided_at->isAfter($request->submitted_at));
+            }
+        }
+
+        $timestampsByRequest = $requests->mapWithKeys(fn (LeaveRequest $request): array => [
+            $request->user_id.'-'.$request->starts_at->toDateString() => [
+                $request->submitted_at->toDateTimeString(),
+                $request->decided_at?->toDateTimeString(),
+            ],
+        ])->all();
+
+        $this->seed();
+
+        $reseededTimestamps = LeaveRequest::query()->orderBy('id')->get()
+            ->mapWithKeys(fn (LeaveRequest $request): array => [
+                $request->user_id.'-'.$request->starts_at->toDateString() => [
+                    $request->submitted_at->toDateTimeString(),
+                    $request->decided_at?->toDateTimeString(),
+                ],
+            ])->all();
+
+        $this->assertSame($timestampsByRequest, $reseededTimestamps);
+    }
+
+    private function assertWorkingTime(Carbon $timestamp): void
+    {
+        $time = $timestamp->format('H:i:s');
+
+        $this->assertGreaterThanOrEqual('08:00:00', $time);
+        $this->assertLessThan('17:00:00', $time);
     }
 }
