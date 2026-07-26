@@ -85,8 +85,8 @@ export default function Landing() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 sm:px-8">
           {/* Logo */}
           <div className="flex items-center gap-3 select-none">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10">
-              <Bot size={18} className="text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-orange-100 bg-white shadow-premium-sm">
+              <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-7.5" />
             </div>
             <div>
               <div className="text-sm font-medium tracking-tight text-neutral-900 leading-none">NiyAI ELMS</div>
@@ -678,8 +678,8 @@ export default function Landing() {
       {/* Corporate Call to Action Footer */}
       <section className="relative z-10 border-t border-neutral-200/60 bg-neutral-50/60 text-neutral-800 py-16">
         <div className="mx-auto max-w-7xl px-6 text-center sm:px-8">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10 mb-6">
-            <Bot size={20} className="text-white" />
+          <div className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-lg border border-orange-100 bg-white shadow-premium-sm">
+            <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-9" />
           </div>
           
           <h2 className="text-2xl font-medium tracking-tight sm:text-3xl text-neutral-800">

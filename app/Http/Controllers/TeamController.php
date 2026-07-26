@@ -41,7 +41,8 @@ class TeamController extends Controller
                 ->with(['user.department', 'leaveType'])
                 ->whereIn('user_id', $memberIds)
                 ->where('status', 'pending')
-                ->latest()
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->get(),
             'teamStats' => [
                 'members' => $members->count(),

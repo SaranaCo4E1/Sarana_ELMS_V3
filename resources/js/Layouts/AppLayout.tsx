@@ -271,8 +271,8 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
     <div className="flex h-full flex-col justify-between py-6 bg-white">
       <div>
         <div className={`flex items-center gap-3 px-6 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : ''}`}>
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-orange-600 text-white shadow-md shadow-orange-600/10 border border-orange-500/10 shrink-0">
-            <Bot size={16} />
+          <div className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg border border-orange-100 bg-white shadow-premium-sm">
+            <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-7" />
           </div>
           {!isCollapsed && (
             <div className="animate-fade-in whitespace-nowrap">

@@ -23,7 +23,8 @@ class DashboardController extends Controller
                 ->with(['user.department', 'leaveType', 'attachments'])
                 ->where('status', 'pending')
                 ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))
-                ->latest()
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->get()
             : collect();
 
@@ -41,7 +42,11 @@ class DashboardController extends Controller
                 ->get()
             : collect();
 
-        $requests = $user->leaveRequests()->with(['leaveType', 'approver', 'attachments'])->latest()->get();
+        $requests = $user->leaveRequests()
+            ->with(['leaveType', 'approver', 'attachments'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
         $requestStats = [
             'pending' => $requests->where('status', 'pending')->count(),
             'approved' => $requests->where('status', 'approved')->count(),

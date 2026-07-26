@@ -32,7 +32,8 @@ class ReportController extends Controller
         $rows = LeaveRequest::query()
             ->with(['user.department', 'leaveType', 'approver', 'attachments'])
             ->whereBetween('starts_at', [$startDate, $endDate])
-            ->orderBy('starts_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         $filename = ($startMonth === $endMonth)

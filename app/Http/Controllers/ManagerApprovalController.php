@@ -25,10 +25,15 @@ class ManagerApprovalController extends Controller
             ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id));
 
         return Inertia::render('Approvals', [
-            'requests' => (clone $scope)->where('status', 'pending')->latest()->get(),
+            'requests' => (clone $scope)
+                ->where('status', 'pending')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get(),
             'recentDecisions' => (clone $scope)
                 ->whereIn('status', ['approved', 'rejected'])
-                ->latest('decided_at')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->limit(150)
                 ->get(),
             'approvalStats' => [

@@ -17,7 +17,11 @@ class ApplyLeaveController extends Controller
         $user = $request->user();
         $balances->ensureBalances($user);
 
-        $requests = $user->leaveRequests()->with(['leaveType', 'approver', 'attachments'])->latest()->get();
+        $requests = $user->leaveRequests()
+            ->with(['leaveType', 'approver', 'attachments'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
 
         return Inertia::render('ApplyLeave', [
             'leaveTypes' => LeaveType::query()->where('is_active', true)->orderBy('name')->get(),
