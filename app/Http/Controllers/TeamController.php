@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,7 +16,15 @@ class TeamController extends Controller
     {
         $user = $request->user();
         $members = User::query()
-            ->with(['department', 'manager'])
+            ->with([
+                'department',
+                'manager',
+                'leaveRequests' => fn (HasMany $query) => $query
+                    ->with(['leaveType', 'approver:id,name'])
+                    ->whereYear('starts_at', now()->year)
+                    ->orderByDesc('starts_at')
+                    ->orderByDesc('id'),
+            ])
             ->withCount([
                 'leaveRequests as pending_leave_requests_count' => fn (Builder $query) => $query->where('status', 'pending'),
                 'leaveRequests as approved_leave_requests_count' => fn (Builder $query) => $query->where('status', 'approved')->whereYear('starts_at', now()->year),
@@ -59,6 +68,7 @@ class TeamController extends Controller
                     ->whereYear('starts_at', now()->year)
                     ->count(),
             ],
+            'requestYear' => now()->year,
         ]);
     }
 }
