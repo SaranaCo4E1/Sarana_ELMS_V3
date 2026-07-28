@@ -43,7 +43,8 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $user?->load('department'),
-                'pending_approvals_count' => fn () => $user && $user->isManager()
+                'permissions' => fn () => $user ? $user->permissionKeys() : [],
+                'pending_approvals_count' => fn () => $user && $user->hasPermission('approvals.manage')
                     ? LeaveRequest::query()
                         ->where('status', 'pending')
                         ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))

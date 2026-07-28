@@ -2,7 +2,7 @@ export type User = {
   id: number;
   name: string;
   email: string;
-  role: 'staff' | 'manager' | 'hr admin' | 'admin';
+  role: string;
   employee_code?: string | null;
   job_title?: string | null;
   phone?: string | null;
@@ -20,7 +20,7 @@ export type User = {
   pending_leave_requests_count?: number;
   approved_leave_requests_count?: number;
   leave_requests?: LeaveRequest[];
-  leaveBalances?: LeaveBalance[];
+  leave_balances?: LeaveBalance[];
 };
 
 export type UserProfile = {
@@ -92,8 +92,26 @@ export type SystemNotification = {
   created_at: string;
 };
 
+export type Permission = {
+  id: number;
+  key: string;
+  name: string;
+  group: string;
+  description?: string | null;
+};
+
+export type Role = {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  is_system: boolean;
+  users_count?: number;
+  permissions?: Permission[];
+};
+
 export type PageProps = {
-  auth: { user: User; pending_approvals_count: number };
+  auth: { user: User; permissions: string[]; pending_approvals_count: number };
   notifications: {
     items: SystemNotification[];
     unread_count: number;

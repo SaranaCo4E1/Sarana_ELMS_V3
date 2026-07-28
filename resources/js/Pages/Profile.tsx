@@ -1,17 +1,18 @@
 import { router, usePage } from '@inertiajs/react';
-import { Banknote, BriefcaseBusiness, CalendarDays, Eye, EyeOff, IdCard, KeyRound, LockKeyhole, Mail, MapPin, Phone, Shield, ShieldAlert, ShieldCheck, UserRound, Loader2 } from 'lucide-react';
+import { Banknote, BriefcaseBusiness, CalendarDays, Eye, EyeOff, IdCard, KeyRound, LockKeyhole, Mail, MapPin, Phone, Send, Shield, ShieldAlert, ShieldCheck, UserRound, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import type { PageProps, User } from '../types';
 import { formatDate, formatRole } from '../utils';
 
-export default function Profile({ profile }: { profile: User }) {
+export default function Profile({ profile, telegramConnected, telegramConfigured }: { profile: User; telegramConnected: boolean; telegramConfigured: boolean }) {
   const { errors } = usePage<PageProps>().props;
   const employeeProfile = profile.profile;
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingTwoFactor, setIsUpdatingTwoFactor] = useState(false);
+  const [isDisconnectingTelegram, setIsDisconnectingTelegram] = useState(false);
   const [form, setForm] = useState({
     name: profile.name ?? '',
     email: profile.email ?? '',
@@ -55,6 +56,14 @@ export default function Profile({ profile }: { profile: User }) {
       onStart: () => setIsUpdatingTwoFactor(true),
       onFinish: () => setIsUpdatingTwoFactor(false),
       onSuccess: () => setTwoFactorPassword(''),
+    });
+  }
+
+  function disconnectTelegram() {
+    router.post('/profile/telegram/disconnect', {}, {
+      preserveScroll: true,
+      onStart: () => setIsDisconnectingTelegram(true),
+      onFinish: () => setIsDisconnectingTelegram(false),
     });
   }
 
@@ -283,6 +292,69 @@ export default function Profile({ profile }: { profile: User }) {
                   </button>
                 )}
               </div>
+            </div>
+          </section>
+
+          {/* Telegram Alerts */}
+          <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm xl:col-span-2">
+            <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
+              <Send size={17} className="text-orange-600" />
+              <h2 className="text-base font-medium text-neutral-800">Telegram Alerts</h2>
+            </div>
+
+            <div className="flex gap-4 items-start rounded-xl bg-neutral-50/50 p-4 border border-neutral-200/60 shadow-premium-sm">
+              <div className="mt-0.5">
+                {telegramConnected ? (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-orange-50 text-orange-600 border border-orange-100">
+                    <ShieldCheck size={16} />
+                  </div>
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-50 text-amber-600 border border-amber-100">
+                    <ShieldAlert size={16} />
+                  </div>
+                )}
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-neutral-800">
+                  {telegramConnected ? 'Telegram Connected' : 'Not Connected'}
+                </h4>
+                <p className="mt-1 text-sm text-neutral-500 leading-relaxed font-medium">
+                  {telegramConnected
+                    ? 'Leave request alerts (submitted and decided) are sent to your linked Telegram chat, in addition to email.'
+                    : telegramConfigured
+                      ? 'Link your Telegram account to also receive leave request alerts there, in addition to email.'
+                      : 'Telegram alerts are not configured for this workspace yet.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {telegramConnected ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-rose-600 shadow-premium-sm hover:bg-rose-50 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                  onClick={disconnectTelegram}
+                  type="button"
+                  disabled={isDisconnectingTelegram}
+                >
+                  {isDisconnectingTelegram ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin text-rose-300" />
+                      Disconnecting...
+                    </>
+                  ) : (
+                    'Disconnect Telegram'
+                  )}
+                </button>
+              ) : (
+                <a
+                  href="/profile/telegram/connect"
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg px-7 py-3.5 text-sm font-medium tracking-wide uppercase text-white shadow-md shadow-orange-600/10 transition-all active:scale-98 ${
+                    telegramConfigured ? 'bg-orange-600 hover:bg-orange-700 cursor-pointer' : 'bg-neutral-300 pointer-events-none'
+                  }`}
+                >
+                  Connect Telegram
+                </a>
+              )}
             </div>
           </section>
         </div>

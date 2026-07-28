@@ -8,6 +8,7 @@ use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\PublicHoliday;
+use App\Models\Role;
 use App\Models\User;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,8 @@ class AdminController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin', [
+            'roles' => Role::orderBy('name')->get(['id', 'name', 'slug']),
+            'managerEligibleRoleSlugs' => $this->managerEligibleRoleSlugs(),
             'departments' => Department::with('manager')->withCount('users')->orderBy('name')->get(),
             'leaveTypes' => LeaveType::withCount('balances')->orderBy('name')->get(),
             'holidays' => PublicHoliday::orderByDesc('holiday_date')->get(),
@@ -133,11 +136,13 @@ class AdminController extends Controller
     {
         $data = $request->validate([
             'department_id' => ['nullable', 'exists:departments,id'],
-            'manager_id' => ['nullable', Rule::exists('users', 'id')->whereIn('role', ['manager', 'admin'])],
+            'manager_id' => ['nullable', Rule::exists('users', 'id')->whereIn('role', $this->managerEligibleRoleSlugs())],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['staff', 'manager', 'hr admin', 'admin'])],
+            'role' => ['required', Rule::in(Role::query()->pluck('slug'))],
+            'phone' => ['required', 'string', 'max:30'],
+            'employee_code' => ['nullable', 'string', 'max:50', 'unique:users,employee_code'],
             'job_title' => ['nullable', 'string', 'max:255'],
             'hire_date' => ['nullable', 'date'],
             'two_factor_enabled' => ['boolean'],
@@ -169,11 +174,13 @@ class AdminController extends Controller
     {
         $data = $request->validate([
             'department_id' => ['nullable', 'exists:departments,id'],
-            'manager_id' => ['nullable', Rule::exists('users', 'id')->whereIn('role', ['manager', 'admin']), Rule::notIn([$user->id])],
+            'manager_id' => ['nullable', Rule::exists('users', 'id')->whereIn('role', $this->managerEligibleRoleSlugs()), Rule::notIn([$user->id])],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user)],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['staff', 'manager', 'hr admin', 'admin'])],
+            'role' => ['required', Rule::in(Role::query()->pluck('slug'))],
+            'phone' => ['required', 'string', 'max:30'],
+            'employee_code' => ['nullable', 'string', 'max:50', Rule::unique('users', 'employee_code')->ignore($user)],
             'job_title' => ['nullable', 'string', 'max:255'],
             'hire_date' => ['nullable', 'date'],
             'two_factor_enabled' => ['boolean'],
@@ -269,5 +276,16 @@ class AdminController extends Controller
         Audit::record($request, $data['is_active'] ? 'admin.holiday.activated' : 'admin.holiday.deactivated', $holiday);
 
         return back()->with('success', 'Holiday status updated.');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function managerEligibleRoleSlugs(): array
+    {
+        return Role::query()
+            ->whereHas('permissions', fn ($query) => $query->where('key', 'approvals.manage'))
+            ->pluck('slug')
+            ->all();
     }
 }

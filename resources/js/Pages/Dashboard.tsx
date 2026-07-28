@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
-import { canApproveRole, formatDays, formatShortDate } from '../utils';
+import { formatDays, formatShortDate } from '../utils';
 import LeaveBadge, { getLeaveStyle } from '../Components/LeaveBadge';
 
 type Props = {
@@ -43,7 +43,7 @@ export default function Dashboard({
   const { auth } = usePage<PageProps>().props;
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
-  const canViewTeamLeave = canApproveRole(auth.user.role);
+  const canViewTeamLeave = (auth.permissions ?? []).includes('team.view');
 
   const filteredRequests = requests.filter((request) => {
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;

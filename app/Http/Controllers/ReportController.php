@@ -3,14 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Inertia\Inertia;
+use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    public function index(): Response
+    {
+        return Inertia::render('Reports', [
+            'users' => User::query()
+                ->with(['department', 'leaveBalances.leaveType'])
+                ->orderBy('name')
+                ->get(),
+            'leaveTypes' => LeaveType::query()->orderBy('name')->get(),
+            'departments' => Department::query()->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
     public function monthly(Request $request): StreamedResponse
     {
         $data = $request->validate([

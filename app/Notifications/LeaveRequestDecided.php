@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
+use App\Notifications\Channels\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -16,7 +17,22 @@ class LeaveRequestDecided extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', TelegramChannel::class];
+    }
+
+    public function toTelegram(object $notifiable): string
+    {
+        $status = ucfirst($this->leaveRequest->status);
+        $leaveType = $this->leaveRequest->leaveType;
+        $approverName = $this->leaveRequest->approver?->name ?? 'Manager';
+        $icon = $this->leaveRequest->status === 'approved' ? '🟢' : '🔴';
+
+        return "{$icon} <b>Leave Request {$status}</b>\n"
+            .'<b>Employee:</b> '.e($notifiable->name)."\n"
+            .'<b>Decided by:</b> '.e($approverName)."\n"
+            .'<b>Leave Type:</b> '.e($leaveType->name)."\n"
+            .'<b>Dates:</b> '.$this->leaveRequest->starts_at->format('M d, Y').' to '.$this->leaveRequest->ends_at->format('M d, Y')."\n"
+            .'<b>Duration:</b> '.$this->leaveRequest->requested_days.' working days';
     }
 
     public function toMail(object $notifiable): MailMessage

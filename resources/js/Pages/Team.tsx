@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { CalendarClock, ClipboardCheck, Search, UserCheck, Users, X } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest, User } from '../types';
@@ -50,6 +50,36 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
       return matchesRole && matchesDept && haystack.includes(query.toLowerCase());
     });
   }, [query, roleFilter, deptFilter, members]);
+
+  const [rosterPage, setRosterPage] = useState(1);
+  const rosterItemsPerPage = 10;
+
+  useEffect(() => {
+    setRosterPage(1);
+  }, [query, roleFilter, deptFilter]);
+
+  const rosterTotalPages = Math.ceil(filteredMembers.length / rosterItemsPerPage);
+
+  const paginatedMembers = useMemo(() => {
+    const start = (rosterPage - 1) * rosterItemsPerPage;
+    return filteredMembers.slice(start, start + rosterItemsPerPage);
+  }, [filteredMembers, rosterPage]);
+
+  const getPageNumbers = (current: number, total: number) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
@@ -116,7 +146,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
             
             {/* Mobile Card List View */}
             <div className="divide-y divide-neutral-100 sm:hidden">
-              {filteredMembers.map((member) => (
+              {paginatedMembers.map((member) => (
                 <div key={member.id} className="p-5 space-y-4 bg-white">
                   <button
                     type="button"
@@ -193,7 +223,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100/60">
-                  {filteredMembers.map((member) => (
+                  {paginatedMembers.map((member) => (
                     <tr key={member.id} className="transition-all hover:bg-neutral-50/40">
                       <td className="px-6 py-4.5">
                         <button
@@ -249,6 +279,55 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {rosterTotalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-100 px-6 py-4 bg-neutral-50/10">
+                <div className="text-xs font-semibold text-neutral-500">
+                  Showing <span className="font-bold text-neutral-700">{Math.min(filteredMembers.length, (rosterPage - 1) * rosterItemsPerPage + 1)}</span> to{' '}
+                  <span className="font-bold text-neutral-700">{Math.min(filteredMembers.length, rosterPage * rosterItemsPerPage)}</span> of{' '}
+                  <span className="font-bold text-neutral-700">{filteredMembers.length}</span> results
+                </div>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button
+                    disabled={rosterPage === 1}
+                    onClick={() => setRosterPage(prev => Math.max(1, prev - 1))}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-650 hover:bg-neutral-50 hover:text-neutral-800 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer shadow-premium-sm"
+                  >
+                    Previous
+                  </button>
+                  {getPageNumbers(rosterPage, rosterTotalPages).map((page, index) => {
+                    if (page === '...') {
+                      return (
+                        <span key={`dots-${index}`} className="px-2 py-1.5 text-xs font-bold text-neutral-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setRosterPage(page as number)}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          rosterPage === page
+                            ? 'bg-orange-600 border-orange-600 text-white shadow-sm'
+                            : 'border-neutral-200 bg-white text-neutral-650 hover:bg-neutral-50 hover:text-neutral-800 shadow-premium-sm'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                  <button
+                    disabled={rosterPage === rosterTotalPages}
+                    onClick={() => setRosterPage(prev => Math.min(rosterTotalPages, prev + 1))}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-650 hover:bg-neutral-50 hover:text-neutral-800 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer shadow-premium-sm"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           <aside className="space-y-6">
