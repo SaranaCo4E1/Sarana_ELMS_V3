@@ -16,6 +16,8 @@ class ProfileController extends Controller
     {
         return Inertia::render('Profile', [
             'profile' => $request->user()->load(['department', 'manager', 'profile']),
+            'telegramConnected' => $request->user()->hasTelegramLinked(),
+            'telegramConfigured' => (bool) config('services.telegram.bot_username'),
         ]);
     }
 

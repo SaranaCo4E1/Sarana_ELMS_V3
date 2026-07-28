@@ -12,8 +12,10 @@ use App\Http\Controllers\ManagerApprovalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TelegramController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -42,6 +44,8 @@ Route::get('/privacy', function () {
 Route::get('/support', [SupportController::class, 'index'])->name('support.index');
 Route::post('/support', [SupportController::class, 'store'])->name('support.store');
 
+Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->name('telegram.webhook');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -52,6 +56,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::patch('/profile/two-factor', [ProfileController::class, 'updateTwoFactor'])->name('profile.two-factor');
+    Route::get('/profile/telegram/connect', [TelegramController::class, 'connect'])->name('profile.telegram.connect');
+    Route::post('/profile/telegram/disconnect', [TelegramController::class, 'disconnect'])->name('profile.telegram.disconnect');
     Route::post('/leave-requests', [LeaveRequestController::class, 'store'])->name('leave-requests.store');
     Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
@@ -60,32 +66,63 @@ Route::middleware('auth')->group(function () {
     Route::get('/approvals/attachments/{leaveAttachment}/preview', [ManagerApprovalController::class, 'previewAttachment'])->name('approvals.attachments.preview');
     Route::get('/approvals/attachments/{leaveAttachment}/download', [ManagerApprovalController::class, 'downloadAttachment'])->name('approvals.attachments.download');
 
-    Route::middleware('role:manager,hr admin,admin')->group(function () {
-        Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
-        Route::patch('/approvals/{leaveRequest}', [ManagerApprovalController::class, 'update'])->name('approvals.update');
+    Route::middleware('permission:team.view')->group(function () {
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
     });
 
-    Route::middleware('role:hr admin,admin')->group(function () {
+    Route::middleware('permission:approvals.manage')->group(function () {
+        Route::get('/approvals', [ManagerApprovalController::class, 'index'])->name('approvals.index');
+        Route::patch('/approvals/{leaveRequest}', [ManagerApprovalController::class, 'update'])->name('approvals.update');
+    });
+
+    Route::middleware('permission:users.manage,departments.manage,leave_types.manage,holidays.manage,balances.override,reports.view,audit_logs.view')->group(function () {
         Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+    });
+
+    Route::middleware('permission:departments.manage')->group(function () {
         Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
-        Route::post('/admin/leave-types', [AdminController::class, 'storeLeaveType'])->name('admin.leave-types.store');
-        Route::post('/admin/holidays', [AdminController::class, 'storeHoliday'])->name('admin.holidays.store');
-        Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
         Route::patch('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
+        Route::patch('/admin/departments/{department}/status', [AdminController::class, 'updateDepartmentStatus'])->name('admin.departments.status');
+    });
+
+    Route::middleware('permission:leave_types.manage')->group(function () {
+        Route::post('/admin/leave-types', [AdminController::class, 'storeLeaveType'])->name('admin.leave-types.store');
         Route::patch('/admin/leave-types/{leaveType}', [AdminController::class, 'updateLeaveType'])->name('admin.leave-types.update');
+        Route::patch('/admin/leave-types/{leaveType}/status', [AdminController::class, 'updateLeaveTypeStatus'])->name('admin.leave-types.status');
+    });
+
+    Route::middleware('permission:holidays.manage')->group(function () {
+        Route::post('/admin/holidays', [AdminController::class, 'storeHoliday'])->name('admin.holidays.store');
         Route::patch('/admin/holidays/{holiday}', [AdminController::class, 'updateHoliday'])->name('admin.holidays.update');
+        Route::patch('/admin/holidays/{holiday}/status', [AdminController::class, 'updateHolidayStatus'])->name('admin.holidays.status');
+    });
+
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
         Route::patch('/admin/users/{user}', [AdminController::class, 'updateUser'])->name('admin.users.update');
         Route::patch('/admin/users/{user}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
-        Route::patch('/admin/leave-types/{leaveType}/status', [AdminController::class, 'updateLeaveTypeStatus'])->name('admin.leave-types.status');
-        Route::patch('/admin/departments/{department}/status', [AdminController::class, 'updateDepartmentStatus'])->name('admin.departments.status');
-        Route::patch('/admin/holidays/{holiday}/status', [AdminController::class, 'updateHolidayStatus'])->name('admin.holidays.status');
+    });
+
+    Route::middleware('permission:balances.override')->group(function () {
         Route::post('/admin/balances', [AdminController::class, 'overrideBalance'])->name('admin.balances.override');
+    });
+
+    Route::middleware('permission:reports.view')->group(function () {
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
+    });
+
+    Route::middleware('permission:audit_logs.view')->group(function () {
         Route::get('/reports/audit-logs', [ReportController::class, 'auditLogs'])->name('reports.audit-logs');
     });
 
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('permission:support_tickets.manage')->group(function () {
         Route::get('/support-tickets', [SupportController::class, 'tickets'])->name('support.tickets');
+    });
+
+    Route::middleware('role:admin')->prefix('roles-permissions')->name('roles-permissions.')->group(function () {
+        Route::get('/', [RolePermissionController::class, 'index'])->name('index');
+        Route::post('/roles', [RolePermissionController::class, 'storeRole'])->name('roles.store');
+        Route::patch('/roles/{role}/permissions', [RolePermissionController::class, 'updateRolePermissions'])->name('roles.permissions.update');
     });
 });

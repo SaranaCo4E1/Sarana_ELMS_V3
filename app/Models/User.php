@@ -15,11 +15,16 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['department_id', 'manager_id', 'name', 'email', 'password', 'role', 'employee_code', 'job_title', 'phone', 'work_location', 'employment_type', 'emergency_contact_name', 'emergency_contact_phone', 'bio', 'hire_date', 'is_active', 'two_factor_enabled', 'two_factor_code', 'two_factor_expires_at'])]
-#[Hidden(['password', 'remember_token', 'two_factor_code'])]
+#[Hidden(['password', 'remember_token', 'two_factor_code', 'telegram_chat_id', 'telegram_link_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * @var array<int, string>|null
+     */
+    protected ?array $permissionKeysCache = null;
 
     /**
      * Get the attributes that should be cast.
@@ -66,6 +71,33 @@ class User extends Authenticatable
     public function leaveRequests(): HasMany
     {
         return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function roleModel(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role', 'slug');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function permissionKeys(): array
+    {
+        if ($this->permissionKeysCache === null) {
+            $this->permissionKeysCache = $this->roleModel?->permissions->pluck('key')->all() ?? [];
+        }
+
+        return $this->permissionKeysCache;
+    }
+
+    public function hasPermission(string $key): bool
+    {
+        return in_array($key, $this->permissionKeys(), true);
+    }
+
+    public function hasTelegramLinked(): bool
+    {
+        return filled($this->telegram_chat_id);
     }
 
     public function isAdmin(): bool

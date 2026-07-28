@@ -4,7 +4,7 @@ import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
-import type { LeaveType, PageProps, User } from '../types';
+import type { LeaveType, PageProps, Role, User } from '../types';
 import { formatDays, formatDate, formatRole } from '../utils';
 
 type Department = { id: number; name: string; code: string; manager_id?: number; manager?: User; is_active: boolean; users_count?: number };
@@ -29,13 +29,14 @@ type AdminModal =
 const emptyDepartmentForm = { name: '', code: '', manager_id: '' };
 const emptyLeaveTypeForm = { name: '', code: '', default_allowance_days: 0, paid: true, requires_attachment: false, deducts_balance: true };
 const emptyHolidayForm = { name: '', holiday_date: '' };
-const emptyUserForm = { name: '', email: '', password: 'password', role: 'staff', department_id: '', manager_id: '', employee_code: '', job_title: '', hire_date: '', two_factor_enabled: false };
+const emptyUserForm = { name: '', email: '', password: 'password', role: 'staff', phone: '', department_id: '', manager_id: '', employee_code: '', job_title: '', hire_date: '', two_factor_enabled: false };
 
 const auditColors: Record<string, string> = {
   user: 'bg-blue-50 border-blue-100 text-blue-600',
   department: 'bg-purple-50 border-purple-100 text-purple-600',
   leave_type: 'bg-violet-50 border-violet-100 text-violet-600',
   holiday: 'bg-pink-50 border-pink-100 text-pink-600',
+  role: 'bg-indigo-50 border-indigo-100 text-indigo-600',
   security: 'bg-rose-50 border-rose-100 text-rose-600',
   leave_request: 'bg-amber-50 border-amber-100 text-amber-600',
   balance: 'bg-emerald-50 border-emerald-100 text-emerald-600',
@@ -52,6 +53,8 @@ const AuditIcon = ({ type }: { type: string }) => {
       return <SlidersHorizontal size={12} />;
     case 'holiday':
       return <CalendarDays size={12} />;
+    case 'role':
+      return <Shield size={12} />;
     case 'security':
       return <AlertCircle size={12} />;
     case 'leave_request':
@@ -144,6 +147,16 @@ function formatAuditLog(log: AuditLog) {
       iconType = 'security';
       break;
 
+    // Roles
+    case 'admin.role.created':
+      description = `Created role "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'role';
+      break;
+    case 'admin.role.permissions_updated':
+      description = `Updated permissions for role "${log.subject?.name || log.subject_id || 'Unknown'}"`;
+      iconType = 'role';
+      break;
+
     // Balance Override
     case 'admin.balance.overridden':
       {
@@ -219,7 +232,7 @@ function formatAuditLog(log: AuditLog) {
   return { actorText, description, iconType };
 }
 
-export default function Admin({ departments, leaveTypes, holidays, users, auditLogs, stats }: { departments: Department[]; leaveTypes: LeaveType[]; holidays: Holiday[]; users: User[]; auditLogs: AuditLog[]; stats: Stats }) {
+export default function Admin({ roles, managerEligibleRoleSlugs, departments, leaveTypes, holidays, users, auditLogs, stats }: { roles: Role[]; managerEligibleRoleSlugs: string[]; departments: Department[]; leaveTypes: LeaveType[]; holidays: Holiday[]; users: User[]; auditLogs: AuditLog[]; stats: Stats }) {
   const { errors } = usePage<PageProps>().props;
   const [activeTab, setActiveTab] = useState('users');
   const [modal, setModal] = useState<AdminModal | null>(null);
@@ -307,7 +320,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
 
   const currentBalance = useMemo(() => {
     if (!selectedUser || !selectedLeaveType) return null;
-    return selectedUser.leaveBalances?.find(
+    return selectedUser.leave_balances?.find(
       b => String(b.leave_type_id) === String(selectedLeaveType.id) && Number(b.year) === Number(balanceForm.year)
     ) || null;
   }, [selectedUser, selectedLeaveType, balanceForm.year]);
@@ -367,7 +380,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
       const u = users.find(user => String(user.id) === String(userId));
       const t = leaveTypes.find(type => String(type.id) === String(leaveTypeId));
       
-      const balance = u?.leaveBalances?.find(
+      const balance = u?.leave_balances?.find(
         b => String(b.leave_type_id) === String(leaveTypeId) && Number(b.year) === year
       );
       
@@ -416,6 +429,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
       email: user.email,
       password: '',
       role: user.role,
+      phone: user.phone ?? '',
       department_id: user.department?.id ? String(user.department.id) : '',
       manager_id: user.manager?.id ? String(user.manager.id) : '',
       employee_code: user.employee_code ?? '',
@@ -594,7 +608,7 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
     return pages;
   };
 
-  const reportingManagers = useMemo(() => users.filter((user) => ['manager', 'admin'].includes(user.role)), [users]);
+  const reportingManagers = useMemo(() => users.filter((user) => managerEligibleRoleSlugs.includes(user.role)), [users, managerEligibleRoleSlugs]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -683,9 +697,10 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                       value={roleFilter}
                       onChange={(e) => setRoleFilter(e.target.value)}
                     >
-                      {['all', 'staff', 'manager', 'hr admin', 'admin'].map((role) => (
-                        <option key={role} value={role}>
-                          {role === 'all' ? 'All Roles' : formatRole(role)}
+                      <option value="all">All Roles</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.slug}>
+                          {formatRole(role.slug)}
                         </option>
                       ))}
                     </select>
@@ -1560,21 +1575,23 @@ export default function Admin({ departments, leaveTypes, holidays, users, auditL
                       <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" type="email" placeholder="Email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} required />
                     </FieldError>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <FieldError label="Employee Code" error={errors.employee_code}>
                       <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" placeholder="EMP-01" value={userForm.employee_code} onChange={(e) => setUserForm({ ...userForm, employee_code: e.target.value })} />
                     </FieldError>
                     <FieldError label="Job Title" error={errors.job_title}>
                       <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" placeholder="Title" value={userForm.job_title} onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })} />
                     </FieldError>
+                    <FieldError label="Phone Number" error={errors.phone}>
+                      <input className="mt-1.5 w-full rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder-neutral-400 shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" placeholder="012 345 678" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} required />
+                    </FieldError>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FieldError label="Role" error={errors.role}>
-                      <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value as typeof userForm.role })}>
-                        <option>staff</option>
-                        <option>manager</option>
-                        <option>hr admin</option>
-                        <option>admin</option>
+                      <select className="mt-1.5 w-full cursor-pointer rounded-lg border border-neutral-200/70 bg-white px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all shadow-premium-sm focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5" value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}>
+                        {roles.map((role) => (
+                          <option key={role.id} value={role.slug}>{formatRole(role.slug)}</option>
+                        ))}
                       </select>
                     </FieldError>
                     <FieldError label="Hire Date" error={errors.hire_date}>

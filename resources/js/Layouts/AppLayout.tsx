@@ -1,9 +1,11 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, IdCard, LogOut, Menu, MessageSquareText, Settings, Sparkles, Users, X } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, IdCard, LogOut, Menu, MessageSquareText, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
-import { canAdminRole, canApproveRole, formatRole } from '../utils';
+import { formatRole } from '../utils';
+
+const ADMIN_PANEL_PERMISSIONS = ['users.manage', 'departments.manage', 'leave_types.manage', 'holidays.manage', 'balances.override', 'reports.view', 'audit_logs.view'];
 
 export default function AppLayout({ children, fullHeight }: { children: React.ReactNode; fullHeight?: boolean }) {
   const { auth, flash, notifications } = usePage<PageProps>().props;
@@ -244,9 +246,13 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
   const { auth } = usePage<PageProps>().props;
   const { url } = usePage();
   const user = auth.user;
-  const canApprove = canApproveRole(user.role);
-  const canAdmin = canAdminRole(user.role);
-  const canViewSupportTickets = user.role === 'admin';
+  const permissions = auth.permissions ?? [];
+  const canViewTeam = permissions.includes('team.view');
+  const canApprove = permissions.includes('approvals.manage');
+  const canAdmin = ADMIN_PANEL_PERMISSIONS.some((permission) => permissions.includes(permission));
+  const canViewSupportTickets = permissions.includes('support_tickets.manage');
+  const canViewReports = permissions.includes('reports.view');
+  const canManageRoles = user.role === 'admin';
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -305,7 +311,7 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
             {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">My Profile</span>}
           </Link>
           
-          {(canApprove || canAdmin) && (
+          {(canViewTeam || canApprove || canAdmin || canViewSupportTickets || canViewReports || canManageRoles) && (
             <div className={`my-5 border-t border-neutral-100 pt-5 transition-all duration-300 ${isCollapsed ? 'px-3' : 'px-6'}`}>
               {!isCollapsed ? (
                 <span className="text-xs font-medium uppercase tracking-wider text-neutral-400 animate-fade-in whitespace-nowrap">Management</span>
@@ -315,7 +321,7 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
             </div>
           )}
 
-          {canApprove && (
+          {canViewTeam && (
             <Link className={navItemClass('/team', isCollapsed)} href="/team" title={isCollapsed ? "Team Center" : undefined}>
               <Users size={16} className="shrink-0" />
               {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Team Center</span>}
@@ -347,10 +353,22 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
               {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Support Tickets</span>}
             </Link>
           )}
+          {canViewReports && (
+            <Link className={navItemClass('/reports', isCollapsed)} href="/reports" title={isCollapsed ? "Reports" : undefined}>
+              <ClipboardList size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Reports</span>}
+            </Link>
+          )}
           {canAdmin && (
             <Link className={navItemClass('/admin', isCollapsed)} href="/admin" title={isCollapsed ? "HR Admin" : undefined}>
               <Settings size={16} className="shrink-0" />
               {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">HR Admin</span>}
+            </Link>
+          )}
+          {canManageRoles && (
+            <Link className={navItemClass('/roles-permissions', isCollapsed)} href="/roles-permissions" title={isCollapsed ? "Roles & Permissions" : undefined}>
+              <ShieldCheck size={16} className="shrink-0" />
+              {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Roles & Permissions</span>}
             </Link>
           )}
         </nav>
