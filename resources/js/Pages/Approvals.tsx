@@ -172,7 +172,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
 
           <div className="divide-y divide-neutral-200/60 bg-neutral-50/5">
             {filtered.map((request) => (
-              <div key={request.id} className="grid gap-6 p-6 lg:grid-cols-[1fr_320px]">
+              <div id={`request-${request.id}`} key={request.id} className="grid scroll-mt-6 gap-6 p-6 lg:grid-cols-[1fr_320px]">
                 {/* Employee Info & Request details */}
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2.5">

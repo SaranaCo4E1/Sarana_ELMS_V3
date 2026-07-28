@@ -1,7 +1,8 @@
 import { Link } from '@inertiajs/react';
-import { CalendarClock, ClipboardCheck, UserCheck, Users, Search } from 'lucide-react';
+import { CalendarClock, ClipboardCheck, Search, UserCheck, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import type { LeaveRequest, User } from '../types';
 import { formatDays, formatRole, formatShortDate } from '../utils';
@@ -12,12 +13,30 @@ type Props = {
   leaveCalendar: LeaveRequest[];
   pendingRequests: LeaveRequest[];
   teamStats: { members: number; pending: number; on_leave_today: number; approved_this_year: number };
+  requestYear: number;
 };
 
-export default function Team({ members, leaveCalendar, pendingRequests, teamStats }: Props) {
+export default function Team({ members, leaveCalendar, pendingRequests, teamStats, requestYear }: Props) {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [deptFilter, setDeptFilter] = useState('all');
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (!selectedMember) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedMember(null);
+      }
+    };
+
+    document.addEventListener('keydown', closeOnEscape);
+
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [selectedMember]);
 
   const departments = useMemo(() => {
     return Array.from(new Set(members.map((m) => m.department?.name).filter(Boolean))) as string[];
@@ -67,7 +86,9 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
         {/* Statistics section */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Metric icon={<Users size={15} />} label="Team Members" value={teamStats.members} variant="indigo" />
-          <Metric icon={<ClipboardCheck size={15} />} label="Pending Decisions" value={teamStats.pending} variant="amber" />
+          <Link href="/approvals" aria-label={`Review ${teamStats.pending} pending decisions`}>
+            <Metric icon={<ClipboardCheck size={15} />} label="Pending Decisions" value={teamStats.pending} variant="amber" />
+          </Link>
           <Metric icon={<UserCheck size={15} />} label="On Leave Today" value={teamStats.on_leave_today} variant="orange" />
           <Metric icon={<CalendarClock size={15} />} label="Approved This Year" value={teamStats.approved_this_year} variant="green" />
         </div>
@@ -127,7 +148,12 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
             <div className="divide-y divide-neutral-100 sm:hidden">
               {paginatedMembers.map((member) => (
                 <div key={member.id} className="p-5 space-y-4 bg-white">
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg text-left outline-none transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-orange-500/30"
+                    onClick={() => setSelectedMember(member)}
+                    aria-label={`View ${member.name}'s ${requestYear} leave requests`}
+                  >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-neutral-50 to-neutral-100 font-medium text-neutral-600 text-sm shrink-0 border border-neutral-200 shadow-premium-sm">
                       {member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
@@ -135,7 +161,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                       <div className="font-medium text-neutral-800 text-sm">{member.name}</div>
                       <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mt-1">{member.employee_code ?? 'NO CODE'}</div>
                     </div>
-                  </div>
+                  </button>
  
                   <div className="grid grid-cols-2 gap-3.5 text-sm text-neutral-600 font-medium">
                     <div>
@@ -167,7 +193,9 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   <div className="pt-3.5 border-t border-neutral-100 flex items-center justify-between text-sm font-medium text-neutral-500">
                     <span>Leave Summary:</span>
                     <div className="font-medium">
-                      <span className="text-amber-700">{member.pending_leave_requests_count ?? 0} pending</span>
+                      <Link className="rounded text-amber-700 hover:text-amber-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30" href="/approvals">
+                        {member.pending_leave_requests_count ?? 0} pending
+                      </Link>
                       <span className="mx-1.5 text-neutral-300">·</span>
                       <span className="text-green-700">{member.approved_leave_requests_count ?? 0} approved</span>
                     </div>
@@ -198,7 +226,12 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   {paginatedMembers.map((member) => (
                     <tr key={member.id} className="transition-all hover:bg-neutral-50/40">
                       <td className="px-6 py-4.5">
-                        <div className="flex items-center gap-3.5">
+                        <button
+                          type="button"
+                          className="flex items-center gap-3.5 rounded-lg text-left outline-none transition-colors hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500/30"
+                          onClick={() => setSelectedMember(member)}
+                          aria-label={`View ${member.name}'s ${requestYear} leave requests`}
+                        >
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-neutral-50 to-neutral-100 font-medium text-neutral-600 text-sm shrink-0 border border-neutral-200 shadow-premium-sm">
                             {member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                           </div>
@@ -206,7 +239,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                             <div className="font-medium text-neutral-800">{member.name}</div>
                             <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mt-1">{member.employee_code ?? 'NO CODE'}</div>
                           </div>
-                        </div>
+                        </button>
                       </td>
                       <td className="px-4 py-4.5 text-neutral-600 font-medium">
                         {member.job_title ?? formatRole(member.role)}
@@ -224,7 +257,9 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                         {member.manager?.name ?? '—'}
                       </td>
                       <td className="px-4 py-4.5 whitespace-nowrap text-neutral-600 font-medium">
-                        <span className="text-amber-700 font-medium">{member.pending_leave_requests_count ?? 0} pending</span>
+                        <Link className="rounded text-amber-700 font-medium hover:text-amber-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30" href="/approvals">
+                          {member.pending_leave_requests_count ?? 0} pending
+                        </Link>
                         <span className="mx-1.5 text-neutral-300">·</span>
                         <span className="text-green-700 font-medium">{member.approved_leave_requests_count ?? 0} approved</span>
                       </td>
@@ -320,6 +355,15 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
           </aside>
         </div>
       </div>
+
+      {selectedMember && createPortal(
+        <EmployeeRequestsModal
+          member={selectedMember}
+          requestYear={requestYear}
+          onClose={() => setSelectedMember(null)}
+        />,
+        document.body,
+      )}
     </AppLayout>
   );
 }
@@ -385,8 +429,8 @@ function RequestLine({ request }: { request: LeaveRequest }) {
   };
   const style = statusStyles[request.status] ?? { bg: 'bg-neutral-500/[0.04]', border: 'border-neutral-500/10', text: 'text-neutral-600/90', dot: 'bg-neutral-400' };
 
-  return (
-    <div className="rounded-lg bg-neutral-50/50 border border-neutral-100 p-4 text-sm shadow-premium-sm">
+  const content = (
+    <div className={`rounded-lg bg-neutral-50/50 border border-neutral-100 p-4 text-sm shadow-premium-sm ${request.status === 'pending' ? 'transition-all group-hover:border-amber-200 group-hover:bg-amber-50/40 group-hover:shadow-premium-md' : ''}`}>
       <div className="font-medium text-neutral-800 flex items-center gap-1.5 flex-wrap">
         <span>{request.user?.name}</span>
         <span>·</span>
@@ -403,5 +447,153 @@ function RequestLine({ request }: { request: LeaveRequest }) {
         </span>
       </div>
     </div>
+  );
+
+  if (request.status === 'pending') {
+    return (
+      <Link
+        className="group block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30"
+        href={`/approvals#request-${request.id}`}
+        aria-label={`Review ${request.user?.name ?? 'employee'}'s pending ${request.leave_type.name} request`}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
+}
+
+function EmployeeRequestsModal({ member, requestYear, onClose }: { member: User; requestYear: number; onClose: () => void }) {
+  const requests = member.leave_requests ?? [];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/60 p-4 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+      role="presentation"
+    >
+      <section
+        aria-labelledby="employee-requests-title"
+        aria-modal="true"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-neutral-200/85 bg-white shadow-premium-lg"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-neutral-100 px-5 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-gradient-to-br from-neutral-50 to-neutral-100 text-sm font-medium text-neutral-600 shadow-premium-sm">
+              {member.name.split(' ').map((name) => name[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h2 id="employee-requests-title" className="truncate text-base font-semibold text-neutral-800">
+                {member.name}
+              </h2>
+              <p className="mt-1 text-sm font-medium text-neutral-500">
+                {requests.length} leave request{requests.length === 1 ? '' : 's'} in {requestYear}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="rounded-lg border border-neutral-200 p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30"
+            onClick={onClose}
+            aria-label="Close employee request details"
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+          {requests.length > 0 ? (
+            <div className="space-y-4">
+              {requests.map((request) => (
+                <EmployeeRequestCard key={request.id} request={request} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 px-6 py-12 text-center">
+              <CalendarClock className="mx-auto text-neutral-300" size={28} />
+              <p className="mt-3 text-sm font-medium text-neutral-500">No leave requests in {requestYear}.</p>
+            </div>
+          )}
+        </div>
+
+        <footer className="flex justify-end border-t border-neutral-100 bg-neutral-50/20 px-5 py-4 sm:px-6">
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white px-5 py-2.5 text-sm font-semibold text-neutral-600 transition-all hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function EmployeeRequestCard({ request }: { request: LeaveRequest }) {
+  const statusStyles: Record<string, { container: string; dot: string }> = {
+    pending: { container: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+    approved: { container: 'border-green-200 bg-green-50 text-green-700', dot: 'bg-green-500' },
+    rejected: { container: 'border-rose-200 bg-rose-50 text-rose-700', dot: 'bg-rose-500' },
+    cancelled: { container: 'border-neutral-200 bg-neutral-50 text-neutral-600', dot: 'bg-neutral-400' },
+  };
+  const style = statusStyles[request.status] ?? statusStyles.cancelled;
+
+  return (
+    <article className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-premium-sm sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} />
+          <p className="mt-2 text-sm font-semibold text-neutral-800">
+            {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
+          </p>
+          <p className="mt-1 text-xs font-medium text-orange-700">{formatDays(request.requested_days)} working day(s)</p>
+        </div>
+        <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${style.container}`}>
+          <span className={`mr-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${style.dot}`} />
+          {request.status}
+        </span>
+      </div>
+
+      <dl className="mt-4 grid gap-4 border-t border-neutral-100 pt-4 sm:grid-cols-2">
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Reason</dt>
+          <dd className="mt-1 text-sm leading-relaxed text-neutral-600">{request.reason || 'No reason provided.'}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Decision</dt>
+          <dd className="mt-1 text-sm leading-relaxed text-neutral-600">
+            {request.manager_comment || (request.status === 'pending' ? 'Awaiting manager review.' : 'No manager comment.')}
+          </dd>
+          {request.approver?.name && <p className="mt-1 text-xs font-medium text-neutral-400">By {request.approver.name}</p>}
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Submitted</dt>
+          <dd className="mt-1 text-sm text-neutral-600">
+            {request.submitted_at ? new Date(request.submitted_at).toLocaleString() : 'Not recorded'}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Decided</dt>
+          <dd className="mt-1 text-sm text-neutral-600">
+            {request.decided_at ? new Date(request.decided_at).toLocaleString() : 'Not decided yet'}
+          </dd>
+        </div>
+      </dl>
+
+      {request.status === 'pending' && (
+        <div className="mt-4 flex justify-end border-t border-neutral-100 pt-4">
+          <Link
+            className="inline-flex items-center rounded-lg bg-orange-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30"
+            href={`/approvals#request-${request.id}`}
+          >
+            Review request
+          </Link>
+        </div>
+      )}
+    </article>
   );
 }

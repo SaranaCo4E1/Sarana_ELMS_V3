@@ -19,6 +19,7 @@ export type User = {
   manager?: { id: number; name: string } | null;
   pending_leave_requests_count?: number;
   approved_leave_requests_count?: number;
+  leave_requests?: LeaveRequest[];
   leave_balances?: LeaveBalance[];
 };
 

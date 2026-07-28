@@ -7,16 +7,18 @@ use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
-use App\Models\PublicHoliday;
 use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\LeaveBalanceService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
+    private const WORKDAY_MINUTES = 9 * 60;
+
     public function run(): void
     {
         $this->call(RolePermissionSeeder::class);
@@ -33,8 +35,29 @@ class DatabaseSeeder extends Seeder
         ]);
         Department::query()->whereIn('code', ['ENG', 'OPS'])->update(['is_active' => false]);
 
+        User::query()->whereIn('email', [
+            'ceo@niy.ai',
+            'admin@niy.ai',
+            'admin@elms.test',
+            'hr@niy.ai',
+            'hr@elms.test',
+            'it@niy.ai',
+            'manager@elms.test',
+            'sales@niy.ai',
+            'hr.staff@niy.ai',
+            'it.engineer@niy.ai',
+            'staff@elms.test',
+            'it.support@niy.ai',
+            'sreynimsamuser@gmail.com',
+            'samuelsinat11@gmail.com',
+            'hakkimhengg@gmail.com',
+            'sean.sophearom77@gmail.com',
+            'sales.rep@niy.ai',
+            'sales.ops@niy.ai',
+        ])->update(['employee_code' => null]);
+
         // Seed the reporting root first so department managers can reference the CEO.
-        $ceo = $this->seedUser('ceo@niy.ai', 'CEO-001', [
+        $ceo = $this->seedUser('ceo@niy.ai', [
             'name' => 'Sophea Sok',
             'password' => $password,
             'role' => 'admin',
@@ -51,7 +74,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $admin = $this->seedUser('admin@niy.ai', 'ADM-001', [
+        $admin = $this->seedUser('admin@niy.ai', [
             'name' => 'Davy Keo',
             'password' => $password,
             'role' => 'admin',
@@ -76,7 +99,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'hr admin',
                 'department' => 'HR',
                 'manager' => $ceo,
-                'employee_code' => 'HR-001',
                 'job_title' => 'HR Manager',
                 'phone' => '011 234 503',
                 'emergency_contact_phone' => '097 234 5903',
@@ -89,7 +111,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'manager',
                 'department' => 'IT',
                 'manager' => $ceo,
-                'employee_code' => 'IT-001',
                 'job_title' => 'IT Manager',
                 'phone' => '017 234 504',
                 'emergency_contact_phone' => '010 234 904',
@@ -102,7 +123,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'manager',
                 'department' => 'SALES',
                 'manager' => $ceo,
-                'employee_code' => 'SALES-001',
                 'job_title' => 'Sales Manager',
                 'phone' => '098 234 505',
                 'emergency_contact_phone' => '015 234 905',
@@ -115,7 +135,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'HR',
                 'manager' => null,
-                'employee_code' => 'HR-101',
                 'job_title' => 'People Operations Specialist',
                 'phone' => '016 234 506',
                 'emergency_contact_phone' => '099 234 906',
@@ -128,7 +147,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-101',
                 'job_title' => 'Backend Engineer',
                 'phone' => '069 234 507',
                 'emergency_contact_phone' => '078 234 907',
@@ -141,7 +159,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-102',
                 'job_title' => 'IT Support Specialist',
                 'phone' => '070 234 508',
                 'emergency_contact_phone' => '085 234 908',
@@ -154,7 +171,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-103',
                 'job_title' => 'IT Staff',
                 'phone' => '086 234 511',
                 'emergency_contact_phone' => '090 234 911',
@@ -167,7 +183,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-104',
                 'job_title' => 'IT Staff',
                 'phone' => '089 234 512',
                 'emergency_contact_phone' => '060 234 912',
@@ -180,7 +195,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-105',
                 'job_title' => 'IT Staff',
                 'phone' => '066 234 513',
                 'emergency_contact_phone' => '067 234 913',
@@ -193,7 +207,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'IT',
                 'manager' => null,
-                'employee_code' => 'IT-106',
                 'job_title' => 'IT Staff',
                 'phone' => '068 234 514',
                 'emergency_contact_phone' => '077 234 914',
@@ -206,7 +219,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'SALES',
                 'manager' => null,
-                'employee_code' => 'SALES-101',
                 'job_title' => 'Account Executive',
                 'phone' => '081 234 509',
                 'emergency_contact_phone' => '088 234 5909',
@@ -219,7 +231,6 @@ class DatabaseSeeder extends Seeder
                 'role' => 'staff',
                 'department' => 'SALES',
                 'manager' => null,
-                'employee_code' => 'SALES-102',
                 'job_title' => 'Sales Operations Analyst',
                 'phone' => '087 234 510',
                 'emergency_contact_phone' => '095 234 910',
@@ -229,7 +240,7 @@ class DatabaseSeeder extends Seeder
         ])->map(function (array $user) use ($departments, $password) {
             $department = $departments[$user['department']];
 
-            return $this->seedUser($user['email'], $user['employee_code'], [
+            return $this->seedUser($user['email'], [
                 'name' => $user['name'],
                 'password' => $password,
                 'role' => $user['role'],
@@ -272,7 +283,7 @@ class DatabaseSeeder extends Seeder
             $code => LeaveType::query()->updateOrCreate(['code' => $code], $type),
         ]);
 
-        $this->seedPublicHolidays();
+        $this->call(PublicHolidaySeeder::class);
 
         $allUsers = collect([$ceo, $admin])->merge($users);
         $balanceService = app(LeaveBalanceService::class);
@@ -296,40 +307,44 @@ class DatabaseSeeder extends Seeder
 
         // Relative offsets keep demo requests useful whenever the seeder runs.
         $requests = [
-            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Travelling to Kampong Cham for my cousin wedding.'],
-            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'High fever and body aches, clinic advised me rest two days.'],
-            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Spending few days with my parents while they visiting Phnom Penh.'],
-            [$users['sales_ops'], 'unpaid', -161, -160, 'approved', $users['sales_manager'], 'Need handle family land transfer at district office.'],
-            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Visiting my grandparents in Siem Reap for a few days.'],
-            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Have dental procedure and need some recovery time after.'],
-            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Taking short family trip we planned few months ago.'],
-            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Taking trip with friends that already booked before release.'],
-            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Migraine came back and have clinic appointement this afternoon.'],
-            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday.'],
-            [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and sore throat since last night.'],
-            [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Need accompany my mother for specialist appointment.'],
-            [$users['sales_ops'], 'unpaid', -1, -1, 'rejected', $users['sales_manager'], 'Urgent bank issue, need go resolve it in person.'],
-            [$users['hr_specialist'], 'annual', 2, 4, 'pending', $users['hr_manager'], 'Going to close friend wedding in Kep.'],
-            [$users['it_support'], 'annual', 6, 8, 'pending', $users['it_manager'], 'Taking my parents to Kampot for short family break.'],
-            [$users['sales_rep'], 'sick', 1, 1, 'pending', $users['sales_manager'], 'Follow up appointment for stomach pain still not better.'],
-            [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Family holiday already booked before current sales cycle.'],
-            [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Respiratory infection, doctor advised to rest two days.'],
-            [$ceo, 'annual', 20, 21, 'pending', null, 'Short personal trip Singapore before next leadership meeting.'],
+            [$users['sales_rep'], 'annual', -236, -234, 'approved', $users['sales_manager'], 'Travelling to Kampong Cham for my cousin wedding'],
+            [$users['it_engineer'], 'sick', -214, -213, 'approved', $users['it_manager'], 'High fever and body aches, clinic advised me rest two days'],
+            [$users['hr_specialist'], 'annual', -188, -186, 'approved', $users['hr_manager'], 'Spending few days with my parents while they visiting Phnom Penh'],
+            [$users['sales_ops'], 'annual', -161, -160, 'approved', $users['sales_manager'], 'Need handle family land transfer at district office'],
+            [$users['it_support'], 'annual', -137, -135, 'approved', $users['it_manager'], 'Visiting my grandparents in Siem Reap for a few days'],
+            [$users['sales_manager'], 'sick', -112, -112, 'approved', $ceo, 'Have dental procedure and need some recovery time after'],
+            [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Taking short family trip we planned few months ago'],
+            [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Taking trip with friends that already booked before release'],
+            [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Migraine came back and have clinic appointement this afternoon'],
+            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday'],
+            [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and sore throat since last night'],
+            [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Need accompany my mother for specialist appointment'],
+            [$users['sales_ops'], 'annual', -1, -1, 'rejected', $users['sales_manager'], 'Urgent bank issue, need go resolve it in person'],
+            [$users['hr_specialist'], 'annual', 2, 4, 'pending', $users['hr_manager'], 'Going to close friend wedding in Kep'],
+            [$users['it_support'], 'annual', 6, 8, 'pending', $users['it_manager'], 'Taking my parents to Kampot for short family break'],
+            [$users['sales_rep'], 'sick', 1, 1, 'pending', $users['sales_manager'], 'Follow up appointment for stomach pain still not better'],
+            [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Family holiday already booked'],
+            [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Stomache problem, doctor advised to rest two days'],
+            [$ceo, 'annual', 20, 21, 'pending', null, 'Short personal trip before next meeting'],
         ];
 
         // Create matching in-app notifications so demo accounts show realistic unread state.
         foreach ($requests as [$user, $typeCode, $startOffset, $endOffset, $status, $approver, $reason]) {
             $startsAt = $this->businessDay($today->copy()->addDays($startOffset));
             $endsAt = $this->businessDay($today->copy()->addDays($endOffset));
+            $fixtureKey = "{$user->email}:{$typeCode}:{$startOffset}:{$endOffset}";
 
             if ($endsAt->lt($startsAt)) {
                 $endsAt = $startsAt->copy();
             }
 
             $requestedDays = max(1, $balanceService->workingDays($startsAt->toDateString(), $endsAt->toDateString()));
-            $submittedAt = $startsAt->copy()->subDays($status === 'pending' ? 2 : 10)->setTime(9, 0);
+            $submittedAt = $this->workingTime(
+                $startsAt->copy()->subDays($status === 'pending' ? 2 : 10),
+                "submitted:{$fixtureKey}",
+            );
             $decidedAt = in_array($status, ['approved', 'rejected'], true)
-                ? $submittedAt->copy()->addDay()->setTime(15, 30)
+                ? $this->workingTime($submittedAt->copy()->addDay(), "decided:{$fixtureKey}")
                 : null;
 
             $leaveRequest = LeaveRequest::query()->updateOrCreate(
@@ -376,7 +391,12 @@ class DatabaseSeeder extends Seeder
                     'Leave request '.$status,
                     'Your '.$types[$typeCode]->name.' request was '.$status.'.',
                     '/dashboard',
-                    $leaveRequest->decided_at ? Carbon::parse($leaveRequest->decided_at)->addHour() : null
+                    $leaveRequest->decided_at
+                        ? $this->workingTime(
+                            Carbon::parse($leaveRequest->decided_at)->addDay(),
+                            "notification-read:{$fixtureKey}",
+                        )
+                        : null,
                 );
             }
         }
@@ -421,27 +441,12 @@ class DatabaseSeeder extends Seeder
         return $date;
     }
 
-    private function seedPublicHolidays(): void
+    private function workingTime(Carbon $date, string $fixtureKey): Carbon
     {
-        // Holiday fixtures live outside seeder code so new years can be added as data only.
-        foreach (glob(database_path('data/holidays/*.json')) ?: [] as $path) {
-            $data = json_decode((string) file_get_contents($path), true);
+        $hashPrefix = Str::substr(hash('sha256', $fixtureKey), 0, 8);
+        $minuteOffset = (int) (hexdec($hashPrefix) % self::WORKDAY_MINUTES);
 
-            if (! is_array($data) || ! isset($data['holidays']) || ! is_array($data['holidays'])) {
-                continue;
-            }
-
-            foreach ($data['holidays'] as $holiday) {
-                if (! isset($holiday['date'], $holiday['name'])) {
-                    continue;
-                }
-
-                PublicHoliday::query()->updateOrCreate(
-                    ['holiday_date' => $holiday['date']],
-                    ['name' => $holiday['name'], 'is_active' => true]
-                );
-            }
-        }
+        return $date->copy()->startOfDay()->addHours(8)->addMinutes($minuteOffset);
     }
 
     private function seedNotification(
@@ -465,29 +470,30 @@ class DatabaseSeeder extends Seeder
         );
     }
 
-    /**
-     * Keep the seeder rerunnable when older demo accounts used the same employee codes.
-     */
-    private function seedUser(string $email, string $employeeCode, array $attributes, array $legacyEmails = []): User
+    private function seedUser(string $email, array $attributes, array $legacyEmails = []): User
     {
         $user = User::query()
             ->where('email', $email)
-            ->orWhere('employee_code', $employeeCode)
             ->orWhereIn('email', $legacyEmails)
             ->first();
 
         if (! $user) {
-            return User::query()->create($attributes + [
+            $user = User::query()->create($attributes + [
                 'email' => $email,
-                'employee_code' => $employeeCode,
+                'employee_code' => null,
             ]);
+        } else {
+            $user->fill($attributes + [
+                'email' => $email,
+                'employee_code' => null,
+            ]);
+            $user->save();
         }
 
-        $user->fill($attributes + [
-            'email' => $email,
-            'employee_code' => $employeeCode,
+        $department = Department::query()->findOrFail($attributes['department_id']);
+        $user->update([
+            'employee_code' => User::formatEmployeeCode($department, $user->id),
         ]);
-        $user->save();
 
         return $user;
     }

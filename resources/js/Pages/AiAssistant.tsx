@@ -49,7 +49,12 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
 
   useEffect(() => {
     const now = new Date();
-    const formatMonthDay = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const formatMonthDay = (d: Date) =>
+      d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}),
+      });
     const start = new Date(now);
     const end = new Date(now);
     end.setDate(end.getDate() + 3);
@@ -704,7 +709,16 @@ function parseChatTurnLimit(value: string | undefined) {
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const date = new Date(value);
+  const currentYear = new Date().getFullYear();
+  const includeYear = date.getFullYear() !== currentYear;
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 

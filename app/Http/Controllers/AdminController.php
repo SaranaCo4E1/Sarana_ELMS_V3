@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -147,7 +148,23 @@ class AdminController extends Controller
             'two_factor_enabled' => ['boolean'],
         ]);
         $data['password'] = Hash::make($data['password']);
-        $user = User::query()->create($data);
+
+        $user = DB::transaction(function () use ($data): User {
+            $department = filled($data['department_id'] ?? null)
+                ? Department::query()->findOrFail($data['department_id'])
+                : null;
+
+            $data['employee_code'] = null;
+            $user = User::query()->create($data);
+
+            $user->update([
+                'employee_code' => $department
+                    ? User::formatEmployeeCode($department, $user->id)
+                    : null,
+            ]);
+
+            return $user;
+        });
         Audit::record($request, 'admin.user.created', $user);
 
         return back()->with('success', 'User created.');
@@ -175,6 +192,13 @@ class AdminController extends Controller
             unset($data['password']);
         }
 
+        $department = filled($data['department_id'] ?? null)
+            ? Department::query()->findOrFail($data['department_id'])
+            : null;
+        $data['employee_code'] = $department
+            ? User::formatEmployeeCode($department, $user->id)
+            : null;
+
         $user->update($data);
         Audit::record($request, 'admin.user.updated', $user);
 
@@ -186,17 +210,32 @@ class AdminController extends Controller
         $data = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
             'leave_type_id' => ['required', 'exists:leave_types,id'],
-            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
-            'allowance_days' => ['required', 'numeric', 'min:0', 'max:366'],
-            'adjustment_days' => ['required', 'numeric', 'min:-366', 'max:366'],
+            'delta_days' => ['required', 'numeric', 'min:-366', 'max:366', 'not_in:0'],
             'override_reason' => ['required', 'string', 'max:1000'],
         ]);
 
-        $balance = LeaveBalance::query()->updateOrCreate(
-            ['user_id' => $data['user_id'], 'leave_type_id' => $data['leave_type_id'], 'year' => $data['year']],
-            $data
-        );
-        Audit::record($request, 'admin.balance.overridden', $balance);
+        $currentYear = now()->year;
+
+        DB::transaction(function () use ($currentYear, $data, $request) {
+            $leaveType = LeaveType::query()->findOrFail($data['leave_type_id']);
+            $balance = LeaveBalance::query()->firstOrCreate(
+                ['user_id' => $data['user_id'], 'leave_type_id' => $leaveType->id, 'year' => $currentYear],
+                ['allowance_days' => $leaveType->default_allowance_days]
+            );
+            $balance = LeaveBalance::query()->lockForUpdate()->findOrFail($balance->id);
+            $previousAvailableDays = $balance->available_days;
+            $balance->adjustment_days = (float) $balance->adjustment_days + (float) $data['delta_days'];
+            $balance->override_reason = $data['override_reason'];
+            $balance->save();
+
+            Audit::record($request, 'admin.balance.overridden', $balance, [
+                'delta_days' => (float) $data['delta_days'],
+                'year' => $currentYear,
+                'previous_available_days' => $previousAvailableDays,
+                'new_available_days' => $balance->available_days,
+                'reason' => $data['override_reason'],
+            ]);
+        });
 
         return back()->with('success', 'Leave balance updated.');
     }

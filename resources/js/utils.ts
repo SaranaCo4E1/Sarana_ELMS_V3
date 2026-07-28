@@ -20,9 +20,12 @@ export function formatShortDate(value: string | Date | null | undefined): string
   if (!value) return '-';
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return String(value);
+  const currentYear = new Date().getFullYear();
+  const includeYear = date.getFullYear() !== currentYear;
   return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
   });
 }
 
