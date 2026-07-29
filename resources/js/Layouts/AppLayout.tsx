@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, IdCard, LogOut, Menu, MessageSquareText, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Clock3, IdCard, LogOut, Menu, MessageSquareText, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
@@ -275,8 +275,8 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
   };
 
   return (
-    <div className="flex h-full flex-col justify-between py-6 bg-white">
-      <div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden py-6 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className={`flex items-center gap-3 px-6 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : ''}`}>
           <div className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg border border-orange-100 bg-white shadow-premium-sm">
             <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-7" />
@@ -289,7 +289,7 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
           )}
         </div>
 
-        <nav className="mt-8 space-y-1">
+        <nav className="mt-8 min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain pb-4">
           <Link className={navItemClass('/dashboard', isCollapsed)} href="/dashboard" title={isCollapsed ? "Dashboard" : undefined}>
             <CalendarCheck size={16} className="shrink-0" />
             {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Dashboard</span>}
@@ -301,6 +301,10 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
           <Link className={navItemClass('/apply-leave', isCollapsed)} href="/apply-leave" title={isCollapsed ? "Apply Leave" : undefined}>
             <CalendarPlus size={16} className="shrink-0" />
             {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Apply Leave</span>}
+          </Link>
+          <Link className={navItemClass('/attendance', isCollapsed)} href="/attendance" title={isCollapsed ? "Attendance" : undefined}>
+            <Clock3 size={16} className="shrink-0" />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Attendance</span>}
           </Link>
           <Link className={navItemClass('/ai-assistant', isCollapsed)} href="/ai-assistant" title={isCollapsed ? "ELMS AI Assistant" : undefined}>
             <Bot size={16} className="shrink-0" />
@@ -374,7 +378,7 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
         </nav>
       </div>
 
-      <div className={`px-4 transition-all duration-300 ${isCollapsed ? 'px-2 flex flex-col items-center gap-4' : ''}`}>
+      <div className={`shrink-0 px-4 transition-all duration-300 ${isCollapsed ? 'px-2 flex flex-col items-center gap-4' : ''}`}>
         {/* User Mini Profile Card */}
         {isCollapsed ? (
           <div 

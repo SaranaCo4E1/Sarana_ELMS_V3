@@ -21,6 +21,9 @@ class RolePermissionSeeder extends Seeder
             ['key' => 'team.view', 'name' => 'View Team Center', 'group' => 'Team', 'description' => 'View team members and their leave activity.'],
             ['key' => 'approvals.manage', 'name' => 'Manage Leave Approvals', 'group' => 'Approvals', 'description' => 'Approve or reject leave requests.'],
             ['key' => 'support_tickets.manage', 'name' => 'Manage Support Tickets', 'group' => 'Support', 'description' => 'View and respond to support tickets.'],
+            ['key' => 'attendance.settings.manage', 'name' => 'Manage Attendance Settings', 'group' => 'Attendance', 'description' => 'Manage attendance branches, schedules, assignments, and QR codes.'],
+            ['key' => 'attendance.records.manage', 'name' => 'Manage Attendance Records', 'group' => 'Attendance', 'description' => 'View, correct, review, and export all attendance records.'],
+            ['key' => 'attendance.team.manage', 'name' => 'Manage Team Attendance', 'group' => 'Attendance', 'description' => 'View and correct attendance for direct reports.'],
         ])->mapWithKeys(function (array $data) {
             $permission = Permission::query()->updateOrCreate(['key' => $data['key']], $data);
 
@@ -44,7 +47,7 @@ class RolePermissionSeeder extends Seeder
                 'slug' => 'manager',
                 'name' => 'Manager',
                 'description' => 'Views team members and approves leave requests for direct reports.',
-                'permissions' => ['team.view', 'approvals.manage'],
+                'permissions' => ['team.view', 'approvals.manage', 'attendance.team.manage'],
             ],
             [
                 'slug' => 'staff',

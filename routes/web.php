@@ -4,6 +4,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AiHelpController;
 use App\Http\Controllers\ApplyLeaveController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceQrController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
@@ -63,6 +65,24 @@ Route::middleware('auth')->group(function () {
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
     Route::post('/ai-help/stream', [AiHelpController::class, 'stream'])->name('ai-help.stream');
+    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::get('/attendance/scan/{qrCode}', [AttendanceController::class, 'showScan'])->name('attendance.scan');
+    Route::post('/attendance/scan/{qrCode}', [AttendanceController::class, 'storeScan'])
+        ->middleware('throttle:10,1')
+        ->name('attendance.scan.store');
+    Route::post('/attendance/punch', [AttendanceController::class, 'storeSelfServicePunch'])
+        ->middleware('throttle:10,1')
+        ->name('attendance.punch.store');
+    Route::get('/attendance/qr/{qrCode}/image', AttendanceQrController::class)->name('attendance.qr.image');
+    Route::post('/attendance/sites', [AttendanceController::class, 'storeSite'])->name('attendance.sites.store');
+    Route::patch('/attendance/sites/{site}', [AttendanceController::class, 'updateSite'])->name('attendance.sites.update');
+    Route::post('/attendance/sites/{site}/regenerate-qr', [AttendanceController::class, 'regenerateQr'])->name('attendance.qr.regenerate');
+    Route::post('/attendance/schedules', [AttendanceController::class, 'storeSchedule'])->name('attendance.schedules.store');
+    Route::patch('/attendance/schedules/{schedule}', [AttendanceController::class, 'updateSchedule'])->name('attendance.schedules.update');
+    Route::post('/attendance/events/manual', [AttendanceController::class, 'storeManualEvent'])->name('attendance.events.manual');
+    Route::patch('/attendance/events/{event}', [AttendanceController::class, 'correctEvent'])->name('attendance.events.correct');
+    Route::patch('/attendance/events/{event}/review', [AttendanceController::class, 'reviewEvent'])->name('attendance.events.review');
+    Route::get('/attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
     Route::get('/approvals/attachments/{leaveAttachment}/preview', [ManagerApprovalController::class, 'previewAttachment'])->name('approvals.attachments.preview');
     Route::get('/approvals/attachments/{leaveAttachment}/download', [ManagerApprovalController::class, 'downloadAttachment'])->name('approvals.attachments.download');
 

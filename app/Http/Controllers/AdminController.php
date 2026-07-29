@@ -10,6 +10,7 @@ use App\Models\LeaveType;
 use App\Models\PublicHoliday;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\AttendanceService;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -132,7 +133,7 @@ class AdminController extends Controller
         return back()->with('success', 'Holiday updated.');
     }
 
-    public function storeUser(Request $request): RedirectResponse
+    public function storeUser(Request $request, AttendanceService $attendance): RedirectResponse
     {
         $data = $request->validate([
             'department_id' => ['nullable', 'exists:departments,id'],
@@ -166,6 +167,7 @@ class AdminController extends Controller
             return $user;
         });
         Audit::record($request, 'admin.user.created', $user);
+        $attendance->createDefaultSchedule($user);
 
         return back()->with('success', 'User created.');
     }

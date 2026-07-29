@@ -14,6 +14,8 @@ Laravel + Inertia + React + TypeScript implementation for employee leave operati
 - Manager approval and rejection with comments.
 - Email notifications and in-app system alerts for submission and decisions.
 - HR/admin management for departments, users, leave types, public holidays, and balance overrides.
+- Self-service and QR attendance punching with branch, geolocation, and network verification.
+- Effective-dated attendance schedules, manager review, manual corrections, and CSV export.
 - Monthly leave attendance CSV export.
 - FAQ-backed AI help module scaffold with chat logging.
 - PostgreSQL-ready relational schema with audit logs.
@@ -37,6 +39,12 @@ DB_PORT=5432
 DB_DATABASE=elms_leave
 DB_USERNAME=postgres
 DB_PASSWORD=your_password
+
+# Comma-separated proxy addresses or CIDR ranges; leave empty when accessed directly.
+TRUSTED_PROXIES=
+
+# Demo history is generated for seeded accounts from this date through yesterday.
+ATTENDANCE_SEED_BASELINE_DATE=2026-07-28
 
 MAIL_MAILER=smtp
 MAIL_HOST=your.smtp.host
@@ -77,7 +85,7 @@ Default seeded accounts all use password `testing123`:
 - `sales.rep@niy.ai`
 - `sales.ops@niy.ai`
 
-The seeder creates three active departments: `IT`, `Sales`, and `HR`. Seeded employee profiles use `Phnom Penh` as their work location. Leave types are seeded with annual leave `18` days, sick leave `5` days, and unpaid leave `30` days per year. It also creates sample leave requests, leave balances, and system notifications for submitted and decided leave requests.
+The seeder creates three active departments: `IT`, `Sales`, and `HR`. Seeded employee profiles use `Phnom Penh` as their work location. Leave types are seeded with annual leave `18` days, sick leave `5` days, and unpaid leave `30` days per year. It also creates sample leave requests, leave balances, system notifications, and deterministic attendance history for the listed demo accounts. Adjust `ATTENDANCE_SEED_BASELINE_DATE` to keep the desired demo-history window; the seeder does not rewrite or backfill unrelated users.
 
 Public holidays are imported from JSON fixtures in `database/data/holidays/*.json`. Add or update a `{year}.json` file there before running `php artisan migrate --seed` or `php artisan db:seed`.
 
@@ -139,8 +147,10 @@ server {
 }
 ```
 
-On GCP VM, terminate HTTPS with a valid certificate, keep `.env` out of source control, run `php artisan config:cache`, and schedule Laravel maintenance tasks with:
+If a load balancer or reverse proxy terminates HTTPS, set `TRUSTED_PROXIES` to its addresses or CIDR ranges before caching configuration. On GCP VM, terminate HTTPS with a valid certificate, keep `.env` out of source control, run `php artisan config:cache`, and schedule Laravel maintenance tasks with:
 
 ```cron
 * * * * * cd /var/www/elms && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+The scheduler runs attendance reconciliation every five minutes, materializing current workdays and finalizing records after their scheduled end time.

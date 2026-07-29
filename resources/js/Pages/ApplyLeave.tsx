@@ -43,6 +43,12 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
   const [statusFilter, setStatusFilter] = useState('all');
   const [aiDraftImported, setAiDraftImported] = useState(false);
   const [dateSelectionError, setDateSelectionError] = useState<string | null>(null);
+  const earliestLeaveDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - 7);
+    return date;
+  }, []);
 
   // Date states for react-datepicker
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -156,6 +162,12 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     e.preventDefault();
     if (!form.starts_at || !form.ends_at) {
       setDateSelectionError('Please select the leave date before submitting.');
+
+      return;
+    }
+    const requestedStartDate = parseDateParam(form.starts_at);
+    if (!requestedStartDate || requestedStartDate < earliestLeaveDate) {
+      setDateSelectionError('Leave requests cannot be backdated by more than 7 days.');
 
       return;
     }
@@ -331,6 +343,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                     <DatePicker
                       selected={startDate}
                       onChange={handleSingleDateChange}
+                      minDate={earliestLeaveDate}
                       dateFormat="MMMM d, yyyy"
                       onKeyDown={(e) => e.preventDefault()}
                       className={`w-full rounded-lg border pl-9.5 pr-3.5 py-2.5 text-sm bg-white font-medium text-neutral-800 placeholder:text-neutral-400 placeholder:font-normal focus:ring-4 focus:ring-orange-500/5 transition-all outline-none cursor-pointer select-none caret-transparent ${dateSelectionError ? 'border-rose-300 focus:border-rose-500' : 'border-neutral-200/70 focus:border-orange-500'}`}
@@ -343,6 +356,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                       startDate={startDate ?? undefined}
                       endDate={endDate ?? undefined}
                       onChange={handleRangeDateChange}
+                      minDate={earliestLeaveDate}
                       dateFormat="MMMM d, yyyy"
                       onKeyDown={(e) => e.preventDefault()}
                       className={`w-full rounded-lg border pl-9.5 pr-3.5 py-2.5 text-sm bg-white font-medium text-neutral-800 placeholder:text-neutral-400 placeholder:font-normal focus:ring-4 focus:ring-orange-500/5 transition-all outline-none cursor-pointer select-none caret-transparent ${dateSelectionError ? 'border-rose-300 focus:border-rose-500' : 'border-neutral-200/70 focus:border-orange-500'}`}

@@ -6,6 +6,7 @@ use App\Models\LeaveAttachment;
 use App\Models\LeaveRequest;
 use App\Models\SystemNotification;
 use App\Notifications\LeaveRequestDecided;
+use App\Services\AttendanceService;
 use App\Services\LeaveBalanceService;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
@@ -45,7 +46,7 @@ class ManagerApprovalController extends Controller
         ]);
     }
 
-    public function update(Request $request, LeaveRequest $leaveRequest, LeaveBalanceService $balances): RedirectResponse
+    public function update(Request $request, LeaveRequest $leaveRequest, LeaveBalanceService $balances, AttendanceService $attendance): RedirectResponse
     {
         $data = $request->validate([
             'decision' => ['required', 'in:approved,rejected'],
@@ -68,6 +69,9 @@ class ManagerApprovalController extends Controller
 
         $leaveRequest->load(['user', 'leaveType']);
         $data['decision'] === 'approved' ? $balances->approve($leaveRequest) : $balances->releasePending($leaveRequest);
+        if ($data['decision'] === 'approved') {
+            $attendance->reconcileApprovedLeave($leaveRequest);
+        }
 
         $leaveRequest->user->notify(new LeaveRequestDecided($leaveRequest));
         SystemNotification::query()->create([

@@ -33,12 +33,13 @@ class LeaveRequestController extends Controller
 
         $data = $request->validate([
             'leave_type_id' => ['required', 'exists:leave_types,id'],
-            'starts_at' => ['required', 'date'],
+            'starts_at' => ['required', 'date', 'after_or_equal:'.today()->subDays(7)->toDateString()],
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
             'duration' => ['required', 'in:full_day,half_day'],
             'reason' => ['nullable', 'string', 'max:2000'],
             'attachments.*' => ['file', 'max:20480', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx'],
         ], [
+            'starts_at.after_or_equal' => 'Leave requests cannot be backdated by more than 7 days.',
             'attachments.*.file' => 'One of your attachments failed to upload. Please ensure the file is valid and try again.',
             'attachments.*.max' => 'Each attachment must not exceed 20 MB in size.',
             'attachments.*.mimes' => 'Attachments must be a PDF, image (JPG, PNG, WEBP), or Word document (DOC, DOCX).',

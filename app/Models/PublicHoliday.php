@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Illuminate\Database\Eloquent\Model;
 
 class PublicHoliday extends Model
@@ -10,6 +11,6 @@ class PublicHoliday extends Model
 
     protected function casts(): array
     {
-        return ['holiday_date' => 'date', 'is_active' => 'boolean'];
+        return ['holiday_date' => DateOnly::class, 'is_active' => 'boolean'];
     }
 }

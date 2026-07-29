@@ -1,8 +1,10 @@
 <?php
 
+use App\Services\AttendanceService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -35,3 +37,9 @@ Artisan::command('telegram:set-webhook', function () {
 
     return $response->successful() && $response->json('ok') ? 0 : 1;
 })->purpose('Register the app\'s webhook URL with Telegram so it can receive /start messages');
+
+Artisan::command('attendance:reconcile', function (AttendanceService $attendance) {
+    $this->info('Processed '.$attendance->reconcileDueDays().' attendance schedules.');
+})->purpose('Materialize and finalize due attendance days');
+
+Schedule::command('attendance:reconcile')->everyFiveMinutes()->withoutOverlapping();

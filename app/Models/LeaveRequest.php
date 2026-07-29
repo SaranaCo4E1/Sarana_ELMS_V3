@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,8 +14,8 @@ class LeaveRequest extends Model
     protected function casts(): array
     {
         return [
-            'starts_at' => 'date',
-            'ends_at' => 'date',
+            'starts_at' => DateOnly::class,
+            'ends_at' => DateOnly::class,
             'requested_days' => 'decimal:2',
             'submitted_at' => 'datetime',
             'decided_at' => 'datetime',

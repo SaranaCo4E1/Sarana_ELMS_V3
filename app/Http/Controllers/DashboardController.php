@@ -6,6 +6,7 @@ use App\Models\LeaveRequest;
 use App\Models\PublicHoliday;
 use App\Models\SystemNotification;
 use App\Models\User;
+use App\Services\AttendanceService;
 use App\Services\LeaveBalanceService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,10 +14,24 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, LeaveBalanceService $balances): Response
-    {
+    public function __invoke(
+        Request $request,
+        LeaveBalanceService $balances,
+        AttendanceService $attendance
+    ): Response {
         $user = $request->user();
         $balances->ensureBalances($user);
+        $attendanceSchedule = $attendance->currentSchedule($user);
+        $attendanceDay = $attendanceSchedule
+            ? $attendance->ensureDay(
+                $user,
+                $attendanceSchedule,
+                now($attendanceSchedule->primarySite->timezone)
+            )
+            : null;
+        $nextAttendanceDirection = $attendanceDay
+            ? $attendance->nextSelfServiceDirection($attendanceDay)
+            : null;
 
         $pendingApprovals = $user->isManager()
             ? LeaveRequest::query()
@@ -94,6 +109,16 @@ class DashboardController extends Controller
             'upcomingHolidays' => $upcomingHolidays,
             'myUpcomingLeaves' => $myUpcomingLeaves,
             'teamUpcomingLeaves' => $teamUpcomingLeaves,
+            'attendanceAction' => [
+                'direction' => $nextAttendanceDirection,
+                'branch_name' => $attendanceSchedule?->primarySite?->name,
+                'unavailable_reason' => match ($attendanceDay?->excuse_type) {
+                    'weekend' => 'Attendance is unavailable on weekends',
+                    'public_holiday' => 'Attendance is unavailable on public holidays',
+                    'approved_leave' => 'Attendance is unavailable during approved leave',
+                    default => $attendanceSchedule ? null : 'No active attendance schedule',
+                },
+            ],
         ]);
     }
 }

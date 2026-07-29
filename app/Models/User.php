@@ -73,6 +73,21 @@ class User extends Authenticatable
         return $this->hasMany(LeaveRequest::class);
     }
 
+    public function attendanceSchedules(): HasMany
+    {
+        return $this->hasMany(AttendanceSchedule::class);
+    }
+
+    public function attendanceDays(): HasMany
+    {
+        return $this->hasMany(AttendanceDay::class);
+    }
+
+    public function attendanceEvents(): HasMany
+    {
+        return $this->hasMany(AttendanceEvent::class);
+    }
+
     public function roleModel(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role', 'slug');

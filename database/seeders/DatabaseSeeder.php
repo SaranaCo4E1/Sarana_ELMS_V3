@@ -3,23 +3,29 @@
 namespace Database\Seeders;
 
 use App\Models\AiFaq;
+use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
+use App\Models\AttendanceSchedule;
+use App\Models\AttendanceSite;
 use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\SystemNotification;
 use App\Models\User;
+use App\Services\AttendanceService;
 use App\Services\LeaveBalanceService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class DatabaseSeeder extends Seeder
 {
     private const WORKDAY_MINUTES = 9 * 60;
 
-    public function run(): void
+    public function run(AttendanceService $attendance): void
     {
         $this->call(RolePermissionSeeder::class);
 
@@ -429,6 +435,223 @@ class DatabaseSeeder extends Seeder
             ['answer' => 'The system counts working days between the selected dates, excluding weekends and configured public holidays.']
         );
 
+        $defaultAttendanceSite = AttendanceSite::query()->firstOrCreate(
+            ['code' => 'PNH'],
+            [
+                'name' => 'Phnom Penh Office',
+                'timezone' => 'Asia/Phnom_Penh',
+                'acceptance_radius_meters' => 150,
+                'maximum_accuracy_meters' => 100,
+                'allowed_ip_ranges' => [],
+                'is_active' => true,
+            ]
+        );
+        $defaultAttendanceSite->qrCode()->firstOrCreate([], [
+            'mode' => 'daily',
+            'is_enabled' => false,
+        ]);
+
+        User::query()->where('is_active', true)->each(
+            fn (User $user) => $attendance->createDefaultSchedule($user, $defaultAttendanceSite)
+        );
+
+        $demoUserIds = $users->pluck('id')
+            ->push($ceo->id)
+            ->push($admin->id)
+            ->unique()
+            ->values()
+            ->all();
+        $this->seedAttendanceHistory($attendance, $defaultAttendanceSite, $demoUserIds);
+    }
+
+    private function seedAttendanceHistory(
+        AttendanceService $attendance,
+        AttendanceSite $site,
+        array $demoUserIds
+    ): void {
+        $baseline = $this->attendanceSeedBaseline($site->timezone);
+        $yesterday = now($site->timezone)->startOfDay()->subDay();
+
+        User::query()
+            ->whereKey($demoUserIds)
+            ->where('is_active', true)
+            ->where(function ($query) use ($baseline): void {
+                $query
+                    ->whereNull('hire_date')
+                    ->orWhereDate('hire_date', '>', $baseline->toDateString());
+            })
+            ->update(['hire_date' => $baseline->toDateString()]);
+
+        if ($baseline->gt($yesterday)) {
+            return;
+        }
+
+        $site->loadMissing('qrCode');
+
+        User::query()
+            ->whereKey($demoUserIds)
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->each(function (User $user) use ($attendance, $baseline, $yesterday, $site): void {
+                $this->alignDefaultScheduleWithAttendanceBaseline($user, $site, $baseline);
+
+                for ($date = $baseline->copy(); $date->lte($yesterday); $date->addDay()) {
+                    $schedule = $attendance->activeSchedule($user, $date);
+                    if (! $schedule || ($user->hire_date && $user->hire_date->toDateString() > $date->toDateString())) {
+                        continue;
+                    }
+
+                    $day = $attendance->ensureDay($user, $schedule, $date);
+                    if (! $day->excuse_type) {
+                        $this->seedAttendanceEvents($day, $schedule, $site);
+                    }
+
+                    $finalizedAt = Carbon::parse(
+                        $day->work_date->toDateString().' '.$day->schedule_snapshot['work_end'],
+                        $day->timezone
+                    )->utc();
+                    $day->update(['finalized_at' => $finalizedAt]);
+                    $attendance->recomputeDay($day);
+                }
+            });
+    }
+
+    private function alignDefaultScheduleWithAttendanceBaseline(
+        User $user,
+        AttendanceSite $site,
+        Carbon $baseline
+    ): void {
+        $schedule = $user->attendanceSchedules()
+            ->where('primary_site_id', $site->id)
+            ->oldest('effective_from')
+            ->first();
+
+        if (! $schedule || $schedule->attendanceDays()->exists()) {
+            return;
+        }
+
+        $effectiveFrom = $baseline->copy();
+        if ($user->hire_date && $user->hire_date->toDateString() > $effectiveFrom->toDateString()) {
+            $effectiveFrom = $user->hire_date->copy()->startOfDay();
+        }
+
+        if ($schedule->effective_from->gt($effectiveFrom)) {
+            $schedule->update(['effective_from' => $effectiveFrom->toDateString()]);
+        }
+    }
+
+    private function seedAttendanceEvents(
+        AttendanceDay $day,
+        AttendanceSchedule $schedule,
+        AttendanceSite $site
+    ): void {
+        $fixtureKey = $day->user_id.':'.$day->work_date->toDateString();
+        $morningRoll = $this->seededNumber("{$fixtureKey}:morning-roll", 0, 99);
+        $lunchRoll = $this->seededNumber("{$fixtureKey}:lunch-roll", 0, 99);
+        $checkoutRoll = $this->seededNumber("{$fixtureKey}:checkout-roll", 0, 99);
+
+        $moments = [
+            'morning_in' => [
+                'direction' => 'in',
+                'scheduled' => $schedule->work_start,
+                'minutes' => $morningRoll < 12
+                    ? $this->seededNumber("{$fixtureKey}:morning-late", 3, 18)
+                    : -$this->seededNumber("{$fixtureKey}:morning-normal", 1, 12),
+            ],
+            'lunch_out' => [
+                'direction' => 'out',
+                'scheduled' => $schedule->lunch_start,
+                'minutes' => $this->seededNumber("{$fixtureKey}:lunch-out", 0, 7),
+            ],
+            'lunch_in' => [
+                'direction' => 'in',
+                'scheduled' => $schedule->lunch_end,
+                'minutes' => $lunchRoll < 8
+                    ? $this->seededNumber("{$fixtureKey}:lunch-late", 2, 10)
+                    : -$this->seededNumber("{$fixtureKey}:lunch-normal", 2, 10),
+            ],
+            'final_out' => [
+                'direction' => 'out',
+                'scheduled' => $schedule->work_end,
+                'minutes' => $checkoutRoll < 6
+                    ? -$this->seededNumber("{$fixtureKey}:checkout-early", 5, 20)
+                    : $this->seededNumber("{$fixtureKey}:checkout-normal", 1, 18),
+            ],
+        ];
+
+        foreach ($moments as $classification => $fixture) {
+            $effectiveAt = Carbon::parse(
+                $day->work_date->toDateString().' '.$fixture['scheduled'],
+                $day->timezone
+            )
+                ->addMinutes($fixture['minutes'])
+                ->addSeconds($this->seededNumber("{$fixtureKey}:{$classification}:seconds", 0, 50))
+                ->utc();
+
+            AttendanceEvent::query()->updateOrCreate(
+                [
+                    'user_id' => $day->user_id,
+                    'idempotency_key' => $this->seededUuid("attendance:{$fixtureKey}:{$classification}"),
+                ],
+                [
+                    'attendance_day_id' => $day->id,
+                    'attendance_site_id' => $site->id,
+                    'attendance_qr_code_id' => $site->qrCode?->id,
+                    'direction' => $fixture['direction'],
+                    'classification' => $classification,
+                    'occurred_at' => $effectiveAt,
+                    'effective_at' => $effectiveAt,
+                    'source' => 'seed',
+                    'latitude' => $site->latitude,
+                    'longitude' => $site->longitude,
+                    'accuracy_meters' => $site->latitude !== null ? 12 : null,
+                    'distance_meters' => $site->latitude !== null ? 0 : null,
+                    'ip_address' => '127.0.0.1',
+                    'user_agent' => 'DatabaseSeeder',
+                    'geolocation_status' => $site->latitude !== null ? 'passed' : 'unavailable',
+                    'network_status' => 'not_configured',
+                    'site_assignment_status' => 'assigned',
+                    'verification_status' => 'clean',
+                    'flag_reasons' => [],
+                ]
+            );
+        }
+    }
+
+    private function attendanceSeedBaseline(string $timezone): Carbon
+    {
+        $configured = trim((string) config('attendance.seed_baseline_date', '2026-07-28'));
+
+        foreach (['Y-m-d', 'd/m/Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat('!'.$format, $configured, $timezone);
+                if ($date && $date->format($format) === $configured) {
+                    return $date->startOfDay();
+                }
+            } catch (\Throwable) {
+                // Try the other supported format before reporting the configuration error.
+            }
+        }
+
+        throw new InvalidArgumentException(
+            'ATTENDANCE_SEED_BASELINE_DATE must use YYYY-MM-DD or DD/MM/YYYY format.'
+        );
+    }
+
+    private function seededNumber(string $fixtureKey, int $minimum, int $maximum): int
+    {
+        $hashPrefix = Str::substr(hash('sha256', $fixtureKey), 0, 8);
+
+        return $minimum + ((int) hexdec($hashPrefix) % ($maximum - $minimum + 1));
+    }
+
+    private function seededUuid(string $fixtureKey): string
+    {
+        $hex = Str::substr(hash('sha256', $fixtureKey), 0, 32);
+        $hex[12] = '4';
+        $hex[16] = dechex((hexdec($hex[16]) & 0x3) | 0x8);
+
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split($hex, 4));
     }
 
     private function businessDay(Carbon $date): Carbon

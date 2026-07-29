@@ -4,6 +4,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
+import AttendancePunchButton from '../Components/AttendancePunchButton';
 import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
 import { formatDays, formatShortDate } from '../utils';
 import LeaveBadge, { getLeaveStyle } from '../Components/LeaveBadge';
@@ -18,6 +19,11 @@ type Props = {
   upcomingHolidays: PublicHoliday[];
   myUpcomingLeaves: LeaveRequest[];
   teamUpcomingLeaves: LeaveRequest[];
+  attendanceAction: {
+    direction?: 'in' | 'out' | null;
+    branch_name?: string | null;
+    unavailable_reason?: string | null;
+  };
 };
 
 const statusStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
@@ -39,6 +45,7 @@ export default function Dashboard({
   upcomingHolidays = [],
   myUpcomingLeaves = [],
   teamUpcomingLeaves = [],
+  attendanceAction,
 }: Props) {
   const { auth } = usePage<PageProps>().props;
   const [statusFilter, setStatusFilter] = useState('all');
@@ -246,6 +253,12 @@ export default function Dashboard({
 
         {/* Right sidebar */}
         <aside className="space-y-6 min-w-0">
+          {attendanceAction.direction && (
+            <AttendancePunchButton
+              direction={attendanceAction.direction}
+              branchName={attendanceAction.branch_name}
+            />
+          )}
           <Link
             className="flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 px-5 py-4 text-sm font-medium text-white hover:bg-orange-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200"
             href="/apply-leave"
