@@ -65,7 +65,7 @@ class DatabaseSeeder extends Seeder
 
         // Seed the reporting root first so department managers can reference the CEO.
         $ceo = $this->seedUser('ceo@niy.ai', [
-            'name' => 'Sophea Sok',
+            'name' => 'Sona Yea',
             'password' => $password,
             'role' => 'admin',
             'department_id' => $departments['HR']->id,
