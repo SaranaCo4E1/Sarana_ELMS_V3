@@ -14,12 +14,27 @@ use App\Models\PublicHoliday;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ReportModuleTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_reports_default_to_the_last_thirty_days(): void
+    {
+        $this->travelTo(Carbon::parse('2026-07-31 10:00:00', 'Asia/Phnom_Penh'));
+        $staff = User::factory()->create(['role' => 'staff', 'is_active' => true]);
+
+        $this->actingAs($staff)
+            ->get(route('reports.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Reports')
+                ->where('filters.start_date', '2026-07-02')
+                ->where('filters.end_date', '2026-07-31'));
+    }
 
     public function test_staff_can_only_view_their_own_individual_report(): void
     {
@@ -115,6 +130,15 @@ class ReportModuleTest extends TestCase
             'deducts_balance' => true,
             'is_active' => true,
         ]);
+        $unpaidType = LeaveType::query()->create([
+            'name' => 'Unpaid Leave',
+            'code' => 'UL',
+            'default_allowance_days' => 30,
+            'paid' => false,
+            'requires_attachment' => false,
+            'deducts_balance' => true,
+            'is_active' => true,
+        ]);
         LeaveRequest::query()->create([
             'user_id' => $staff->id,
             'leave_type_id' => $type->id,
@@ -136,9 +160,17 @@ class ReportModuleTest extends TestCase
             'used_days' => 2,
             'pending_days' => 1,
         ]);
+        LeaveBalance::query()->create([
+            'user_id' => $staff->id,
+            'leave_type_id' => $unpaidType->id,
+            'year' => 2026,
+            'allowance_days' => 30,
+            'used_days' => 0,
+            'pending_days' => 0,
+        ]);
 
         $this->attendanceDay($staff, '2026-07-03', 'complete', ['on_time', 'on_time', 'on_time', 'on_time']);
-        $this->attendanceDay($staff, '2026-07-06', 'issues', ['late', 'on_time', 'on_time', 'missing']);
+        $this->attendanceDay($staff, '2026-07-06', 'issues', ['late', 'early', 'on_time', 'missing']);
 
         $this->actingAs($staff)
             ->get(route('reports.index', [
@@ -151,8 +183,21 @@ class ReportModuleTest extends TestCase
                 ->where('summary.available_balance', 15)
                 ->where('summary.attendance_compliance', 50)
                 ->where('summary.late', 1)
+                ->where('summary.early', 1)
                 ->where('summary.missing', 1)
+                ->where('attendance.issue_mix.0.name', 'Late-in days')
+                ->where('attendance.issue_mix.1.name', 'Early-out days')
                 ->where('leave.balance_year', 2026));
+
+        $export = $this->actingAs($staff)->get(route('reports.export.attendance', [
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-07-07',
+        ]));
+
+        $export->assertOk();
+        $exportContent = $export->streamedContent();
+        $this->assertStringContainsString('Late in', $exportContent);
+        $this->assertStringContainsString('Early out', $exportContent);
     }
 
     public function test_attendance_reports_only_include_finalized_working_days(): void
@@ -212,6 +257,88 @@ class ReportModuleTest extends TestCase
                 'attendance_statuses' => ['pending'],
             ]))
             ->assertSessionHasErrors('attendance_statuses.0');
+    }
+
+    public function test_attendance_issue_totals_count_affected_employee_days_instead_of_slots(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'is_active' => true]);
+        $this->attendanceDay($staff, '2026-07-01', 'issues', ['late', 'late', 'missing', 'missing']);
+        $this->attendanceDay($staff, '2026-07-02', 'issues', ['early', 'early', 'missing', 'missing']);
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'section' => 'attendance',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-02',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.late', 1)
+                ->where('summary.early', 1)
+                ->where('summary.missing', 2)
+                ->where('attendance.issue_mix.0.value', 1)
+                ->where('attendance.issue_mix.1.value', 1)
+                ->where('attendance.issue_mix.2.value', 2)
+                ->where('attendance.employees.0.late', 1)
+                ->where('attendance.employees.0.early', 1)
+                ->where('attendance.employees.0.missing', 2)
+                ->where('details.data.0.late', 1)
+                ->where('details.data.0.early', 1)
+                ->where('details.data.0.missing', 2));
+    }
+
+    public function test_absence_concurrency_distribution_groups_working_days_and_counts_distinct_employees(): void
+    {
+        $manager = User::factory()->create(['role' => 'manager', 'is_active' => true]);
+        $firstReport = User::factory()->create(['role' => 'staff', 'manager_id' => $manager->id, 'is_active' => true]);
+        $secondReport = User::factory()->create(['role' => 'staff', 'manager_id' => $manager->id, 'is_active' => true]);
+        $thirdReport = User::factory()->create(['role' => 'staff', 'manager_id' => $manager->id, 'is_active' => true]);
+        $leaveType = LeaveType::query()->create([
+            'name' => 'Annual Leave',
+            'code' => 'AL',
+            'default_allowance_days' => 18,
+            'paid' => true,
+            'requires_attachment' => false,
+            'deducts_balance' => true,
+            'is_active' => true,
+        ]);
+
+        foreach ([$firstReport, $firstReport, $secondReport] as $employee) {
+            LeaveRequest::query()->create([
+                'user_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'starts_at' => '2026-07-02',
+                'ends_at' => '2026-07-02',
+                'requested_days' => 1,
+                'status' => 'approved',
+            ]);
+        }
+
+        foreach ([$firstReport, $secondReport, $thirdReport] as $employee) {
+            LeaveRequest::query()->create([
+                'user_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'starts_at' => '2026-07-03',
+                'ends_at' => '2026-07-03',
+                'requested_days' => 1,
+                'status' => 'approved',
+            ]);
+        }
+
+        $this->actingAs($manager)
+            ->get(route('reports.index', [
+                'view' => 'multi',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-03',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('leave.concurrency_distribution', [
+                    ['name' => '0 absent', 'days' => 1],
+                    ['name' => '1 absent', 'days' => 0],
+                    ['name' => '2 absent', 'days' => 1],
+                    ['name' => '3+ absent', 'days' => 1],
+                ]));
     }
 
     public function test_scoped_csv_exports_exclude_other_employees_and_are_audited(): void

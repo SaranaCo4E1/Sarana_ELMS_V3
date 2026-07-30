@@ -6,6 +6,7 @@ use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSite;
+use App\Models\AttendanceSlot;
 use App\Models\AuditLog;
 use App\Models\LeaveRequest;
 use App\Models\SystemNotification;
@@ -22,6 +23,7 @@ class DatabaseSeederTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-07-29 10:00:00', 'Asia/Phnom_Penh')->utc());
+        config(['attendance.seed_baseline_date' => '2026-07-28']);
     }
 
     protected function tearDown(): void
@@ -205,18 +207,8 @@ class DatabaseSeederTest extends TestCase
             ->with('slots')
             ->whereDate('work_date', '2026-07-28')
             ->get();
-        $applicableSlots = $attendanceDays->flatMap->slots->where('status', '!=', 'not_applicable');
-        $expectedSlots = $applicableSlots->count();
-        $missingSlots = $applicableSlots->where('status', 'missing')->count();
-        $missingRatio = $missingSlots / $expectedSlots;
-
-        $this->assertGreaterThanOrEqual(0.10, $missingRatio);
-        $this->assertLessThanOrEqual(0.15, $missingRatio);
-        $this->assertLessThan(
-            $expectedSlots,
-            AttendanceEvent::query()
-                ->whereHas('day', fn ($query) => $query->whereDate('work_date', '2026-07-28'))
-                ->count()
+        $this->assertTrue(
+            $attendanceDays->every(fn (AttendanceDay $day): bool => $day->slots->where('status', 'missing')->count() <= 1)
         );
         $this->assertFalse(
             AttendanceDay::query()->whereDate('work_date', '2026-07-29')->exists(),
@@ -229,6 +221,89 @@ class DatabaseSeederTest extends TestCase
                 $this->assertNotNull($day->finalized_at);
                 $this->assertContains($day->status, ['complete', 'issues', 'on_leave', 'holiday', 'weekend']);
             });
+    }
+
+    public function test_database_seeder_creates_realistic_multi_month_attendance_and_leave_distributions(): void
+    {
+        config(['attendance.seed_baseline_date' => '2026-03-12']);
+
+        $this->seed();
+
+        $this->assertGreaterThan(1_000, AttendanceDay::query()->count());
+        $this->assertTrue(AttendanceDay::query()->where('status', 'weekend')->exists());
+        $this->assertTrue(AttendanceDay::query()->where('status', 'holiday')->exists());
+        $this->assertTrue(AttendanceDay::query()->where('status', 'on_leave')->exists());
+
+        foreach (['on_time', 'late', 'early', 'missing', 'not_applicable'] as $status) {
+            $this->assertDatabaseHas('attendance_slots', ['status' => $status]);
+        }
+
+        $workingDays = AttendanceDay::query()->whereNull('excuse_type')->count();
+        $lateInDays = AttendanceSlot::query()
+            ->where('status', 'late')
+            ->distinct()
+            ->count('attendance_day_id');
+        $earlyOutDays = AttendanceSlot::query()
+            ->where('status', 'early')
+            ->distinct()
+            ->count('attendance_day_id');
+        $missingDays = AttendanceSlot::query()
+            ->where('status', 'missing')
+            ->distinct()
+            ->count('attendance_day_id');
+
+        $this->assertGreaterThanOrEqual(0.05, $lateInDays / $workingDays);
+        $this->assertLessThanOrEqual(0.10, $lateInDays / $workingDays);
+        $this->assertGreaterThanOrEqual(0.02, $earlyOutDays / $workingDays);
+        $this->assertLessThanOrEqual(0.06, $earlyOutDays / $workingDays);
+        $this->assertGreaterThanOrEqual(0.03, $missingDays / $workingDays);
+        $this->assertLessThanOrEqual(0.07, $missingDays / $workingDays);
+        $this->assertFalse(
+            AttendanceSlot::query()
+                ->where('status', 'missing')
+                ->get(['attendance_day_id'])
+                ->groupBy('attendance_day_id')
+                ->contains(fn ($slots): bool => $slots->count() > 1)
+        );
+        $this->assertSame(
+            ['final_out', 'lunch_in', 'lunch_out', 'morning_in'],
+            AttendanceSlot::query()
+                ->where('status', 'missing')
+                ->distinct()
+                ->orderBy('type')
+                ->pluck('type')
+                ->all()
+        );
+
+        foreach (['approved', 'rejected', 'pending'] as $status) {
+            $this->assertTrue(LeaveRequest::query()->where('status', $status)->exists());
+        }
+
+        $this->assertSame(
+            2,
+            LeaveRequest::query()
+                ->where('status', 'approved')
+                ->whereDate('starts_at', '<=', '2026-07-15')
+                ->whereDate('ends_at', '>=', '2026-07-15')
+                ->distinct()
+                ->count('user_id')
+        );
+        $this->assertSame(
+            3,
+            LeaveRequest::query()
+                ->where('status', 'approved')
+                ->whereDate('starts_at', '<=', '2026-07-16')
+                ->whereDate('ends_at', '>=', '2026-07-16')
+                ->distinct()
+                ->count('user_id')
+        );
+
+        $this->assertTrue(
+            LeaveRequest::query()
+                ->whereDate('starts_at', '>', now()->toDateString())
+                ->whereIn('status', ['approved', 'pending'])
+                ->exists()
+        );
     }
 
     public function test_database_seeder_does_not_rewrite_or_backfill_unrelated_active_users(): void

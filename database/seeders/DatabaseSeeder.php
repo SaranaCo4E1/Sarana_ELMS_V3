@@ -3,9 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AiFaq;
-use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
-use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSite;
 use App\Models\AuditLog;
 use App\Models\Department;
@@ -16,6 +14,7 @@ use App\Models\Role;
 use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\AttendanceService;
+use App\Services\DemoAttendanceHistorySeeder;
 use App\Services\LeaveBalanceService;
 use App\Support\Audit;
 use Illuminate\Database\Seeder;
@@ -28,9 +27,7 @@ class DatabaseSeeder extends Seeder
 {
     private const WORKDAY_MINUTES = 9 * 60;
 
-    private const ATTENDANCE_MISSING_PERCENT = 15;
-
-    public function run(AttendanceService $attendance): void
+    public function run(AttendanceService $attendance, DemoAttendanceHistorySeeder $attendanceHistory): void
     {
         $this->call(RolePermissionSeeder::class);
 
@@ -327,7 +324,9 @@ class DatabaseSeeder extends Seeder
             [$users['hr_manager'], 'annual', -86, -84, 'approved', $ceo, 'Taking short family trip we planned few months ago'],
             [$users['it_engineer'], 'annual', -62, -60, 'approved', $users['it_manager'], 'Taking trip with friends that already booked before release'],
             [$users['sales_ops'], 'sick', -39, -39, 'approved', $users['sales_manager'], 'Migraine came back and have clinic appointement this afternoon'],
-            [$users['it_engineer'], 'annual', -18, -16, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday'],
+            [$users['it_engineer'], 'annual', -15, -13, 'approved', $users['it_manager'], 'Family trip to Battambang for my grandmother birthday'],
+            [$users['it_support'], 'annual', -14, -13, 'approved', $users['it_manager'], 'Helping my parents move house before their new tenancy starts'],
+            [$users['sales_ops'], 'annual', -13, -13, 'approved', $users['sales_manager'], 'Attending my younger sister university graduation ceremony'],
             [$users['it_support'], 'sick', -7, -7, 'approved', $users['it_manager'], 'Fever and sore throat since last night'],
             [$users['sales_rep'], 'annual', -3, -2, 'approved', $users['sales_manager'], 'Need accompany my mother for specialist appointment'],
             [$users['sales_ops'], 'annual', -1, -1, 'rejected', $users['sales_manager'], 'Urgent bank issue, need go resolve it in person'],
@@ -505,7 +504,7 @@ class DatabaseSeeder extends Seeder
             ->unique()
             ->values()
             ->all();
-        $this->seedAttendanceHistory($attendance, $defaultAttendanceSite, $demoUserIds);
+        $attendanceHistory->seed($defaultAttendanceSite, $demoUserIds);
         $this->seedAuditHistory($admin, $ceo, $departments, $types, $users, $today);
     }
 
@@ -728,204 +727,6 @@ class DatabaseSeeder extends Seeder
             'attendance.event.corrected' => ['method' => 'PATCH', 'route' => 'attendance.events.correct'],
             default => throw new InvalidArgumentException("No seeded request route is defined for audit action [{$action}]."),
         };
-    }
-
-    private function seedAttendanceHistory(
-        AttendanceService $attendance,
-        AttendanceSite $site,
-        array $demoUserIds
-    ): void {
-        $baseline = $this->attendanceSeedBaseline($site->timezone);
-        $yesterday = now($site->timezone)->startOfDay()->subDay();
-
-        User::query()
-            ->whereKey($demoUserIds)
-            ->where('is_active', true)
-            ->where(function ($query) use ($baseline): void {
-                $query
-                    ->whereNull('hire_date')
-                    ->orWhereDate('hire_date', '>', $baseline->toDateString());
-            })
-            ->update(['hire_date' => $baseline->toDateString()]);
-
-        if ($baseline->gt($yesterday)) {
-            return;
-        }
-
-        $site->loadMissing('qrCode');
-
-        User::query()
-            ->whereKey($demoUserIds)
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->each(function (User $user) use ($attendance, $baseline, $yesterday, $site): void {
-                $this->alignDefaultScheduleWithAttendanceBaseline($user, $site, $baseline);
-
-                for ($date = $baseline->copy(); $date->lte($yesterday); $date->addDay()) {
-                    $schedule = $attendance->activeSchedule($user, $date);
-                    if (! $schedule || ($user->hire_date && $user->hire_date->toDateString() > $date->toDateString())) {
-                        continue;
-                    }
-
-                    $day = $attendance->ensureDay($user, $schedule, $date);
-                    if (! $day->excuse_type) {
-                        $this->seedAttendanceEvents($day, $schedule, $site);
-                    }
-
-                    $finalizedAt = Carbon::parse(
-                        $day->work_date->toDateString().' '.$day->schedule_snapshot['work_end'],
-                        $day->timezone
-                    )->utc();
-                    $day->update(['finalized_at' => $finalizedAt]);
-                    $attendance->recomputeDay($day);
-                }
-            });
-    }
-
-    private function alignDefaultScheduleWithAttendanceBaseline(
-        User $user,
-        AttendanceSite $site,
-        Carbon $baseline
-    ): void {
-        $schedule = $user->attendanceSchedules()
-            ->where('primary_site_id', $site->id)
-            ->oldest('effective_from')
-            ->first();
-
-        if (! $schedule || $schedule->attendanceDays()->exists()) {
-            return;
-        }
-
-        $effectiveFrom = $baseline->copy();
-        if ($user->hire_date && $user->hire_date->toDateString() > $effectiveFrom->toDateString()) {
-            $effectiveFrom = $user->hire_date->copy()->startOfDay();
-        }
-
-        if ($schedule->effective_from->gt($effectiveFrom)) {
-            $schedule->update(['effective_from' => $effectiveFrom->toDateString()]);
-        }
-    }
-
-    private function seedAttendanceEvents(
-        AttendanceDay $day,
-        AttendanceSchedule $schedule,
-        AttendanceSite $site
-    ): void {
-        $fixtureKey = $day->user_id.':'.$day->work_date->toDateString();
-        $morningRoll = $this->seededNumber("{$fixtureKey}:morning-roll", 0, 99);
-        $lunchRoll = $this->seededNumber("{$fixtureKey}:lunch-roll", 0, 99);
-        $checkoutRoll = $this->seededNumber("{$fixtureKey}:checkout-roll", 0, 99);
-        $lunchMissing = $this->seededNumber("{$fixtureKey}:lunch-missing-roll", 0, 99)
-            < self::ATTENDANCE_MISSING_PERCENT;
-        $missingMoments = [
-            'morning_in' => $this->seededNumber("{$fixtureKey}:morning-missing-roll", 0, 99)
-                < self::ATTENDANCE_MISSING_PERCENT,
-            // Keep the lunch punches as a pair so one omitted event does not make
-            // the attendance classifier treat both milestones as accidentally missing.
-            'lunch_out' => $lunchMissing,
-            'lunch_in' => $lunchMissing,
-            'final_out' => $this->seededNumber("{$fixtureKey}:checkout-missing-roll", 0, 99)
-                < self::ATTENDANCE_MISSING_PERCENT,
-        ];
-
-        $moments = [
-            'morning_in' => [
-                'direction' => 'in',
-                'scheduled' => $schedule->work_start,
-                'minutes' => $morningRoll < 12
-                    ? $this->seededNumber("{$fixtureKey}:morning-late", 3, 18)
-                    : -$this->seededNumber("{$fixtureKey}:morning-normal", 1, 12),
-            ],
-            'lunch_out' => [
-                'direction' => 'out',
-                'scheduled' => $schedule->lunch_start,
-                'minutes' => $this->seededNumber("{$fixtureKey}:lunch-out", 0, 7),
-            ],
-            'lunch_in' => [
-                'direction' => 'in',
-                'scheduled' => $schedule->lunch_end,
-                'minutes' => $lunchRoll < 8
-                    ? $this->seededNumber("{$fixtureKey}:lunch-late", 2, 10)
-                    : -$this->seededNumber("{$fixtureKey}:lunch-normal", 2, 10),
-            ],
-            'final_out' => [
-                'direction' => 'out',
-                'scheduled' => $schedule->work_end,
-                'minutes' => $checkoutRoll < 6
-                    ? -$this->seededNumber("{$fixtureKey}:checkout-early", 5, 20)
-                    : $this->seededNumber("{$fixtureKey}:checkout-normal", 1, 18),
-            ],
-        ];
-
-        foreach ($moments as $classification => $fixture) {
-            $idempotencyKey = $this->seededUuid("attendance:{$fixtureKey}:{$classification}");
-
-            if ($missingMoments[$classification]) {
-                AttendanceEvent::query()
-                    ->where('user_id', $day->user_id)
-                    ->where('idempotency_key', $idempotencyKey)
-                    ->where('source', 'seed')
-                    ->delete();
-
-                continue;
-            }
-
-            $effectiveAt = Carbon::parse(
-                $day->work_date->toDateString().' '.$fixture['scheduled'],
-                $day->timezone
-            )
-                ->addMinutes($fixture['minutes'])
-                ->addSeconds($this->seededNumber("{$fixtureKey}:{$classification}:seconds", 0, 50))
-                ->utc();
-
-            AttendanceEvent::query()->updateOrCreate(
-                [
-                    'user_id' => $day->user_id,
-                    'idempotency_key' => $idempotencyKey,
-                ],
-                [
-                    'attendance_day_id' => $day->id,
-                    'attendance_site_id' => $site->id,
-                    'attendance_qr_code_id' => $site->qrCode?->id,
-                    'direction' => $fixture['direction'],
-                    'classification' => $classification,
-                    'occurred_at' => $effectiveAt,
-                    'effective_at' => $effectiveAt,
-                    'source' => 'seed',
-                    'latitude' => $site->latitude,
-                    'longitude' => $site->longitude,
-                    'accuracy_meters' => $site->latitude !== null ? 12 : null,
-                    'distance_meters' => $site->latitude !== null ? 0 : null,
-                    'ip_address' => '127.0.0.1',
-                    'user_agent' => 'DatabaseSeeder',
-                    'geolocation_status' => $site->latitude !== null ? 'passed' : 'unavailable',
-                    'network_status' => 'not_configured',
-                    'site_assignment_status' => 'assigned',
-                    'verification_status' => 'clean',
-                    'flag_reasons' => [],
-                ]
-            );
-        }
-    }
-
-    private function attendanceSeedBaseline(string $timezone): Carbon
-    {
-        $configured = trim((string) config('attendance.seed_baseline_date', '2026-07-28'));
-
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat('!'.$format, $configured, $timezone);
-                if ($date && $date->format($format) === $configured) {
-                    return $date->startOfDay();
-                }
-            } catch (\Throwable) {
-                // Try the other supported format before reporting the configuration error.
-            }
-        }
-
-        throw new InvalidArgumentException(
-            'ATTENDANCE_SEED_BASELINE_DATE must use YYYY-MM-DD or DD/MM/YYYY format.'
-        );
     }
 
     private function seededNumber(string $fixtureKey, int $minimum, int $maximum): int

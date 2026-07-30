@@ -49,7 +49,7 @@ class ReportRequest extends FormRequest
         $this->merge([
             'view' => $this->input('view', $defaultView),
             'section' => $this->input('section', 'overview'),
-            'start_date' => $startDate ?: $now->copy()->startOfYear()->toDateString(),
+            'start_date' => $startDate ?: $now->copy()->subDays(29)->toDateString(),
             'end_date' => $endDate ?: $now->toDateString(),
             'department_ids' => $this->arrayInput('department_ids'),
             'manager_ids' => $this->arrayInput('manager_ids'),

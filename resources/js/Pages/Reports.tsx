@@ -14,6 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import DatePicker from 'react-datepicker';
 import Select from 'react-select';
 import AppLayout from '../Layouts/AppLayout';
 import type { PageProps } from '../types';
@@ -31,6 +32,7 @@ type EmployeeOption = {
   is_active: boolean;
 };
 type SelectOption = { value: string; label: string };
+type PeriodPreset = 'month' | '30' | 'quarter' | 'year';
 type TrendRow = {
   key: string;
   label: string;
@@ -106,7 +108,7 @@ type Props = {
     balances: { name: string; entitlement: number; used: number; pending: number; available: number; utilization: number }[];
     employee_balances: { user_id: number; name: string; department: string; used: number; available: number; utilization: number }[];
     rankings: { user_id: number; name: string; department: string; days: number }[];
-    concurrent: { date: string; employees: number }[];
+    concurrency_distribution: { name: string; days: number }[];
   };
   attendance: {
     trend: TrendRow[];
@@ -129,12 +131,21 @@ const LEAVE_STATUSES: SelectOption[] = ['approved', 'pending', 'rejected', 'canc
 const ATTENDANCE_STATUSES: SelectOption[] = ['complete', 'issues']
   .map((value) => ({ value, label: titleCase(value) }));
 const CHART_COLORS = ['#ea580c', '#f59e0b', '#0f766e', '#2563eb', '#7c3aed', '#dc2626'];
+const PERIOD_PRESETS: [PeriodPreset, string][] = [
+  ['month', 'This month'],
+  ['30', 'Last 30 days'],
+  ['quarter', 'This quarter'],
+  ['year', 'This year'],
+];
 
 export default function Reports(props: Props) {
   const { capabilities, filterOptions, filters, summary, leave, attendance, details } = props;
   const { auth } = usePage<PageProps>().props;
   const canSeeAttendanceCalendar = capabilities.team || capabilities.organization;
   const [draft, setDraft] = useState<Filters>(filters);
+  const [selectedPeriodPreset, setSelectedPeriodPreset] = useState<PeriodPreset | null>(
+    () => matchingPeriodPreset(filters),
+  );
   const [loading, setLoading] = useState(false);
   const [leaveTrendMode, setLeaveTrendMode] = useState<'line' | 'bar'>('line');
   const [compositionMode, setCompositionMode] = useState<'donut' | 'treemap'>('donut');
@@ -206,6 +217,9 @@ export default function Reports(props: Props) {
     () => compositionOption(attendance.issue_mix, issueMode),
     [attendance.issue_mix, issueMode],
   );
+  const activePeriodPreset = selectedPeriodPreset && periodMatches(draft, selectedPeriodPreset)
+    ? selectedPeriodPreset
+    : matchingPeriodPreset(draft);
 
   const updateDraft = (patch: Partial<Filters>) => {
     const next = { ...draft, ...patch, page: 1 };
@@ -226,6 +240,9 @@ export default function Reports(props: Props) {
     const validManagerIds = new Set(people.map((employee) => employee.manager_id).filter(Boolean));
     next.manager_ids = next.manager_ids.filter((id) => validManagerIds.has(id));
     setDraft(next);
+    if (patch.start_date !== undefined || patch.end_date !== undefined) {
+      setSelectedPeriodPreset(null);
+    }
   };
 
   const apply = (overrides: Partial<Filters> = {}) => {
@@ -248,9 +265,10 @@ export default function Reports(props: Props) {
     });
   };
 
-  const applyPeriod = (preset: string) => {
+  const applyPeriod = (preset: PeriodPreset) => {
     const next = { ...draft, ...periodFor(preset), page: 1 };
     setDraft(next);
+    setSelectedPeriodPreset(preset);
     router.get('/reports', queryPayload(next), {
       preserveScroll: true,
       preserveState: true,
@@ -259,13 +277,12 @@ export default function Reports(props: Props) {
   };
 
   const reset = () => {
-    const now = new Date();
+    const defaultPeriod = periodFor('30');
     const clean: Filters = {
       ...filters,
       view: capabilities.team || capabilities.organization ? 'multi' : 'individual',
       section: filters.section,
-      start_date: `${now.getFullYear()}-01-01`,
-      end_date: localDate(now),
+      ...defaultPeriod,
       department_ids: [],
       manager_ids: [],
       role_slugs: [],
@@ -280,6 +297,7 @@ export default function Reports(props: Props) {
       direction: 'asc',
     };
     setDraft(clean);
+    setSelectedPeriodPreset('30');
     router.get('/reports', queryPayload(clean), { preserveScroll: true, replace: true });
   };
 
@@ -367,13 +385,14 @@ export default function Reports(props: Props) {
 
           <div className="space-y-5 p-5">
             <div className="flex flex-wrap gap-2">
-              {[
-                ['month', 'This month'],
-                ['30', 'Last 30 days'],
-                ['quarter', 'This quarter'],
-                ['year', 'This year'],
-              ].map(([preset, label]) => (
-                <button key={preset} type="button" onClick={() => applyPeriod(preset)} className="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:border-orange-200 hover:text-orange-700">
+              {PERIOD_PRESETS.map(([preset, label]) => (
+                <button
+                  key={preset}
+                  type="button"
+                  aria-pressed={activePeriodPreset === preset}
+                  onClick={() => applyPeriod(preset)}
+                  className={periodButton(activePeriodPreset === preset)}
+                >
                   {label}
                 </button>
               ))}
@@ -381,10 +400,23 @@ export default function Reports(props: Props) {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <FilterField label="Start date" icon={<CalendarRange size={14} />}>
-                <input type="date" value={draft.start_date} onChange={(event) => updateDraft({ start_date: event.target.value })} className={inputClass} />
+                <DatePicker
+                  selected={parseDateOnly(draft.start_date)}
+                  onChange={(date: Date | null) => date && updateDraft({ start_date: localDate(date) })}
+                  dateFormat="MMM d, yyyy"
+                  className={`${inputClass} cursor-pointer`}
+                  autoComplete="off"
+                />
               </FilterField>
               <FilterField label="End date" icon={<CalendarRange size={14} />}>
-                <input type="date" min={draft.start_date} value={draft.end_date} onChange={(event) => updateDraft({ end_date: event.target.value })} className={inputClass} />
+                <DatePicker
+                  selected={parseDateOnly(draft.end_date)}
+                  onChange={(date: Date | null) => date && updateDraft({ end_date: localDate(date) })}
+                  minDate={parseDateOnly(draft.start_date)}
+                  dateFormat="MMM d, yyyy"
+                  className={`${inputClass} cursor-pointer`}
+                  autoComplete="off"
+                />
               </FilterField>
 
               {draft.view === 'individual' && capabilities.can_select_individual ? (
@@ -551,10 +583,10 @@ export default function Reports(props: Props) {
                 </ChartWithToggle>
                 {filters.view === 'multi' && (
                   <ReportChart
-                    title="Concurrent approved absence"
-                    description="Number of employees simultaneously on approved leave on each working day."
-                    filename={`concurrent-absence-${periodFilename}`}
-                    option={simpleLineOption(leave.concurrent.map((row) => row.date), leave.concurrent.map((row) => row.employees), 'Employees')}
+                    title="Absence concurrency distribution"
+                    description="Working days grouped by how many employees were simultaneously on approved leave."
+                    filename={`absence-concurrency-distribution-${periodFilename}`}
+                    option={concurrencyDistributionOption(leave.concurrency_distribution)}
                   />
                 )}
                 {filters.view === 'multi' && (
@@ -600,7 +632,7 @@ export default function Reports(props: Props) {
                 <ChartWithToggle modes={['donut', 'bar']} value={issueMode} onChange={(value) => setIssueMode(value as 'donut' | 'bar')}>
                   <ReportChart
                     title="Attendance issue mix"
-                    description="Late arrivals, early departures, missing punches, and flagged events."
+                    description="Employee-days affected by late in, early out, or a missing punch, plus flagged events."
                     filename={`attendance-issues-${periodFilename}`}
                     option={issueOption}
                   />
@@ -666,16 +698,16 @@ function KpiGrid({ summary, section }: { summary: Props['summary']; section: Fil
     ['Employees', summary.employees, <Users size={17} />, 'neutral'],
     ['Approved leave', `${summary.approved_leave_days} days`, <CalendarRange size={17} />, 'orange'],
     ['Pending leave', `${summary.pending_leave_days} days`, <Clock3 size={17} />, 'amber'],
-    ['Available leave balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
+    ['Total Available leave balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
     ['Attendnace Compliance', `${summary.attendance_compliance}%`, <Activity size={17} />, 'blue'],
-    ['Late / early', `${summary.late} / ${summary.early}`, <Clock3 size={17} />, 'purple'],
-    ['Missing punches', summary.missing, <TriangleAlert size={17} />, 'red'],
+    ['Late-in days / early-out days', `${summary.late} / ${summary.early}`, <Clock3 size={17} />, 'purple'],
+    ['Missing-punch days', summary.missing, <TriangleAlert size={17} />, 'red'],
     ['Issues', summary.unresolved_flags, <TriangleAlert size={17} />, 'red'],
   ];
   const visibleLabels = section === 'leave'
     ? ['Employees', 'Approved leave', 'Pending leave', 'Available balance']
     : section === 'attendance'
-      ? ['Employees', 'Compliance', 'Late / early', 'Missing punches', 'Unresolved flags']
+      ? ['Employees', 'Compliance', 'Late-in days / early-out days', 'Missing-punch days', 'Unresolved flags']
       : cards.map(([label]) => String(label));
   const visibleCards = cards.filter(([label]) => visibleLabels.includes(String(label)));
 
@@ -735,9 +767,9 @@ function DetailTable({ filters, details, onNavigate }: { filters: Filters; detai
                 ['leave_days', 'Leave days'],
                 ['available_balance', 'Available'],
                 ['attendance_compliance', 'Compliance'],
-                ['late', 'Late'],
-                ['early', 'Early'],
-                ['missing', 'Missing'],
+                ['late', 'Late-in days'],
+                ['early', 'Early-out days'],
+                ['missing', 'Missing-punch days'],
               ].map(([key, label]) => (
                 <th key={key} className="px-4 py-3">
                   <button type="button" onClick={() => sort(key)} className="font-semibold hover:text-orange-700">{label}{filters.sort === key ? (filters.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button>
@@ -848,14 +880,24 @@ function balanceOption(rows: Props['leave']['balances']) {
   };
 }
 
-function simpleLineOption(labels: string[], values: number[], name: string) {
+function concurrencyDistributionOption(rows: Props['leave']['concurrency_distribution']) {
+  const colors = ['#0f766e', '#2563eb', '#f59e0b', '#dc2626'];
+
   return {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 50, right: 25, top: 30, bottom: 55 },
-    xAxis: { type: 'category', data: labels, axisLabel: { rotate: labels.length > 12 ? 35 : 0 } },
-    yAxis: { type: 'value', minInterval: 1 },
-    dataZoom: labels.length > 18 ? [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 6 }] : [],
-    series: [{ name, type: 'line', smooth: true, areaStyle: { opacity: 0.12 }, data: values }],
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 65, right: 25, top: 30, bottom: 45 },
+    xAxis: { type: 'category', data: rows.map((row) => row.name) },
+    yAxis: { type: 'value', name: 'Working days', minInterval: 1 },
+    series: [{
+      name: 'Working days',
+      type: 'bar',
+      barMaxWidth: 64,
+      label: { show: true, position: 'top' },
+      data: rows.map((row, index) => ({
+        value: row.days,
+        itemStyle: { color: colors[index] },
+      })),
+    }],
   };
 }
 
@@ -901,7 +943,7 @@ function departmentOption(rows: Props['attendance']['departments'], radar: boole
     return {
       tooltip: {},
       legend: { bottom: 6 },
-      radar: { indicator: [{ name: 'Compliance', max: 100 }, { name: 'Late', max: issueMax }, { name: 'Early', max: issueMax }, { name: 'Missing', max: issueMax }] },
+      radar: { indicator: [{ name: 'Compliance', max: 100 }, { name: 'Late-in days', max: issueMax }, { name: 'Early-out days', max: issueMax }, { name: 'Missing-punch days', max: issueMax }] },
       series: [{ type: 'radar', data: rows.map((row) => ({ name: row.name, value: [row.compliance, row.late, row.early, row.missing] })) }],
     };
   }
@@ -913,26 +955,46 @@ function departmentOption(rows: Props['attendance']['departments'], radar: boole
     yAxis: { type: 'value' },
     series: [
       { name: 'Compliance %', type: 'bar', data: rows.map((row) => row.compliance) },
-      { name: 'Late', type: 'bar', data: rows.map((row) => row.late) },
-      { name: 'Missing', type: 'bar', data: rows.map((row) => row.missing) },
+      { name: 'Late-in days', type: 'bar', data: rows.map((row) => row.late) },
+      { name: 'Missing-punch days', type: 'bar', data: rows.map((row) => row.missing) },
     ],
   };
 }
 
-function periodFor(preset: string) {
+function periodFor(preset: PeriodPreset) {
   const end = new Date();
   const start = new Date(end);
   if (preset === 'month') start.setDate(1);
   if (preset === '30') start.setDate(end.getDate() - 29);
-  if (preset === 'quarter') start.setMonth(Math.floor(end.getMonth() / 3) * 3, 1);
+  if (preset === 'quarter') {
+    const quarterStartMonth = Math.floor(end.getMonth() / 3) * 3;
+    start.setMonth(quarterStartMonth, 1);
+    end.setMonth(quarterStartMonth + 3, 0);
+  }
   if (preset === 'year') start.setMonth(0, 1);
   return { start_date: localDate(start), end_date: localDate(end) };
+}
+
+function periodMatches(filters: Pick<Filters, 'start_date' | 'end_date'>, preset: PeriodPreset) {
+  const period = periodFor(preset);
+
+  return filters.start_date === period.start_date && filters.end_date === period.end_date;
+}
+
+function matchingPeriodPreset(filters: Pick<Filters, 'start_date' | 'end_date'>): PeriodPreset | null {
+  return PERIOD_PRESETS.find(([preset]) => periodMatches(filters, preset))?.[0] ?? null;
 }
 
 function localDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function parseDateOnly(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+
+  return new Date(year, month - 1, day);
 }
 
 function formatDate(value: string) {
@@ -993,6 +1055,10 @@ function viewButton(active: boolean) {
 
 function sectionButton(active: boolean) {
   return `inline-flex min-w-32 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${active ? 'bg-orange-50 text-orange-800' : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800'}`;
+}
+
+function periodButton(active: boolean) {
+  return `rounded-full border px-3 py-1.5 text-xs font-semibold transition ${active ? 'border-orange-300 bg-orange-50 text-orange-800 shadow-sm' : 'border-neutral-200 text-neutral-600 hover:border-orange-200 hover:text-orange-700'}`;
 }
 
 const inputClass = 'h-[42px] w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-700 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5';

@@ -20,6 +20,10 @@ import { createRoot } from 'react-dom/client';
 
 createInertiaApp({
   title: (title) => title ? `${title} - NiyAI ELMS` : 'NiyAI ELMS',
+  progress: {
+    color: '#ff750f',
+    showSpinner: false,
+  },
   resolve: (name) => {
     const pages = import.meta.glob<{ default: ComponentType }>('./Pages/**/*.tsx', { eager: true });
     return pages[`./Pages/${name}.tsx`];

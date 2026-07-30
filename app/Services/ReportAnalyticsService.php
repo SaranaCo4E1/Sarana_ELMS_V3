@@ -173,6 +173,12 @@ class ReportAnalyticsService
         $types = [];
         $concurrentByDate = [];
 
+        for ($date = $filters->startDate->copy(); $date->lte($filters->endDate); $date->addDay()) {
+            if (! $date->isWeekend() && ! $holidays->has($date->toDateString())) {
+                $concurrentByDate[$date->toDateString()] = [];
+            }
+        }
+
         foreach ($requests as $request) {
             $days = $this->workingDaysWithin($request, $filters, $holidays);
             $status[$request->status]['count']++;
@@ -241,7 +247,9 @@ class ReportAnalyticsService
             'summary' => [
                 'approved_days' => round((float) ($status['approved']['days'] ?? 0), 2),
                 'pending_days' => round((float) ($status['pending']['days'] ?? 0), 2),
-                'available_balance' => round((float) $balances->sum(fn (LeaveBalance $balance) => $balance->available_days), 2),
+                'available_balance' => round((float) $balances
+                    ->filter(fn (LeaveBalance $balance) => $balance->leaveType?->paid)
+                    ->sum(fn (LeaveBalance $balance) => $balance->available_days), 2),
             ],
             'trend' => array_values($buckets),
             'status' => array_values($status),
@@ -249,10 +257,20 @@ class ReportAnalyticsService
             'balances' => $balanceByType,
             'employee_balances' => $employeeBalances,
             'rankings' => $rankings,
-            'concurrent' => collect($concurrentByDate)->map(fn (array $users, string $date) => [
-                'date' => $date,
-                'employees' => count($users),
-            ])->values(),
+            'concurrency_distribution' => collect([
+                '0 absent' => fn (int $employees): bool => $employees === 0,
+                '1 absent' => fn (int $employees): bool => $employees === 1,
+                '2 absent' => fn (int $employees): bool => $employees === 2,
+                '3+ absent' => fn (int $employees): bool => $employees >= 3,
+            ])->map(function (callable $matches, string $name) use ($concurrentByDate): array {
+                return [
+                    'name' => $name,
+                    'days' => collect($concurrentByDate)
+                        ->map(fn (array $users): int => count($users))
+                        ->filter($matches)
+                        ->count(),
+                ];
+            })->values(),
         ];
     }
 
@@ -273,9 +291,9 @@ class ReportAnalyticsService
             $heatmap[$date]['records']++;
             $heatmap[$date]['issues'] += $day->status === 'issues' ? 1 : 0;
 
-            foreach ($day->slots as $slot) {
-                if (array_key_exists($slot->status, $issues)) {
-                    $issues[$slot->status]++;
+            foreach (['late', 'early', 'missing'] as $issue) {
+                if ($day->slots->contains('status', $issue)) {
+                    $issues[$issue]++;
                 }
             }
 
@@ -300,7 +318,6 @@ class ReportAnalyticsService
             $complete = $records->where('status', 'complete')->count();
             $issueDays = $records->where('status', 'issues')->count();
             $denominator = $complete + $issueDays;
-            $slots = $records->flatMap->slots;
 
             return [
                 'user_id' => $records->first()->user_id,
@@ -309,9 +326,9 @@ class ReportAnalyticsService
                 'compliance' => $denominator > 0 ? round(($complete / $denominator) * 100, 1) : 0,
                 'complete' => $complete,
                 'issues' => $issueDays,
-                'late' => $slots->where('status', 'late')->count(),
-                'early' => $slots->where('status', 'early')->count(),
-                'missing' => $slots->where('status', 'missing')->count(),
+                'late' => $this->countDaysWithSlotStatus($records, 'late'),
+                'early' => $this->countDaysWithSlotStatus($records, 'early'),
+                'missing' => $this->countDaysWithSlotStatus($records, 'missing'),
                 'records' => $records->count(),
             ];
         })->sortByDesc(fn (array $row) => $row['late'] + $row['missing'])->values();
@@ -321,14 +338,13 @@ class ReportAnalyticsService
                 $complete = $records->where('status', 'complete')->count();
                 $issueDays = $records->where('status', 'issues')->count();
                 $denominator = $complete + $issueDays;
-                $slots = $records->flatMap->slots;
 
                 return [
                     'name' => $name,
                     'compliance' => $denominator > 0 ? round(($complete / $denominator) * 100, 1) : 0,
-                    'late' => $slots->where('status', 'late')->count(),
-                    'early' => $slots->where('status', 'early')->count(),
-                    'missing' => $slots->where('status', 'missing')->count(),
+                    'late' => $this->countDaysWithSlotStatus($records, 'late'),
+                    'early' => $this->countDaysWithSlotStatus($records, 'early'),
+                    'missing' => $this->countDaysWithSlotStatus($records, 'missing'),
                 ];
             })->values();
 
@@ -345,7 +361,12 @@ class ReportAnalyticsService
             'trend' => array_values($buckets),
             'heatmap' => array_values($heatmap),
             'issue_mix' => collect($issues)->map(fn (int $value, string $name) => [
-                'name' => ucfirst($name),
+                'name' => match ($name) {
+                    'late' => 'Late-in days',
+                    'early' => 'Early-out days',
+                    'missing' => 'Missing-punch days',
+                    default => ucfirst($name),
+                },
                 'value' => $value,
             ])->values(),
             'employees' => $employeeStats,
@@ -368,7 +389,6 @@ class ReportAnalyticsService
             $complete = $userDays->where('status', 'complete')->count();
             $issues = $userDays->where('status', 'issues')->count();
             $denominator = $complete + $issues;
-            $slots = $userDays->flatMap->slots;
 
             return [
                 'id' => $user->id,
@@ -380,9 +400,9 @@ class ReportAnalyticsService
                 'used_balance' => round((float) $userBalances->sum('used_days'), 2),
                 'available_balance' => round((float) $userBalances->sum(fn (LeaveBalance $balance) => $balance->available_days), 2),
                 'attendance_compliance' => $denominator > 0 ? round(($complete / $denominator) * 100, 1) : 0,
-                'late' => $slots->where('status', 'late')->count(),
-                'early' => $slots->where('status', 'early')->count(),
-                'missing' => $slots->where('status', 'missing')->count(),
+                'late' => $this->countDaysWithSlotStatus($userDays, 'late'),
+                'early' => $this->countDaysWithSlotStatus($userDays, 'early'),
+                'missing' => $this->countDaysWithSlotStatus($userDays, 'missing'),
             ];
         });
 
@@ -402,6 +422,13 @@ class ReportAnalyticsService
             'total' => $total,
             'last_page' => $lastPage,
         ];
+    }
+
+    private function countDaysWithSlotStatus(Collection $days, string $status): int
+    {
+        return $days->filter(
+            fn (AttendanceDay $day): bool => $day->slots->contains('status', $status)
+        )->count();
     }
 
     private function emptyBuckets(ReportFilters $filters, array $keys): array

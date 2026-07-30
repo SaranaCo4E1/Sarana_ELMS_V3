@@ -182,13 +182,13 @@ class ReportController extends Controller
                     $day->primarySite?->name,
                     ucfirst($day->status),
                     $value('morning_in'),
-                    $slots['morning_in']?->status,
+                    self::attendanceSlotStatus($slots['morning_in']?->status),
                     $value('lunch_out'),
-                    $slots['lunch_out']?->status,
+                    self::attendanceSlotStatus($slots['lunch_out']?->status),
                     $value('lunch_in'),
-                    $slots['lunch_in']?->status,
+                    self::attendanceSlotStatus($slots['lunch_in']?->status),
                     $value('final_out'),
-                    $slots['final_out']?->status,
+                    self::attendanceSlotStatus($slots['final_out']?->status),
                     $day->events->where('verification_status', 'flagged')->whereNull('reviewed_at')->count(),
                 ]);
             }
@@ -321,6 +321,15 @@ class ReportController extends Controller
         }
 
         return (string) $value;
+    }
+
+    private static function attendanceSlotStatus(?string $status): ?string
+    {
+        return match ($status) {
+            'late' => 'Late in',
+            'early' => 'Early out',
+            default => $status,
+        };
     }
 
     private function holidays(Carbon $startDate, Carbon $endDate): Collection
