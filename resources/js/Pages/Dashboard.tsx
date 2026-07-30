@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../Layouts/AppLayout';
 import AttendancePunchButton from '../Components/AttendancePunchButton';
+import type { AttendancePunchPreview } from '../Components/AttendanceTimingNotice';
 import type { LeaveBalance, LeaveRequest, PageProps, SystemNotification, User, PublicHoliday } from '../types';
 import { formatDays, formatShortDate } from '../utils';
 import LeaveBadge, { getLeaveStyle } from '../Components/LeaveBadge';
@@ -22,6 +23,8 @@ type Props = {
   attendanceAction: {
     direction?: 'in' | 'out' | null;
     branch_name?: string | null;
+    cooldown_until?: string | null;
+    preview?: AttendancePunchPreview | null;
     unavailable_reason?: string | null;
   };
 };
@@ -69,7 +72,7 @@ export default function Dashboard({
         {/* Left main section */}
         <section className="space-y-6">
           {/* Metrics section */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <Metric
               icon={<Clock3 size={15} />}
               label="Pending"
@@ -257,6 +260,8 @@ export default function Dashboard({
             <AttendancePunchButton
               direction={attendanceAction.direction}
               branchName={attendanceAction.branch_name}
+              cooldownUntil={attendanceAction.cooldown_until}
+              preview={attendanceAction.preview}
             />
           )}
           <Link
@@ -534,7 +539,7 @@ function RequestTable({ requests }: { requests: LeaveRequest[] }) {
                 <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Handover Notes / Reason</div>
                 {viewDetailsRequest.reason ? (
                   <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 italic shadow-premium-sm">
-                    "{viewDetailsRequest.reason}"
+                    {viewDetailsRequest.reason}
                   </p>
                 ) : (
                   <p className="text-sm text-neutral-400 italic font-medium">No notes provided.</p>
@@ -789,13 +794,13 @@ function Metric({
   const content = (
     <>
       <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${theme.bg} blur-2xl -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500`} />
-      <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-neutral-400 relative z-10">
+      <div className="flex items-center justify-between text-[11px] sm:text-xs font-medium uppercase tracking-wider text-neutral-400 relative z-10">
         <span className="group-hover:text-neutral-700 transition-colors">{label}</span>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-md border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
+        <div className={`hidden sm:flex h-8 w-8 items-center justify-center rounded-md border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
           {icon}
         </div>
       </div>
-      <div className="mt-5 text-2xl sm:text-3xl font-medium tracking-tight text-neutral-800 relative z-10">{value}</div>
+      <div className="mt-2.5 sm:mt-5 text-2xl sm:text-3xl font-medium tracking-tight text-neutral-800 relative z-10">{value}</div>
     </>
   );
 

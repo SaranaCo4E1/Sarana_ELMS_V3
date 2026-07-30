@@ -19,6 +19,8 @@ type PageProps = {
 export default function Support() {
   const { auth, flash } = usePage<any>().props;
   const user = auth?.user;
+  const returnHref = user ? '/dashboard' : '/';
+  const returnLabel = user ? 'Back to Dashboard' : 'Back to Home';
   
   const [submittedSuccessfully, setSubmittedSuccessfully] = useState(false);
 
@@ -60,6 +62,7 @@ export default function Support() {
 
   return (
     <div className="relative min-h-screen bg-slate-50/40 text-neutral-800 antialiased selection:bg-orange-500 selection:text-white">
+      <Head title="Help Desk" />
       {/* Dynamic Background Glow elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-orange-400/8 to-amber-500/8 blur-3xl"></div>
@@ -70,11 +73,11 @@ export default function Support() {
         {/* Navigation Header */}
         <div className="mb-10 flex items-center justify-between">
           <Link
-            href="/"
+            href={returnHref}
             className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-900 transition-colors uppercase tracking-wider group"
           >
             <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-            Back to Portal
+            {returnLabel}
           </Link>
           <div className="flex items-center gap-2.5 text-sm font-semibold text-neutral-400 uppercase tracking-wider bg-neutral-200/50 px-4 py-2 rounded-lg border border-neutral-200/20">
             <MessageSquare size={12} className="text-orange-500" />
@@ -115,10 +118,10 @@ export default function Support() {
                   Submit Another Ticket
                 </button>
                 <Link
-                  href="/"
+                  href={returnHref}
                   className="w-full sm:w-auto px-6 py-3 rounded-lg bg-orange-600 hover:bg-orange-700 text-sm font-semibold text-white transition-all text-center select-none shadow-md shadow-orange-600/10"
                 >
-                  Return to Home
+                  {user ? 'Return to Dashboard' : 'Return to Home'}
                 </Link>
               </div>
             </div>

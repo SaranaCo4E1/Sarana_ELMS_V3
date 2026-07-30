@@ -50,6 +50,32 @@ class AttendanceModuleTest extends TestCase
         $this->assertSame('issues', $day->status);
     }
 
+    public function test_punch_preview_uses_the_same_milestone_and_timing_rules_as_recording(): void
+    {
+        [$user, $site, $schedule, $code] = $this->attendanceSetup();
+        $service = app(AttendanceService::class);
+        Carbon::setTestNow(Carbon::parse('2026-07-29 08:01:00', $site->timezone)->utc());
+        $day = $service->ensureDay($user, $schedule, now($site->timezone));
+
+        $this->assertSame('morning_in', $service->previewNextPunch($day)['classification']);
+        $this->assertSame('late', $service->previewNextPunch($day)['status']);
+
+        $this->punchAt($service, $user, $code, '2026-07-29 08:01:00', 1);
+        Carbon::setTestNow(Carbon::parse('2026-07-29 11:45:00', $site->timezone)->utc());
+        $this->assertSame('lunch_out', $service->previewNextPunch($day->fresh())['classification']);
+        $this->assertSame('early', $service->previewNextPunch($day->fresh())['status']);
+
+        $this->punchAt($service, $user, $code, '2026-07-29 11:45:00', 2);
+        Carbon::setTestNow(Carbon::parse('2026-07-29 12:45:00', $site->timezone)->utc());
+        $this->assertSame('lunch_in', $service->previewNextPunch($day->fresh())['classification']);
+        $this->assertSame('on_time', $service->previewNextPunch($day->fresh())['status']);
+
+        $this->punchAt($service, $user, $code, '2026-07-29 12:45:00', 3);
+        Carbon::setTestNow(Carbon::parse('2026-07-29 12:46:00', $site->timezone)->utc());
+        $this->assertSame('final_out', $service->previewNextPunch($day->fresh())['classification']);
+        $this->assertSame('early', $service->previewNextPunch($day->fresh())['status']);
+    }
+
     public function test_non_qualifying_exit_return_pairs_remain_ordinary_and_lunch_is_missing_after_finalization(): void
     {
         [$user, $site, $schedule, $code] = $this->attendanceSetup();
@@ -59,7 +85,7 @@ class AttendanceModuleTest extends TestCase
         $ordinaryOut = $this->punchAt($service, $user, $code, '2026-07-29 10:30:00', 2);
         $this->punchAt($service, $user, $code, '2026-07-29 10:45:00', 3);
         $shortLunchOut = $this->punchAt($service, $user, $code, '2026-07-29 11:50:00', 4);
-        $this->punchAt($service, $user, $code, '2026-07-29 12:00:00', 5);
+        $this->punchAt($service, $user, $code, '2026-07-29 11:55:00', 5);
         $this->punchAt($service, $user, $code, '2026-07-29 17:00:00', 6);
 
         $day = AttendanceDay::query()->firstOrFail();
@@ -71,6 +97,63 @@ class AttendanceModuleTest extends TestCase
         $this->assertSame('ordinary', $shortLunchOut->fresh()->classification);
         $this->assertSame('missing', $slots['lunch_out']->status);
         $this->assertSame('missing', $slots['lunch_in']->status);
+    }
+
+    public function test_unmatched_exit_during_lunch_window_is_immediately_classified_as_lunch_out(): void
+    {
+        [$user, $site, $schedule, $code] = $this->attendanceSetup();
+        $service = app(AttendanceService::class);
+
+        $this->punchAt($service, $user, $code, '2026-07-29 11:43:00', 1);
+        $lunchOut = $this->punchAt($service, $user, $code, '2026-07-29 12:41:00', 2);
+
+        $day = AttendanceDay::query()->with(['slots.event', 'events'])->firstOrFail();
+        $slots = $day->slots->keyBy('type');
+
+        $this->assertSame('lunch_out', $lunchOut->fresh()->classification);
+        $this->assertSame($lunchOut->id, $slots['lunch_out']->attendance_event_id);
+        $this->assertSame('on_time', $slots['lunch_out']->status);
+        $this->assertSame('pending', $slots['lunch_in']->status);
+        $this->assertSame('issues', $day->status, 'The late morning check-in remains an issue.');
+    }
+
+    public function test_short_lunch_after_noon_still_populates_both_lunch_milestones(): void
+    {
+        [$user, $site, $schedule, $code] = $this->attendanceSetup();
+        $service = app(AttendanceService::class);
+
+        $this->punchAt($service, $user, $code, '2026-07-29 11:43:00', 1);
+        $lunchOut = $this->punchAt($service, $user, $code, '2026-07-29 12:41:00', 2);
+        $lunchIn = $this->punchAt($service, $user, $code, '2026-07-29 12:43:00', 3);
+
+        $slots = AttendanceDay::query()->with('slots.event')->firstOrFail()->slots->keyBy('type');
+
+        $this->assertSame('lunch_out', $lunchOut->fresh()->classification);
+        $this->assertSame('lunch_in', $lunchIn->fresh()->classification);
+        $this->assertSame($lunchOut->id, $slots['lunch_out']->attendance_event_id);
+        $this->assertSame($lunchIn->id, $slots['lunch_in']->attendance_event_id);
+        $this->assertSame('on_time', $slots['lunch_out']->status);
+        $this->assertSame('on_time', $slots['lunch_in']->status);
+    }
+
+    public function test_next_exit_after_completed_lunch_is_final_out_even_before_lunch_end(): void
+    {
+        [$user, $site, $schedule, $code] = $this->attendanceSetup();
+        $service = app(AttendanceService::class);
+
+        $this->punchAt($service, $user, $code, '2026-07-29 11:43:00', 1);
+        $this->punchAt($service, $user, $code, '2026-07-29 12:41:00', 2);
+        $this->punchAt($service, $user, $code, '2026-07-29 12:43:00', 3);
+        $finalOut = $this->punchAt($service, $user, $code, '2026-07-29 12:44:00', 4);
+
+        $day = AttendanceDay::query()->with('slots.event')->firstOrFail();
+        $slots = $day->slots->keyBy('type');
+
+        $this->assertSame('final_out', $finalOut->fresh()->classification);
+        $this->assertSame($finalOut->id, $slots['final_out']->attendance_event_id);
+        $this->assertSame('early', $slots['final_out']->status);
+        $this->assertSame('issues', $day->status);
+        $this->assertNull($service->nextSelfServiceDirection($day));
     }
 
     public function test_first_scan_after_lunch_is_final_out_and_passed_milestones_are_missing(): void
@@ -96,6 +179,53 @@ class AttendanceModuleTest extends TestCase
         $this->assertSame('issues', $day->status);
     }
 
+    public function test_first_check_in_during_lunch_return_window_is_lunch_in_with_prior_milestones_missing(): void
+    {
+        [$user, $site, $schedule, $code] = $this->attendanceSetup();
+        $service = app(AttendanceService::class);
+        Carbon::setTestNow(Carbon::parse('2026-07-29 12:54:00', $site->timezone)->utc());
+        $day = $service->ensureDay($user, $schedule, now($site->timezone));
+
+        $preview = $service->previewNextPunch($day);
+        $this->assertSame('lunch_in', $preview['classification']);
+        $this->assertSame('on_time', $preview['status']);
+
+        $lunchIn = $this->punchAt($service, $user, $code, '2026-07-29 12:54:00', 1);
+        $slots = $day->fresh()->slots->keyBy('type');
+
+        $this->assertSame('in', $lunchIn->direction);
+        $this->assertSame('lunch_in', $lunchIn->fresh()->classification);
+        $this->assertSame('missing', $slots['morning_in']->status);
+        $this->assertSame('missing', $slots['lunch_out']->status);
+        $this->assertSame('on_time', $slots['lunch_in']->status);
+        $this->assertSame('pending', $slots['final_out']->status);
+        $this->assertSame('issues', $day->fresh()->status);
+    }
+
+    public function test_lunch_in_remains_available_and_pending_during_late_return_window(): void
+    {
+        [$user, $site, $schedule, $code] = $this->attendanceSetup();
+        $service = app(AttendanceService::class);
+        Carbon::setTestNow(Carbon::parse('2026-07-29 13:01:00', $site->timezone)->utc());
+        $day = $service->ensureDay($user, $schedule, now($site->timezone));
+        $service->finalizeIfDue($day);
+
+        $slots = $day->fresh()->slots->keyBy('type');
+        $preview = $service->previewNextPunch($day->fresh());
+
+        $this->assertSame('missing', $slots['morning_in']->status);
+        $this->assertSame('missing', $slots['lunch_out']->status);
+        $this->assertSame('pending', $slots['lunch_in']->status);
+        $this->assertSame('pending', $slots['final_out']->status);
+        $this->assertSame('in', $service->nextDirection($day));
+        $this->assertSame('lunch_in', $preview['classification']);
+        $this->assertSame('late', $preview['status']);
+
+        $lunchIn = $this->punchAt($service, $user, $code, '2026-07-29 13:01:00', 1);
+        $this->assertSame('lunch_in', $lunchIn->fresh()->classification);
+        $this->assertSame('late', $day->fresh()->slots->firstWhere('type', 'lunch_in')->status);
+    }
+
     public function test_elapsed_milestones_are_missing_after_lunch_even_without_punches(): void
     {
         [$user, $site, $schedule] = $this->attendanceSetup();
@@ -111,6 +241,7 @@ class AttendanceModuleTest extends TestCase
         $this->assertSame('missing', $slots['lunch_in']->status);
         $this->assertSame('pending', $slots['final_out']->status);
         $this->assertSame('issues', $day->fresh()->status);
+        $this->assertSame('out', $service->nextDirection($day->fresh()));
     }
 
     public function test_office_ip_can_verify_a_punch_when_location_is_denied(): void
@@ -165,6 +296,59 @@ class AttendanceModuleTest extends TestCase
                 ->where('attendanceAction.branch_name', $site->name)
                 ->where('attendanceAction.unavailable_reason', null)
             );
+    }
+
+    public function test_second_punch_during_cooldown_is_explained_instead_of_silently_returning_the_previous_event(): void
+    {
+        [$user, $site] = $this->attendanceSetup();
+        $firstPunchAt = Carbon::parse('2026-07-29 08:00:00', $site->timezone)->utc();
+        Carbon::setTestNow($firstPunchAt);
+
+        $payload = [
+            'latitude' => $site->latitude,
+            'longitude' => $site->longitude,
+            'accuracy_meters' => 10,
+        ];
+
+        $this->actingAs($user)->post(route('attendance.punch.store'), [
+            ...$payload,
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertSessionHasNoErrors();
+
+        Carbon::setTestNow($firstPunchAt->copy()->addSeconds(5));
+
+        $this->actingAs($user)
+            ->from(route('attendance.index'))
+            ->post(route('attendance.punch.store'), [
+                ...$payload,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect(route('attendance.index'))
+            ->assertSessionHasErrors([
+                'attendance' => 'Your previous punch was recorded. Please wait 25 seconds before the next action.',
+            ]);
+
+        $this->assertDatabaseCount('attendance_events', 1);
+        $this->actingAs($user)
+            ->get(route('attendance.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('nextDirection', 'out')
+                ->where('punchCooldownUntil', $firstPunchAt->copy()->addSeconds(30)->toIso8601String())
+            );
+
+        Carbon::setTestNow($firstPunchAt->copy()->addSeconds(30));
+        $this->actingAs($user)->post(route('attendance.punch.store'), [
+            ...$payload,
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('attendance_events', 2);
+        $this->assertDatabaseHas('attendance_events', [
+            'user_id' => $user->id,
+            'direction' => 'out',
+            'source' => 'self_service',
+        ]);
     }
 
     public function test_self_service_attendance_is_unavailable_on_an_excused_day(): void
@@ -251,7 +435,12 @@ class AttendanceModuleTest extends TestCase
         $this->actingAs($user)
             ->get(route('attendance.scan', ['qrCode' => $code, 'token' => $token]))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('AttendanceScan')->where('direction', 'in'));
+            ->assertInertia(fn ($page) => $page
+                ->component('AttendanceScan')
+                ->where('direction', 'in')
+                ->where('punchPreview.classification', 'morning_in')
+                ->where('punchPreview.status', 'on_time')
+            );
     }
 
     public function test_admin_can_render_the_current_qr_as_svg_and_daily_token_expires(): void

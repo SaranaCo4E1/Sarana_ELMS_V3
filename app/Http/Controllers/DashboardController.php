@@ -29,6 +29,10 @@ class DashboardController extends Controller
                 now($attendanceSchedule->primarySite->timezone)
             )
             : null;
+        if ($attendanceDay) {
+            $attendance->finalizeIfDue($attendanceDay);
+            $attendanceDay->refresh()->load(['slots.event', 'events', 'primarySite']);
+        }
         $nextAttendanceDirection = $attendanceDay
             ? $attendance->nextSelfServiceDirection($attendanceDay)
             : null;
@@ -37,6 +41,7 @@ class DashboardController extends Controller
             ? LeaveRequest::query()
                 ->with(['user.department', 'leaveType', 'attachments'])
                 ->where('status', 'pending')
+                ->where('user_id', '!=', $user->id)
                 ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')
@@ -92,6 +97,7 @@ class DashboardController extends Controller
             ? LeaveRequest::query()
                 ->with(['user.department', 'leaveType'])
                 ->where('status', 'approved')
+                ->where('user_id', '!=', $user->id)
                 ->whereDate('ends_at', '>=', now()->toDateString())
                 ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))
                 ->orderBy('starts_at')
@@ -112,6 +118,8 @@ class DashboardController extends Controller
             'attendanceAction' => [
                 'direction' => $nextAttendanceDirection,
                 'branch_name' => $attendanceSchedule?->primarySite?->name,
+                'cooldown_until' => $attendanceDay ? $attendance->punchCooldownUntil($attendanceDay)?->toIso8601String() : null,
+                'preview' => $attendanceDay && $nextAttendanceDirection ? $attendance->previewNextPunch($attendanceDay) : null,
                 'unavailable_reason' => match ($attendanceDay?->excuse_type) {
                     'weekend' => 'Attendance is unavailable on weekends',
                     'public_holiday' => 'Attendance is unavailable on public holidays',

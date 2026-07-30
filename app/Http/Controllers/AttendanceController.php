@@ -55,6 +55,10 @@ class AttendanceController extends Controller
         $today = $schedule
             ? $attendance->ensureDay($actor, $schedule, now()->setTimezone($schedule->primarySite->timezone))
             : null;
+        if ($today) {
+            $attendance->finalizeIfDue($today);
+            $today->refresh()->load(['slots.event', 'events.site', 'primarySite']);
+        }
         $nextDirection = $today ? $attendance->nextSelfServiceDirection($today) : null;
         $selectedPersonalDate = $dateData['personal_date'] ?? now($actorTimezone)->toDateString();
         $personalRecord = $this->isWeekend($selectedPersonalDate, $actorTimezone)
@@ -193,6 +197,8 @@ class AttendanceController extends Controller
         return Inertia::render('Attendance', [
             'today' => $today,
             'nextDirection' => $nextDirection,
+            'punchCooldownUntil' => $today ? $attendance->punchCooldownUntil($today)?->toIso8601String() : null,
+            'punchPreview' => $today && $nextDirection ? $attendance->previewNextPunch($today) : null,
             'attendanceUnavailableReason' => $this->attendanceUnavailableReason($schedule, $today, $nextDirection),
             'personalRecord' => $personalRecord,
             'selectedPersonalDate' => $selectedPersonalDate,
@@ -248,10 +254,13 @@ class AttendanceController extends Controller
         $schedule = $attendance->activeSchedule($request->user(), now()->setTimezone($qrCode->site->timezone));
         abort_unless($schedule, 422, 'No attendance schedule is active for your account.');
         $day = $attendance->ensureDay($request->user(), $schedule, now()->setTimezone($qrCode->site->timezone));
+        $attendance->finalizeIfDue($day);
+        $day->refresh()->load(['slots.event', 'events', 'primarySite']);
 
         return Inertia::render('AttendanceScan', [
             'site' => $qrCode->site->only(['id', 'name', 'timezone']),
             'direction' => $attendance->nextDirection($day),
+            'punchPreview' => $attendance->previewNextPunch($day),
             'token' => $request->query('token'),
             'qrPublicId' => $qrCode->public_id,
             'idempotencyKey' => (string) Str::uuid(),
@@ -281,6 +290,9 @@ class AttendanceController extends Controller
             $request->ip(),
             $request->userAgent()
         );
+        Audit::recordChange($request, 'attendance.event.recorded', $event, [], $event->only([
+            'direction', 'effective_at', 'source', 'verification_status', 'site_id',
+        ]), ['channel' => 'qr']);
 
         $message = ($event->direction === 'in' ? 'Check-in' : 'Check-out')
             .' recorded at '.$event->effective_at->setTimezone($qrCode->site->timezone)->format('H:i');
@@ -311,6 +323,9 @@ class AttendanceController extends Controller
             $request->userAgent()
         );
         $event->loadMissing('site');
+        Audit::recordChange($request, 'attendance.event.recorded', $event, [], $event->only([
+            'direction', 'effective_at', 'source', 'verification_status', 'site_id',
+        ]), ['channel' => 'self_service']);
 
         $message = ($event->direction === 'in' ? 'Check-in' : 'Check-out').' recorded at '
             .$event->effective_at->setTimezone($event->site->timezone)->format('H:i');
@@ -334,7 +349,11 @@ class AttendanceController extends Controller
 
             return $site;
         });
-        Audit::record($request, 'attendance.site.created', $site);
+        Audit::recordChange($request, 'attendance.site.created', $site, [], [
+            ...$site->only(array_keys($data)),
+            'qr_mode' => $qrData['mode'] ?? null,
+            'qr_enabled' => $qrData['is_enabled'] ?? false,
+        ]);
 
         return back()->with('success', 'Attendance branch created.');
     }
@@ -344,9 +363,18 @@ class AttendanceController extends Controller
         $this->authorizeSettings($request);
         $data = $this->validateSite($request, $site);
         $qrData = $this->validateQr($request, $data);
+        $before = [
+            ...$site->only(array_keys($data)),
+            'qr_mode' => $site->qrCode?->mode,
+            'qr_enabled' => $site->qrCode?->is_enabled,
+        ];
         $site->update($data);
         $site->qrCode()->updateOrCreate([], $qrData);
-        Audit::record($request, 'attendance.site.updated', $site);
+        Audit::recordChange($request, 'attendance.site.updated', $site, $before, [
+            ...$site->only(array_keys($data)),
+            'qr_mode' => $qrData['mode'] ?? null,
+            'qr_enabled' => $qrData['is_enabled'] ?? false,
+        ]);
 
         return back()->with('success', 'Attendance branch updated.');
     }
@@ -359,7 +387,11 @@ class AttendanceController extends Controller
         $this->authorizeSettings($request);
         abort_unless($site->qrCode, 422, 'This branch does not have a QR configuration.');
         $qr->regenerate($site->qrCode);
-        Audit::record($request, 'attendance.qr.regenerated', $site->qrCode);
+        Audit::record($request, 'attendance.qr.regenerated', $site->qrCode, [
+            'site_id' => $site->id,
+            'site_name' => $site->name,
+            'invalidated_previous_codes' => true,
+        ]);
 
         return back()->with('success', 'QR code regenerated. Previous printouts are now invalid.');
     }
@@ -405,7 +437,12 @@ class AttendanceController extends Controller
 
             return $schedule;
         });
-        Audit::record($request, 'attendance.schedule.created', $schedule);
+        Audit::recordChange($request, 'attendance.schedule.created', $schedule, [], [
+            ...$schedule->only([
+                'user_id', 'primary_site_id', 'effective_from', 'work_start', 'lunch_start', 'lunch_end', 'work_end',
+            ]),
+            'allowed_site_ids' => $schedule->allowedSites()->pluck('attendance_sites.id')->all(),
+        ]);
 
         return back()->with('success', 'Effective-dated attendance schedule created.');
     }

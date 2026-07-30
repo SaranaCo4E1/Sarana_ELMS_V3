@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import type { PageProps } from '../../types';
@@ -10,6 +10,7 @@ export default function ForgotPassword() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-neutral-50/60 px-4 py-12">
+      <Head title="Forgot Password" />
       {/* Ambient background decoration */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 h-80 w-80 rounded-full bg-orange-500/5 blur-3xl"></div>
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 h-80 w-80 rounded-full bg-amber-500/5 blur-3xl"></div>

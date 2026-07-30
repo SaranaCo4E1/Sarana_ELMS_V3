@@ -67,6 +67,8 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
   
   const calendarDays = useMemo(() => buildCalendarDays(visibleMonth, leaveEvents, holidays), [visibleMonth, leaveEvents, holidays]);
   const selectedItems = calendarDays.find((day) => day.key === selectedDay)?.items ?? itemsForDate(selectedDay, leaveEvents, holidays);
+  const visibleLeaveCount = filteredEventsForTimeline.filter((item) => item.kind === 'leave').length;
+  const visibleHolidayCount = filteredEventsForTimeline.filter((item) => item.kind === 'holiday').length;
 
   return (
     <AppLayout>
@@ -79,7 +81,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
           </div>
           <div className="inline-flex items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-5 py-3 text-sm font-medium text-neutral-600 shadow-premium-sm">
             <CalendarDays size={15} className="text-neutral-400" /> 
-            <span>{leaveEvents.length} leave requests · {holidays.length} holidays</span>
+            <span>All loaded: {leaveEvents.length} leave requests · {holidays.length} holidays</span>
           </div>
         </div>
 
@@ -91,7 +93,9 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               <div className="flex flex-wrap items-center justify-between gap-5 border-b border-neutral-200 px-6 py-6 bg-neutral-50/20">
                 <div>
                   <h3 className="font-medium text-neutral-800 text-base">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
-                  <p className="text-sm font-medium text-neutral-400 mt-1">Leave, holidays, and daily summaries</p>
+                  <p className="text-sm font-medium text-neutral-400 mt-1">
+                    This month: {visibleLeaveCount} leave request{visibleLeaveCount === 1 ? '' : 's'} · {visibleHolidayCount} holiday{visibleHolidayCount === 1 ? '' : 's'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -314,7 +318,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               ))}
             </Panel>
 
-            <Panel icon={<CalendarClock size={15} />} title="Upcoming Holidays" empty="No upcoming holidays.">
+            <Panel icon={<CalendarClock size={15} />} title="Holidays in the Next 30 Days" empty="No holidays in the next 30 days.">
               {upcomingHolidays.map((holiday) => (
                 <CompactHolidayRow key={holiday.id} holiday={holiday} />
               ))}
@@ -526,7 +530,7 @@ function LeaveNote({ item }: { item: Extract<CalendarItem, { kind: 'leave' }> })
           </div>
       {item.event.reason && (
         <div className="mt-2.5 rounded-md bg-neutral-50/50 p-3 text-sm text-neutral-600 leading-relaxed italic border border-neutral-100/60">
-          "{item.event.reason}"
+          {item.event.reason}
         </div>
       )}
     </div>

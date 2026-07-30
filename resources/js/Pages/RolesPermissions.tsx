@@ -150,7 +150,7 @@ export default function RolesPermissions({ roles, permissions }: { roles: Role[]
                         </span>
                       </div>
                       <div className="text-sm text-neutral-500 font-medium mt-1.5">
-                        {role.description || 'No description'} · {role.permissions?.length ?? 0} permissions · {role.users_count ?? 0} members
+                        {role.description || 'No description'} · {permissionSummary(role)} · {role.users_count ?? 0} members
                       </div>
                     </div>
                     <button
@@ -325,6 +325,14 @@ function Metric({ label, value, variant }: { label: string; value: number; varia
       </div>
     </div>
   );
+}
+
+function permissionSummary(role: Role) {
+  const explicitCount = role.permissions?.length ?? 0;
+  if (role.slug === 'staff' && explicitCount === 0) {
+    return 'Standard employee access (no additional permissions)';
+  }
+  return `${explicitCount} permission${explicitCount === 1 ? '' : 's'}`;
 }
 
 function FieldError({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {

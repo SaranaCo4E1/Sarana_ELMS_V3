@@ -110,7 +110,7 @@ export default function Reports({ users, leaveTypes, departments }: Props) {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200/60 px-6 py-5 bg-neutral-50/20">
             <div>
               <h2 className="text-base font-medium text-neutral-800">Leave Report</h2>
-              <p className="text-sm font-medium text-neutral-500 mt-1.5">Leave taken and remaining balance per employee, filterable by employee, year, department, and role</p>
+              <p className="text-sm font-medium text-neutral-500 mt-1.5">Leave taken and currently available after pending reservations, filterable by employee, year, department, and role</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <div className="relative">
@@ -247,15 +247,15 @@ export default function Reports({ users, leaveTypes, departments }: Props) {
                 <tr>
                   {paidTypes.flatMap((type) => [
                     <th key={`${type.id}-taken`} className="px-3 py-2.5 text-center font-semibold">Taken</th>,
-                    <th key={`${type.id}-balance`} className="px-3 py-2.5 text-center font-semibold">Balance</th>,
+                    <th key={`${type.id}-balance`} className="px-3 py-2.5 text-center font-semibold">Available</th>,
                   ])}
                   {paidTypes.length > 0 && [
                     <th key="total-taken" className="px-3 py-2.5 text-center font-semibold">Taken</th>,
-                    <th key="total-balance" className="px-3 py-2.5 text-center font-semibold">Balance</th>,
+                    <th key="total-balance" className="px-3 py-2.5 text-center font-semibold">Available</th>,
                   ]}
                   {unpaidTypes.flatMap((type) => [
                     <th key={`${type.id}-taken`} className="px-3 py-2.5 text-center font-semibold">Taken</th>,
-                    <th key={`${type.id}-balance`} className="px-3 py-2.5 text-center font-semibold">Balance</th>,
+                    <th key={`${type.id}-balance`} className="px-3 py-2.5 text-center font-semibold">Available</th>,
                   ])}
                 </tr>
               </thead>

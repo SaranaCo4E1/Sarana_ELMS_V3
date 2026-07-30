@@ -76,7 +76,7 @@ export default function Profile({ profile, telegramConnected, telegramConfigured
     <AppLayout>
       <div className="space-y-6">
         {/* Premium Profile Banner Card */}
-        <div className="relative overflow-hidden rounded-xl border border-neutral-200/60 bg-white p-6 shadow-premium-sm hover:shadow-premium-md transition-all duration-300 animate-fade-in">
+        <div className="relative overflow-hidden rounded-xl border border-neutral-200/60 bg-white p-6 shadow-premium-sm">
           {/* Subtle background decoration */}
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/5 blur-3xl pointer-events-none"></div>
           <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-amber-500/5 blur-3xl pointer-events-none"></div>
@@ -117,28 +117,47 @@ export default function Profile({ profile, telegramConnected, telegramConfigured
 
         {/* Profile Info and Form Grid */}
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-          {/* Main Form */}
+          {/* Editable employee details */}
           <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
             <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
               <IdCard size={17} className="text-orange-600" />
-              <h2 className="text-base font-medium text-neutral-800">Personal Information</h2>
+              <div>
+                <h2 className="text-base font-medium text-neutral-800">Employee Details</h2>
+                <p className="mt-0.5 text-xs text-neutral-500">Keep your personal, employment, and payroll records up to date.</p>
+              </div>
             </div>
             
             <form onSubmit={submit} className="grid gap-5 md:grid-cols-2">
-              <Field label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} error={errors.name} />
-              <Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} error={errors.email} />
-              <Field label="Date of birth" type="date" value={form.date_of_birth} onChange={(value) => setForm({ ...form, date_of_birth: value })} error={errors.date_of_birth} />
-              <SelectField label="Gender" value={form.gender} onChange={(value) => setForm({ ...form, gender: value })} error={errors.gender} options={['Male', 'Female']} />
-              <Field label="Nationality" value={form.nationality} onChange={(value) => setForm({ ...form, nationality: value })} error={errors.nationality} />
-              <Field label="National ID number" value={form.national_id_number} onChange={(value) => setForm({ ...form, national_id_number: value })} error={errors.national_id_number} />
-              <Field label="Join date" type="date" value={form.join_date} onChange={(value) => setForm({ ...form, join_date: value })} error={errors.join_date} />
-              <Field label="Employment type" value={form.employment_type} onChange={(value) => setForm({ ...form, employment_type: value })} error={errors.employment_type} />
-              <Field label="Emergency contact" value={form.emergency_contact_name} onChange={(value) => setForm({ ...form, emergency_contact_name: value })} error={errors.emergency_contact_name} />
-              <Field label="Emergency phone" value={form.emergency_contact_phone} onChange={(value) => setForm({ ...form, emergency_contact_phone: value })} error={errors.emergency_contact_phone} />
-              <Field label="Bank name" value={form.bank_name} onChange={(value) => setForm({ ...form, bank_name: value })} error={errors.bank_name} />
-              <Field label="Bank account number" value={form.bank_account_number} onChange={(value) => setForm({ ...form, bank_account_number: value })} error={errors.bank_account_number} />
-              
-              <TextAreaField label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })} error={errors.address} />
+              <div className="md:col-span-2">
+                <ProfileSectionHeading title="Personal" description="Identity, contact, and emergency information" />
+                <div className="mt-4 grid gap-5 md:grid-cols-2">
+                  <Field label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} error={errors.name} />
+                  <Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} error={errors.email} />
+                  <Field label="Date of birth" type="date" value={form.date_of_birth} onChange={(value) => setForm({ ...form, date_of_birth: value })} error={errors.date_of_birth} />
+                  <SelectField label="Gender" value={form.gender} onChange={(value) => setForm({ ...form, gender: value })} error={errors.gender} options={['Male', 'Female']} />
+                  <Field label="Nationality" value={form.nationality} onChange={(value) => setForm({ ...form, nationality: value })} error={errors.nationality} />
+                  <Field label="National ID number" value={form.national_id_number} onChange={(value) => setForm({ ...form, national_id_number: value })} error={errors.national_id_number} />
+                  <Field label="Emergency contact" value={form.emergency_contact_name} onChange={(value) => setForm({ ...form, emergency_contact_name: value })} error={errors.emergency_contact_name} />
+                  <Field label="Emergency phone" value={form.emergency_contact_phone} onChange={(value) => setForm({ ...form, emergency_contact_phone: value })} error={errors.emergency_contact_phone} />
+                  <TextAreaField label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })} error={errors.address} />
+                </div>
+              </div>
+
+              <div className="border-t border-neutral-100 pt-5 md:col-span-2">
+                <ProfileSectionHeading title="Employment" description="Work arrangement and start date" />
+                <div className="mt-4 grid gap-5 md:grid-cols-2">
+                  <Field label="Join date" type="date" value={form.join_date} onChange={(value) => setForm({ ...form, join_date: value })} error={errors.join_date} />
+                  <Field label="Employment type" value={form.employment_type} onChange={(value) => setForm({ ...form, employment_type: value })} error={errors.employment_type} />
+                </div>
+              </div>
+
+              <div className="border-t border-neutral-100 pt-5 md:col-span-2">
+                <ProfileSectionHeading title="Payroll" description="Banking details used by your organization" />
+                <div className="mt-4 grid gap-5 md:grid-cols-2">
+                  <Field label="Bank name" value={form.bank_name} onChange={(value) => setForm({ ...form, bank_name: value })} error={errors.bank_name} />
+                  <Field label="Bank account number" value={form.bank_account_number} onChange={(value) => setForm({ ...form, bank_account_number: value })} error={errors.bank_account_number} />
+                </div>
+              </div>
 
               {/* General Error (if any fallback) */}
               {Object.values(errors).length > 0 && !errors.name && !errors.email && !errors.date_of_birth && !errors.gender && !errors.nationality && !errors.national_id_number && !errors.join_date && !errors.employment_type && !errors.address && !errors.emergency_contact_name && !errors.emergency_contact_phone && !errors.bank_account_number && !errors.bank_name && (
@@ -166,8 +185,12 @@ export default function Profile({ profile, telegramConnected, telegramConfigured
             </form>
           </section>
 
-          {/* Quick Roster Stats Card */}
+          {/* Employment summary */}
           <aside className="space-y-4">
+            <div className="px-1">
+              <h2 className="text-sm font-semibold text-neutral-800">Employment Overview</h2>
+              <p className="mt-1 text-xs text-neutral-500">Organization-managed roster information.</p>
+            </div>
             <Info icon={<UserRound size={15} />} label="Roster Role" value={formatRole(profile.role)} />
             <Info icon={<BriefcaseBusiness size={15} />} label="Primary Department" value={profile.department?.name ?? 'Unassigned'} />
             <Info icon={<UserRound size={15} />} label="Reporting Manager" value={profile.manager?.name ?? 'No Manager Assigned'} />
@@ -181,6 +204,13 @@ export default function Profile({ profile, telegramConnected, telegramConfigured
             />
             <Info icon={<Phone size={15} />} label="Employee ID Code" value={profile.employee_code ?? 'Not Set'} />
           </aside>
+        </div>
+
+        <div className="flex items-end justify-between gap-4 pt-2">
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-800">Security</h2>
+            <p className="mt-1 text-sm text-neutral-500">Manage sign-in credentials and account protection.</p>
+          </div>
         </div>
 
         {/* Security Details Sections */}
@@ -295,8 +325,17 @@ export default function Profile({ profile, telegramConnected, telegramConfigured
             </div>
           </section>
 
-          {/* Telegram Alerts */}
-          <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm xl:col-span-2">
+        </div>
+
+        <div className="flex items-end justify-between gap-4 pt-2">
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-800">Notifications</h2>
+            <p className="mt-1 text-sm text-neutral-500">Choose where leave request updates are delivered.</p>
+          </div>
+        </div>
+
+        {/* Telegram Alerts */}
+        <section className="rounded-xl border border-neutral-200/50 bg-white p-6 shadow-premium-sm">
             <div className="mb-6 flex items-center gap-2 border-b border-neutral-100 pb-4">
               <Send size={17} className="text-orange-600" />
               <h2 className="text-base font-medium text-neutral-800">Telegram Alerts</h2>
@@ -356,8 +395,7 @@ export default function Profile({ profile, telegramConnected, telegramConfigured
                 </a>
               )}
             </div>
-          </section>
-        </div>
+        </section>
       </div>
     </AppLayout>
   );
@@ -369,6 +407,15 @@ function toDateInputValue(value: string | null | undefined): string {
 
 function formatInfoDate(value: string | null | undefined): string {
   return value ? formatDate(value) : 'Not Set';
+}
+
+function ProfileSectionHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
+      <p className="mt-0.5 text-xs text-neutral-500">{description}</p>
+    </div>
+  );
 }
 
 function SelectField({

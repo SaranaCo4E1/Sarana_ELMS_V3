@@ -47,6 +47,7 @@ class HandleInertiaRequests extends Middleware
                 'pending_approvals_count' => fn () => $user && $user->hasPermission('approvals.manage')
                     ? LeaveRequest::query()
                         ->where('status', 'pending')
+                        ->where('user_id', '!=', $user->id)
                         ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))
                         ->count()
                     : 0,

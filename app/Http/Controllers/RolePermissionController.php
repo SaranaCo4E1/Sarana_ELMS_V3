@@ -40,7 +40,9 @@ class RolePermissionController extends Controller
             'description' => $data['description'] ?? null,
             'is_system' => false,
         ]);
-        Audit::record($request, 'admin.role.created', $role);
+        Audit::recordChange($request, 'admin.role.created', $role, [], $role->only([
+            'name', 'slug', 'description', 'is_system',
+        ]));
 
         return back()->with('success', 'Role created.');
     }
@@ -52,8 +54,17 @@ class RolePermissionController extends Controller
             'permission_ids.*' => ['integer', 'exists:permissions,id'],
         ]);
 
+        $before = $role->permissions()->orderBy('key')->pluck('key')->all();
         $role->permissions()->sync($data['permission_ids']);
-        Audit::record($request, 'admin.role.permissions_updated', $role);
+        $after = $role->permissions()->orderBy('key')->pluck('key')->all();
+        Audit::recordChange($request, 'admin.role.permissions_updated', $role, [
+            'permissions' => $before,
+        ], [
+            'permissions' => $after,
+        ], [
+            'permissions_added' => array_values(array_diff($after, $before)),
+            'permissions_removed' => array_values(array_diff($before, $after)),
+        ]);
 
         return back()->with('success', 'Role permissions updated.');
     }

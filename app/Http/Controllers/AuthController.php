@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Notifications\TwoFactorCodeNotification;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,12 @@ class AuthController extends Controller
         $user = User::query()->where('email', $credentials['email'])->where('is_active', true)->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            Audit::record($request, 'auth.login.failed', $user, [
+                'attempted_email' => $credentials['email'],
+                'reason' => $user?->is_active === false ? 'inactive_account' : 'invalid_credentials',
+                'security_event' => true,
+            ]);
+
             return back()->withErrors(['email' => 'Invalid credentials or inactive account.']);
         }
 
@@ -41,12 +48,18 @@ class AuthController extends Controller
             ])->save();
             $user->notify(new TwoFactorCodeNotification($code));
             $request->session()->put('2fa:user:id', $user->id);
+            Audit::record($request, 'auth.two_factor.challenge_sent', $user, ['security_event' => true]);
 
             return redirect()->route('two-factor.show');
         }
 
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
+        Audit::record($request, 'auth.login.succeeded', $user, [
+            'remembered' => $request->boolean('remember'),
+            'two_factor_used' => false,
+            'security_event' => true,
+        ]);
 
         return redirect()->intended(route('dashboard'));
     }
@@ -69,6 +82,11 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->forget('2fa:user:id');
         $request->session()->regenerate();
+        Audit::record($request, 'auth.login.succeeded', $user, [
+            'remembered' => false,
+            'two_factor_used' => true,
+            'security_event' => true,
+        ]);
 
         return redirect()->route('dashboard');
     }
@@ -112,6 +130,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        Audit::record($request, 'auth.logout', $request->user(), ['security_event' => true]);
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

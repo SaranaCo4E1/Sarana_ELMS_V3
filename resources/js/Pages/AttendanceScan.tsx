@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { CheckCircle2, Clock3, LocateFixed, LogIn, LogOut, MapPin, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
+import AttendanceTimingNotice, { type AttendancePunchPreview } from '../Components/AttendanceTimingNotice';
 
 type Props = {
   site: { id: number; name: string; timezone: string };
@@ -8,9 +9,10 @@ type Props = {
   token: string;
   qrPublicId: string;
   idempotencyKey: string;
+  punchPreview?: AttendancePunchPreview | null;
 };
 
-export default function AttendanceScan({ site, direction, token, qrPublicId, idempotencyKey }: Props) {
+export default function AttendanceScan({ site, direction, token, qrPublicId, idempotencyKey, punchPreview }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState('Ready to request your location.');
   const Icon = direction === 'in' ? LogIn : LogOut;
@@ -90,6 +92,8 @@ export default function AttendanceScan({ site, direction, token, qrPublicId, ide
                   <span>Time is recorded securely by the server</span>
                 </div>
               </div>
+
+              <AttendanceTimingNotice preview={punchPreview} />
 
               <div className="flex gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-sm leading-6 text-blue-800">
                 <LocateFixed size={18} className="mt-0.5 shrink-0" />

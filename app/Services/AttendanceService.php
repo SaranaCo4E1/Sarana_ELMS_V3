@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\IpUtils;
 class AttendanceService
 {
     public const SLOT_TYPES = ['morning_in', 'lunch_out', 'lunch_in', 'final_out'];
+    public const PUNCH_COOLDOWN_SECONDS = 30;
 
     public function activeSchedule(User $user, string|Carbon $localDate): ?AttendanceSchedule
     {
@@ -55,6 +56,7 @@ class AttendanceService
             'lunch_end' => $schedule->lunch_end,
             'work_end' => $schedule->work_end,
             'lunch_classification_lead_minutes' => $schedule->lunch_classification_lead_minutes,
+            'lunch_return_window_minutes' => (int) config('attendance.lunch_return_window_minutes', 60),
             'grace_minutes' => $schedule->grace_minutes,
             'primary_site_id' => $schedule->primary_site_id,
             'allowed_site_ids' => $schedule->allowedSites->pluck('id')->push($schedule->primary_site_id)->unique()->values()->all(),
@@ -103,9 +105,9 @@ class AttendanceService
             return $latest->direction === 'out' ? 'in' : 'out';
         }
 
-        $lunchEnd = $this->localMoment($day, $day->schedule_snapshot['lunch_end']);
+        $lunchReturnDeadline = $this->lunchReturnDeadline($day);
 
-        return now()->greaterThanOrEqualTo($lunchEnd) ? 'out' : 'in';
+        return now()->greaterThanOrEqualTo($lunchReturnDeadline) ? 'out' : 'in';
     }
 
     public function nextSelfServiceDirection(AttendanceDay $day): ?string
@@ -120,6 +122,90 @@ class AttendanceService
             ->exists();
 
         return $finalOutRecorded ? null : $this->nextDirection($day);
+    }
+
+    public function punchCooldownUntil(AttendanceDay $day): ?Carbon
+    {
+        $latest = $day->events()
+            ->whereNull('voided_at')
+            ->latest('occurred_at')
+            ->latest('id')
+            ->first();
+
+        if (! $latest) {
+            return null;
+        }
+
+        $availableAt = $latest->occurred_at->copy()->addSeconds(self::PUNCH_COOLDOWN_SECONDS);
+
+        return now()->lt($availableAt) ? $availableAt : null;
+    }
+
+    /**
+     * @return array{classification: string, status: string, expected_at: ?string}
+     */
+    public function previewNextPunch(AttendanceDay $day, ?Carbon $at = null): array
+    {
+        $at ??= now();
+        $day->loadMissing(['slots.event', 'events']);
+        $slots = $day->slots->keyBy('type');
+        $direction = $this->nextDirection($day);
+        $classification = 'ordinary';
+        $lunchStart = $this->localMoment($day, $day->schedule_snapshot['lunch_start']);
+        $lunchEnd = $this->localMoment($day, $day->schedule_snapshot['lunch_end']);
+        $lunchReturnDeadline = $this->lunchReturnDeadline($day);
+
+        if ($slots->get('lunch_in')?->event && $direction === 'out') {
+            $classification = 'final_out';
+        } elseif ($day->events->isEmpty()) {
+            if (
+                $direction === 'in'
+                && $at->greaterThanOrEqualTo($lunchStart)
+                && $at->lessThan($lunchReturnDeadline)
+            ) {
+                $classification = 'lunch_in';
+            } elseif ($direction === 'out' && $at->greaterThanOrEqualTo($lunchEnd)) {
+                $classification = 'final_out';
+            } else {
+                $classification = 'morning_in';
+            }
+        } elseif ($direction === 'out') {
+            if ($slots->get('lunch_in')?->event) {
+                $classification = 'final_out';
+            } elseif (! $slots->get('lunch_out')?->event) {
+                $snapshot = $day->schedule_snapshot;
+                $lunchOutFloor = $lunchStart->copy()
+                    ->subMinutes((int) $snapshot['lunch_classification_lead_minutes']);
+
+                if ($at->greaterThanOrEqualTo($lunchOutFloor) && $at->lessThan($lunchEnd)) {
+                    $classification = 'lunch_out';
+                } elseif ($at->greaterThanOrEqualTo($lunchEnd)) {
+                    $classification = 'final_out';
+                }
+            }
+        } elseif (
+            $slots->get('lunch_out')?->event
+            && ! $slots->get('lunch_in')?->event
+            && $at->greaterThanOrEqualTo($lunchStart)
+        ) {
+            $classification = 'lunch_in';
+        }
+
+        $slot = $slots->get($classification);
+        $status = $slot
+            ? $this->slotStatus(
+                $classification,
+                $at,
+                $slot->expected_at,
+                (int) ($day->schedule_snapshot['grace_minutes'] ?? 0)
+            )
+            : 'ordinary';
+
+        return [
+            'classification' => $classification,
+            'status' => $status,
+            'expected_at' => $slot?->expected_at?->toIso8601String(),
+        ];
     }
 
     public function recordPunch(
@@ -223,9 +309,12 @@ class AttendanceService
                 ->first();
 
             if ($latest) {
-                $secondsSinceLatest = now()->getTimestamp() - $latest->occurred_at->getTimestamp();
-                if ($secondsSinceLatest >= 0 && $secondsSinceLatest <= 30) {
-                    return $latest;
+                $availableAt = $latest->occurred_at->copy()->addSeconds(self::PUNCH_COOLDOWN_SECONDS);
+                if (now()->lt($availableAt)) {
+                    $remainingSeconds = max(1, (int) ceil(now()->diffInMilliseconds($availableAt) / 1000));
+                    throw ValidationException::withMessages([
+                        'attendance' => "Your previous punch was recorded. Please wait {$remainingSeconds} seconds before the next action.",
+                    ]);
                 }
             }
 
@@ -273,17 +362,26 @@ class AttendanceService
         }
 
         $assignments = [];
+        $lunchStart = $this->localMoment($day, $snapshot['lunch_start']);
         $firstIn = $events->first(fn (AttendanceEvent $event) => $event->direction === 'in');
         if ($firstIn) {
-            $assignments['morning_in'] = $firstIn;
-            $firstIn->update(['classification' => 'morning_in']);
+            if (
+                $events->first()?->is($firstIn)
+                && $firstIn->effective_at->greaterThanOrEqualTo($lunchStart)
+                && $firstIn->effective_at->lessThan($this->lunchReturnDeadline($day))
+            ) {
+                $assignments['lunch_in'] = $firstIn;
+                $firstIn->update(['classification' => 'lunch_in']);
+            } else {
+                $assignments['morning_in'] = $firstIn;
+                $firstIn->update(['classification' => 'morning_in']);
+            }
         }
 
-        $lunchOutFloor = $this->localMoment($day, $snapshot['lunch_start'])
+        $lunchOutFloor = $lunchStart->copy()
             ->subMinutes((int) $snapshot['lunch_classification_lead_minutes']);
         $lunchOutCeiling = $this->localMoment($day, $snapshot['lunch_end']);
-        $lunchInFloor = $lunchOutCeiling->copy()
-            ->subMinutes((int) $snapshot['lunch_classification_lead_minutes']);
+        $lunchInFloor = $lunchStart;
 
         for ($index = 0; $index < $events->count() - 1; $index++) {
             $out = $events[$index];
@@ -294,6 +392,7 @@ class AttendanceService
                 && $out->effective_at->greaterThanOrEqualTo($lunchOutFloor)
                 && $out->effective_at->lessThan($lunchOutCeiling)
                 && $in->effective_at->greaterThanOrEqualTo($lunchInFloor)
+                && $in->effective_at->lessThan($this->lunchReturnDeadline($day))
             ) {
                 $assignments['lunch_out'] = $out;
                 $assignments['lunch_in'] = $in;
@@ -304,8 +403,26 @@ class AttendanceService
         }
 
         $last = $events->last();
+        if (
+            ! isset($assignments['lunch_out'])
+            && $last
+            && $last->direction === 'out'
+            && $last->effective_at->greaterThanOrEqualTo($lunchOutFloor)
+            && $last->effective_at->lessThan($lunchOutCeiling)
+        ) {
+            $assignments['lunch_out'] = $last;
+            $last->update(['classification' => 'lunch_out']);
+        }
+
         $finalOutFloor = $this->localMoment($day, $snapshot['lunch_end']);
-        if ($last && $last->direction === 'out' && $last->effective_at->greaterThanOrEqualTo($finalOutFloor)) {
+        $isOutAfterCompletedLunch = isset($assignments['lunch_in'])
+            && $last
+            && $last->effective_at->greaterThan($assignments['lunch_in']->effective_at);
+        if (
+            $last
+            && $last->direction === 'out'
+            && ($isOutAfterCompletedLunch || $last->effective_at->greaterThanOrEqualTo($finalOutFloor))
+        ) {
             $assignments['final_out'] = $last;
             $last->update(['classification' => 'final_out']);
         }
@@ -328,7 +445,7 @@ class AttendanceService
             $event = $assignments[$slot->type] ?? null;
             $status = $event
                 ? $this->slotStatus($slot->type, $event->effective_at, $slot->expected_at, (int) ($snapshot['grace_minutes'] ?? 0))
-                : ($day->finalized_at || ($progressedAt && $progressedAt->greaterThan($slot->expected_at))
+                : ($day->finalized_at || ($progressedAt && $progressedAt->greaterThanOrEqualTo($this->slotMissingDeadline($day, $slot->type)))
                     ? 'missing'
                     : 'pending');
             $slot->update(['attendance_event_id' => $event?->id, 'status' => $status]);
@@ -509,6 +626,27 @@ class AttendanceService
             'morning_in', 'lunch_in' => $actual->greaterThan($expected->copy()->addMinutes($grace)) ? 'late' : 'on_time',
             'lunch_out', 'final_out' => $actual->lessThan($expected->copy()->subMinutes($grace)) ? 'early' : 'on_time',
             default => 'on_time',
+        };
+    }
+
+    private function lunchReturnDeadline(AttendanceDay $day): Carbon
+    {
+        return $this->localMoment($day, $day->schedule_snapshot['lunch_end'])
+            ->addMinutes((int) ($day->schedule_snapshot['lunch_return_window_minutes']
+                ?? config('attendance.lunch_return_window_minutes', 60)));
+    }
+
+    private function slotMissingDeadline(AttendanceDay $day, string $type): Carbon
+    {
+        $snapshot = $day->schedule_snapshot;
+
+        return match ($type) {
+            'morning_in' => $this->localMoment($day, $snapshot['lunch_start'])
+                ->subMinutes((int) $snapshot['lunch_classification_lead_minutes']),
+            'lunch_out' => $this->localMoment($day, $snapshot['lunch_start']),
+            'lunch_in' => $this->lunchReturnDeadline($day),
+            'final_out' => $this->localMoment($day, $snapshot['work_end']),
+            default => $this->localMoment($day, $snapshot['work_end']),
         };
     }
 

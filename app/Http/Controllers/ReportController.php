@@ -8,6 +8,7 @@ use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -52,6 +53,12 @@ class ReportController extends Controller
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
+
+        Audit::record($request, 'report.leave.exported', null, [
+            'start_month' => $startMonth,
+            'end_month' => $endMonth,
+            'row_count' => $rows->count(),
+        ]);
 
         $filename = ($startMonth === $endMonth)
             ? 'leave-report-'.$startMonth.'.csv'
@@ -146,6 +153,12 @@ class ReportController extends Controller
             ->orderBy('created_at')
             ->get();
 
+        Audit::record($request, 'report.audit_logs.exported', null, [
+            'start_month' => $startMonth,
+            'end_month' => $endMonth,
+            'row_count' => $rows->count(),
+        ]);
+
         $filename = ($startMonth === $endMonth)
             ? 'audit-trail-report-'.$startMonth.'.csv'
             : 'audit-trail-report-'.$startMonth.'-to-'.$endMonth.'.csv';
@@ -165,10 +178,24 @@ class ReportController extends Controller
                 'Subject Type Short',
                 'Subject ID',
                 'IP Address',
+                'Changed Fields',
+                'Before Values',
+                'After Values',
+                'Reason / Note',
+                'Request Method',
+                'Request Route',
+                'User Agent',
                 'Metadata',
             ]);
 
             foreach ($rows as $row) {
+                $changes = collect($row->metadata['changes'] ?? []);
+                $reason = $row->metadata['reason']
+                    ?? $row->metadata['decision_reason']
+                    ?? $row->metadata['note']
+                    ?? '';
+                $requestContext = $row->metadata['request'] ?? [];
+
                 fputcsv($out, [
                     $row->id,
                     $row->created_at?->toDateTimeString(),
@@ -182,10 +209,34 @@ class ReportController extends Controller
                     $row->subject_type ? class_basename($row->subject_type) : '',
                     $row->subject_id,
                     $row->ip_address,
+                    $changes->pluck('label')->filter()->implode('; '),
+                    $changes->map(fn ($change) => ($change['label'] ?? $change['field']).': '.self::csvAuditValue($change['from'] ?? null))->implode('; '),
+                    $changes->map(fn ($change) => ($change['label'] ?? $change['field']).': '.self::csvAuditValue($change['to'] ?? null))->implode('; '),
+                    $reason,
+                    $requestContext['method'] ?? '',
+                    $requestContext['route'] ?? '',
+                    $requestContext['user_agent'] ?? '',
                     $row->metadata ? json_encode($row->metadata) : '',
                 ]);
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private static function csvAuditValue(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return 'Not set';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
+
+        if (is_array($value)) {
+            return implode(', ', array_map([self::class, 'csvAuditValue'], $value));
+        }
+
+        return (string) $value;
     }
 }

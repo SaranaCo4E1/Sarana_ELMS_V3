@@ -40,6 +40,14 @@ class ProfileController extends Controller
             'bank_name' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $profile = $user->profile()->firstOrNew(['user_id' => $user->id]);
+        $profileFields = array_diff(array_keys($data), ['name', 'email']);
+        $before = [
+            'name' => $user->name,
+            'email' => $user->email,
+            ...$profile->only($profileFields),
+        ];
+
         $user->update([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -47,8 +55,12 @@ class ProfileController extends Controller
 
         unset($data['name'], $data['email']);
 
-        $user->profile()->updateOrCreate(['user_id' => $user->id], $data);
-        Audit::record($request, 'profile.updated', $user);
+        $profile->fill($data)->save();
+        Audit::recordChange($request, 'profile.updated', $user, $before, [
+            'name' => $user->name,
+            'email' => $user->email,
+            ...$profile->only($profileFields),
+        ]);
 
         return back()->with('success', 'Profile updated.');
     }
@@ -62,7 +74,10 @@ class ProfileController extends Controller
         ]);
 
         $user->forceFill(['password' => Hash::make($data['password'])])->save();
-        Audit::record($request, 'profile.password.updated', $user);
+        Audit::record($request, 'profile.password.updated', $user, [
+            'security_event' => true,
+            'credentials_revoked' => false,
+        ]);
 
         return back()->with('success', 'Password updated.');
     }
@@ -75,13 +90,21 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+        $before = ['two_factor_enabled' => (bool) $user->two_factor_enabled];
         $user->forceFill([
             'two_factor_enabled' => $data['enabled'],
             'two_factor_code' => null,
             'two_factor_expires_at' => null,
         ])->save();
 
-        Audit::record($request, $data['enabled'] ? 'profile.two_factor.enabled' : 'profile.two_factor.disabled', $user);
+        Audit::recordChange(
+            $request,
+            $data['enabled'] ? 'profile.two_factor.enabled' : 'profile.two_factor.disabled',
+            $user,
+            $before,
+            ['two_factor_enabled' => (bool) $user->two_factor_enabled],
+            ['security_event' => true]
+        );
 
         return back()->with('success', $data['enabled'] ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.');
     }

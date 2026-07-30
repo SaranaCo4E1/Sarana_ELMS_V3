@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { Check, Clock3, FileText, Search, ShieldCheck, Users, X, Eye, Download, Loader2 } from 'lucide-react';
+import { AlertTriangle, Check, Clock3, FileText, Search, ShieldCheck, Users, X, Eye, Download, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -27,6 +27,7 @@ const attachmentDownloadUrl = (attachment: { id: number }) => `/approvals/attach
 export default function Approvals({ requests, recentDecisions, approvalStats }: Props) {
   const [decidingIds, setDecidingIds] = useState<Record<number, 'approved' | 'rejected' | null>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
+  const [commentErrors, setCommentErrors] = useState<Record<number, string>>({});
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('all');
   const [pendingLeaveType, setPendingLeaveType] = useState('all');
@@ -108,6 +109,11 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
   };
 
   const decide = (id: number, decision: 'approved' | 'rejected') => {
+    if (decision === 'rejected' && !(comments[id] ?? '').trim()) {
+      setCommentErrors((previous) => ({ ...previous, [id]: 'Add a reason before rejecting this request.' }));
+      return;
+    }
+    setCommentErrors((previous) => ({ ...previous, [id]: '' }));
     router.patch(`/approvals/${id}`, { decision, manager_comment: comments[id] ?? '' }, {
       preserveScroll: true,
       onStart: () => setDecidingIds(prev => ({ ...prev, [id]: decision })),
@@ -119,7 +125,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Metric widgets */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <Metric icon={<Clock3 size={15} />} label="Waiting Reviews" value={approvalStats.pending} variant="amber" />
           <Metric icon={<ShieldCheck size={15} />} label="Approved This Month" value={approvalStats.approved_this_month} variant="green" />
           <Metric icon={<X size={15} />} label="Rejected This Month" value={approvalStats.rejected_this_month} variant="rose" />
@@ -191,11 +197,13 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
 
                   {request.reason ? (
                     <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/20 border border-neutral-200/60 rounded-lg p-3.5 italic shadow-premium-sm max-w-2xl">
-                      "{request.reason}"
+                      {request.reason}
                     </p>
                   ) : (
                     <p className="text-sm text-neutral-400 italic font-medium">No notes provided.</p>
                   )}
+
+                  <DecisionContext request={request} requests={requests} />
 
                   <div className="flex flex-wrap gap-2.5 pt-1.5">
                     {(request.attachments ?? []).map((attachment) => {
@@ -246,18 +254,27 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                 <div className="flex flex-col justify-between rounded-xl border border-neutral-200/50 bg-white p-5 shadow-premium-sm">
                   <div>
                     <label className="block text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
-                      Decision Comment
+                      Decision Comment <span className="normal-case tracking-normal text-neutral-400">(required to reject)</span>
                     </label>
                     <textarea
                       className="h-24 w-full rounded-lg border border-neutral-200/70 p-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:border-orange-600 focus:ring-4 focus:ring-orange-500/5 transition-all outline-none resize-none"
-                      placeholder="Comment or reason for approval/rejection..."
+                      placeholder="Optional for approval; required for rejection"
                       value={comments[request.id] ?? ''}
-                      onChange={(e) => setComments({ ...comments, [request.id]: e.target.value })}
+                      onChange={(e) => {
+                        setComments({ ...comments, [request.id]: e.target.value });
+                        if (commentErrors[request.id]) {
+                          setCommentErrors({ ...commentErrors, [request.id]: '' });
+                        }
+                      }}
                     />
+                    {commentErrors[request.id] && (
+                      <p className="mt-2 text-xs font-medium text-rose-600">{commentErrors[request.id]}</p>
+                    )}
                   </div>
                   <div className="mt-4.5 grid grid-cols-2 gap-3">
                     <button
-                      disabled={decidingIds[request.id] !== undefined && decidingIds[request.id] !== null}
+                      disabled={(decidingIds[request.id] !== undefined && decidingIds[request.id] !== null) || hasMissingRequiredAttachment(request)}
+                      title={hasMissingRequiredAttachment(request) ? 'A required attachment is missing' : undefined}
                       className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-2.5 text-sm font-semibold text-white transition-all hover:bg-orange-700 active:scale-98 cursor-pointer shadow-premium-sm"
                       onClick={() => decide(request.id, 'approved')}
                     >
@@ -643,7 +660,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                 <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Handover Notes / Reason</div>
                 {viewDetailsRequest.reason ? (
                   <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50/40 border border-neutral-200/60 rounded-lg p-3.5 italic shadow-premium-sm">
-                    "{viewDetailsRequest.reason}"
+                    {viewDetailsRequest.reason}
                   </p>
                 ) : (
                   <p className="text-sm text-neutral-400 italic font-medium">No notes provided by employee.</p>
@@ -764,15 +781,59 @@ function Metric({ label, value, icon, variant }: { label: string; value: string 
   const theme = themes[variant];
 
   return (
-    <div className={`rounded-xl border ${theme.border} p-6 bg-white shadow-premium-sm hover:shadow-premium-md transition-all duration-300 relative overflow-hidden group`}>
+    <div className={`rounded-xl border ${theme.border} p-3.5 sm:p-6 bg-white shadow-premium-sm hover:shadow-premium-md transition-all duration-300 relative overflow-hidden group`}>
       <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${theme.bg} blur-2xl -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500`} />
       <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-neutral-500 relative z-10">
         <span>{label}</span>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-md border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
+        <div className={`hidden sm:flex h-8 w-8 items-center justify-center rounded-md border ${theme.iconBg} shadow-premium-sm transition-transform duration-300 group-hover:scale-105`}>
           {icon}
         </div>
       </div>
-      <div className="mt-5 text-3xl font-medium tracking-tight text-neutral-800 relative z-10">{value}</div>
+      <div className="mt-2.5 text-2xl sm:mt-5 sm:text-3xl font-medium tracking-tight text-neutral-800 relative z-10">{value}</div>
     </div>
   );
+}
+
+function DecisionContext({ request, requests }: { request: LeaveRequest; requests: LeaveRequest[] }) {
+  const balance = request.user?.leave_balances?.find((item) => item.leave_type_id === request.leave_type.id);
+  const sameDepartmentConflicts = requests.filter((candidate) =>
+    candidate.id !== request.id
+    && request.user?.department?.id !== undefined
+    && candidate.user?.department?.id === request.user?.department?.id
+    && candidate.starts_at <= request.ends_at
+    && candidate.ends_at >= request.starts_at
+  );
+  const missingRequiredAttachment = hasMissingRequiredAttachment(request);
+  const insufficientBalance = request.leave_type.deducts_balance
+    && balance !== undefined
+    && Number(balance.available_days) < 0;
+
+  return (
+    <div className="flex flex-wrap gap-2 text-xs font-medium">
+      {balance && (
+        <span className={`rounded-md border px-2.5 py-1.5 ${insufficientBalance ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-neutral-200 bg-white text-neutral-600'}`}>
+          Balance: {formatDays(balance.available_days)} available
+        </span>
+      )}
+      <span className={`rounded-md border px-2.5 py-1.5 ${sameDepartmentConflicts.length > 0 ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-green-200 bg-green-50 text-green-700'}`}>
+        {sameDepartmentConflicts.length > 0
+          ? `${sameDepartmentConflicts.length} overlapping department request${sameDepartmentConflicts.length === 1 ? '' : 's'}`
+          : 'No pending department conflicts'}
+      </span>
+      {/* {missingRequiredAttachment && (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-rose-700">
+          <AlertTriangle size={12} /> Required attachment missing
+        </span>
+      )} */}
+      {insufficientBalance && (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-rose-700">
+          <AlertTriangle size={12} /> Balance is overcommitted
+        </span>
+      )}
+    </div>
+  );
+}
+
+function hasMissingRequiredAttachment(request: LeaveRequest) {
+  return request.leave_type.requires_attachment && (request.attachments ?? []).length === 0;
 }

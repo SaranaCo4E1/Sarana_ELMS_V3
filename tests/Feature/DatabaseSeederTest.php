@@ -6,7 +6,9 @@ use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSite;
+use App\Models\AuditLog;
 use App\Models\LeaveRequest;
+use App\Models\SystemNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -47,6 +49,110 @@ class DatabaseSeederTest extends TestCase
                     $user->employee_code,
                 );
             });
+    }
+
+    public function test_database_seeder_populates_detailed_idempotent_audit_history(): void
+    {
+        $this->seed();
+
+        $initialCount = AuditLog::query()->where('metadata->seeded', true)->count();
+        $this->assertGreaterThan(35, $initialCount);
+        $this->assertTrue(
+            AuditLog::query()
+                ->where('action', 'admin.user.updated')
+                ->whereNotNull('metadata->changes')
+                ->exists()
+        );
+        $this->assertTrue(
+            AuditLog::query()
+                ->where('action', 'leave.request.approved')
+                ->whereNotNull('metadata->decision_reason')
+                ->exists()
+        );
+
+        $this->seed();
+
+        $this->assertSame(
+            $initialCount,
+            AuditLog::query()->where('metadata->seeded', true)->count()
+        );
+    }
+
+    public function test_database_seeder_gives_default_admin_personal_leave_history_and_actionable_notifications(): void
+    {
+        $this->seed();
+
+        $admin = User::query()->where('email', 'admin@niy.ai')->firstOrFail();
+
+        $this->assertTrue(
+            $admin->leaveRequests()->where('status', 'pending')->exists(),
+            'The default admin should have a pending personal request to demonstrate its in-progress state.'
+        );
+        $this->assertTrue(
+            $admin->leaveRequests()->where('status', 'approved')->exists(),
+            'The default admin should have approved personal history.'
+        );
+
+        $pendingApprovalIds = LeaveRequest::query()
+            ->where('status', 'pending')
+            ->where('user_id', '!=', $admin->id)
+            ->pluck('id');
+
+        foreach ($pendingApprovalIds as $requestId) {
+            $this->assertTrue(
+                SystemNotification::query()
+                    ->where('user_id', $admin->id)
+                    ->whereNull('read_at')
+                    ->where('action_url', '/approvals#request-'.$requestId)
+                    ->exists(),
+                "The default admin should be notified about pending request {$requestId}."
+            );
+        }
+
+        $this->assertTrue(
+            SystemNotification::query()
+                ->where('user_id', $admin->id)
+                ->where('title', 'Leave request submitted')
+                ->whereNull('read_at')
+                ->exists()
+        );
+        $this->assertTrue(
+            SystemNotification::query()
+                ->where('user_id', $admin->id)
+                ->where('title', 'Leave request approved')
+                ->exists()
+        );
+
+        $personalPending = $admin->leaveRequests()->where('status', 'pending')->firstOrFail();
+        $submittedNotification = SystemNotification::query()
+            ->where('user_id', $admin->id)
+            ->where('title', 'Leave request submitted')
+            ->firstOrFail();
+        $this->assertTrue($submittedNotification->created_at->equalTo($personalPending->submitted_at));
+
+        $personalApproved = $admin->leaveRequests()->where('status', 'approved')->firstOrFail();
+        $decidedNotification = SystemNotification::query()
+            ->where('user_id', $admin->id)
+            ->where('title', 'Leave request approved')
+            ->firstOrFail();
+        $this->assertTrue($decidedNotification->created_at->equalTo($personalApproved->decided_at));
+        $this->assertFalse(SystemNotification::query()->where('created_at', '>', now())->exists());
+    }
+
+    public function test_database_seeder_is_idempotent_when_relative_dates_move_to_the_next_day(): void
+    {
+        $this->travelTo(Carbon::parse('2026-07-30 10:00:00'));
+        $this->seed();
+        $initialRequestCount = LeaveRequest::query()->count();
+
+        $this->travelTo(Carbon::parse('2026-07-31 10:00:00'));
+        $this->seed();
+
+        $this->assertSame($initialRequestCount, LeaveRequest::query()->count());
+        $this->assertSame(
+            $initialRequestCount,
+            LeaveRequest::query()->distinct()->count('reason')
+        );
     }
 
     public function test_database_seeder_assigns_the_default_attendance_schedule_to_every_active_user(): void

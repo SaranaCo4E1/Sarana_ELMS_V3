@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Clock3, IdCard, LogOut, Menu, MessageSquareText, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
@@ -6,6 +6,20 @@ import type { PageProps } from '../types';
 import { formatRole, formatShortDate } from '../utils';
 
 const ADMIN_PANEL_PERMISSIONS = ['users.manage', 'departments.manage', 'leave_types.manage', 'holidays.manage', 'balances.override', 'reports.view', 'audit_logs.view'];
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/calendar': 'Calendar',
+  '/apply-leave': 'Apply Leave',
+  '/attendance': 'Attendance',
+  '/ai-assistant': 'AI Assistant',
+  '/profile': 'My Profile',
+  '/team': 'Team Center',
+  '/approvals': 'Approvals',
+  '/support-tickets': 'Support Tickets',
+  '/reports': 'Reports',
+  '/admin': 'HR Admin',
+  '/roles-permissions': 'Roles & Permissions',
+};
 
 export default function AppLayout({ children, fullHeight }: { children: React.ReactNode; fullHeight?: boolean }) {
   const { auth, flash, notifications } = usePage<PageProps>().props;
@@ -40,6 +54,8 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   const user = auth.user;
   const unreadCount = notifications?.unread_count ?? 0;
   const notificationItems = notifications?.items ?? [];
+  const path = url.split('?')[0].replace(/\/+$/, '') || '/';
+  const pageTitle = PAGE_TITLES[path] ?? 'Leave Portal';
 
   // Reset flash visibility when flash changes
   useEffect(() => {
@@ -54,7 +70,9 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   }, [url]);
 
   return (
-    <div className="relative flex flex-col min-h-screen overflow-hidden bg-[#fafbfa]">
+    <>
+      <Head title={pageTitle} />
+      <div className="relative flex flex-col min-h-screen overflow-hidden bg-[#fafbfa]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -right-40 top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-orange-400/8 to-amber-500/8 blur-3xl" />
         <div className="absolute bottom-0 left-40 h-[24rem] w-[24rem] rounded-full bg-gradient-to-tr from-orange-400/5 to-amber-300/5 blur-3xl" />
@@ -186,8 +204,17 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
                           </div>
                         </Link>
                       ))
+                    ) : auth.pending_approvals_count > 0 ? (
+                      <Link
+                        href="/approvals"
+                        className="block rounded-lg border border-orange-100 bg-orange-50/60 px-3.5 py-3 text-sm text-orange-900 transition-colors hover:bg-orange-50"
+                        onClick={() => setNotificationOpen(false)}
+                      >
+                        <span className="font-medium">{auth.pending_approvals_count} leave request{auth.pending_approvals_count === 1 ? '' : 's'} awaiting review</span>
+                        <span className="mt-1 block text-orange-700">Open the approval queue to review them.</span>
+                      </Link>
                     ) : (
-                      <div className="py-8 text-center text-sm text-neutral-400">No notifications yet.</div>
+                      <div className="py-8 text-center text-sm text-neutral-400">You’re all caught up.</div>
                     )}
                   </div>
                   </div>
@@ -216,17 +243,19 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
         </header>
 
         {/* Content Body */}
-        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden animate-fade-in' : 'min-w-0 px-3 py-5 xs:px-4 sm:px-8 max-w-7xl mx-auto w-full overflow-y-auto animate-fade-in'}>
+        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden' : 'min-w-0 px-3 py-5 xs:px-4 sm:px-8 max-w-7xl mx-auto w-full overflow-y-auto'}>
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
 function formatRelativeDate(value: string) {
   const date = new Date(value);
   const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return formatShortDate(date);
   const diffMinutes = Math.floor(diffMs / 60000);
 
   if (diffMinutes < 1) return 'Just now';
@@ -351,12 +380,12 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
               )}
             </Link>
           )}
-          {canViewSupportTickets && (
+          {/* {canViewSupportTickets && (
             <Link className={navItemClass('/support-tickets', isCollapsed)} href="/support-tickets" title={isCollapsed ? "Support Tickets" : undefined}>
               <MessageSquareText size={16} className="shrink-0" />
               {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Support Tickets</span>}
             </Link>
-          )}
+          )} */}
           {canViewReports && (
             <Link className={navItemClass('/reports', isCollapsed)} href="/reports" title={isCollapsed ? "Reports" : undefined}>
               <ClipboardList size={16} className="shrink-0" />

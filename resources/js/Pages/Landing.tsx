@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { 
   Bot, 
@@ -75,6 +75,7 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen bg-slate-50/40 text-neutral-800 antialiased selection:bg-orange-500 selection:text-white">
+      <Head title="Leave Management" />
       {/* Ambient background glows wrapped in a clipped container to prevent height leakage */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-orange-400/8 to-amber-500/8 blur-3xl"></div>
@@ -125,7 +126,7 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-16 pb-12 sm:px-8 sm:pt-24 lg:grid lg:grid-cols-12 lg:gap-12">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-12 pb-10 sm:px-8 sm:pt-24 sm:pb-12 lg:grid lg:grid-cols-12 lg:gap-12">
         <div className="lg:col-span-6 flex flex-col justify-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50/50 px-3.5 py-1.5 text-xs font-medium text-orange-800 shadow-premium-sm mb-6 w-fit">
             <Sparkles size={13} className="text-orange-600" /> Introducing intelligent Leave Planning
@@ -166,27 +167,27 @@ export default function Landing() {
             </a>
           </div>
 
-          <div className="mt-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8 border-t border-neutral-200/60 pt-8">
+          <div className="mt-9 grid grid-cols-3 gap-3 border-t border-neutral-200/60 pt-6 sm:mt-12 sm:flex sm:items-center sm:gap-8 sm:pt-8">
             <div className="flex-1">
-              <div className="text-2xl font-medium text-neutral-900">100%</div>
-              <div className="text-[10px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">Automated Audits</div>
+              <div className="text-sm font-medium text-neutral-900 sm:text-base">Traceable</div>
+              <div className="text-[9px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">Audit history</div>
             </div>
             <div className="hidden sm:block h-8 w-px bg-neutral-200"></div>
             <div className="flex-1">
-              <div className="text-2xl font-medium text-neutral-900">&lt; 30 min</div>
-              <div className="text-[10px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">Average Approval</div>
+              <div className="text-sm font-medium text-neutral-900 sm:text-base">Streamlined</div>
+              <div className="text-[9px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">Approvals</div>
             </div>
             <div className="hidden sm:block h-8 w-px bg-neutral-200"></div>
             <div className="flex-1">
-              <div className="text-2xl font-medium text-neutral-900">Active</div>
-              <div className="text-[10px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">ELMS AI Assistant</div>
+              <div className="text-sm font-medium text-neutral-900 sm:text-base">Guided</div>
+              <div className="text-[9px] font-normal uppercase tracking-wider text-neutral-500 mt-0.5">AI assistance</div>
             </div>
           </div>
         </div>
 
         {/* CSS Mockup Representation of Portal (Right side) */}
-        <div className="lg:col-span-6 mt-12 lg:mt-0 relative flex justify-center items-center">
-          <div className="w-full max-w-lg rounded-xl border border-neutral-200 bg-white shadow-premium-lg overflow-hidden animate-fade-in">
+        <div className="hidden lg:col-span-6 lg:mt-0 lg:flex relative justify-center items-center">
+          <div className="w-full max-w-lg rounded-xl border border-neutral-200 bg-white shadow-premium-lg overflow-hidden">
             {/* Mock Header */}
             <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50/50 px-5 py-3">
               <div className="flex items-center gap-1.5">
@@ -385,7 +386,7 @@ export default function Landing() {
       </section>
 
       {/* Feature Grid Section */}
-      <section id="features" className="relative z-10 border-t border-b border-neutral-200/40 bg-white py-20 sm:py-24">
+      <section id="features" className="relative z-10 border-t border-b border-neutral-200/40 bg-white py-14 sm:py-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-xs font-medium uppercase tracking-wider text-orange-600">Enterprise Ready</h2>
@@ -397,7 +398,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="mx-auto mt-16 max-w-5xl grid grid-cols-1 gap-8 sm:grid-cols-3">
+          <div className="mx-auto mt-10 max-w-5xl grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-3 sm:gap-8">
             {/* Feature 1 */}
             <div className="relative rounded-xl border border-neutral-200 bg-[#fafbfa]/40 p-6.5 shadow-premium-sm transition-all hover:bg-white hover:shadow-premium-md group">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500 text-white shadow-md shadow-orange-500/10 group-hover:scale-105 transition-all">
@@ -435,7 +436,7 @@ export default function Landing() {
       </section>
 
       {/* Interactive Demonstration Demo Component */}
-      <section id="preview" className="relative z-10 py-20 sm:py-24">
+      <section id="preview" className="relative z-10 py-14 sm:py-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-8">
           <div className="mx-auto max-w-2xl text-center mb-12">
             <span className="rounded-full bg-orange-100/60 border border-orange-200/50 px-3 py-1 text-[10px] font-medium text-orange-800">
@@ -669,9 +670,9 @@ export default function Landing() {
       </section>
 
       {/* Accordion FAQ Section */}
-      <section id="faq" className="relative z-10 border-t border-neutral-200/40 bg-white/40 py-20 sm:py-24">
+      <section id="faq" className="relative z-10 border-t border-neutral-200/40 bg-white/40 py-14 sm:py-24">
         <div className="mx-auto max-w-3xl px-6 sm:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-9 sm:mb-16">
             <h2 className="text-xs font-medium uppercase tracking-wider text-orange-600">Company Policies</h2>
             <p className="mt-3.5 text-3xl font-medium tracking-tight text-neutral-900 sm:text-4xl">
               Frequently Asked Questions
@@ -709,37 +710,40 @@ export default function Landing() {
       </section>
 
       {/* Corporate Call to Action Footer */}
-      <section className="relative z-10 border-t border-neutral-200/60 bg-neutral-50/60 text-neutral-800 py-16">
+      <section className="relative z-10 border-t border-neutral-200/60 bg-neutral-50/60 text-neutral-800 py-10 sm:py-16">
         <div className="mx-auto max-w-7xl px-6 text-center sm:px-8">
-          <div className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-lg border border-orange-100 bg-white shadow-premium-sm">
-            <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-9" />
-          </div>
-          
-          <h2 className="text-2xl font-medium tracking-tight sm:text-3xl text-neutral-800">
-            Ready to streamline leave administration?
-          </h2>
-          <p className="mx-auto mt-4 max-w-md text-xs font-normal text-neutral-500 leading-relaxed">
-            NiyAI ELMS is private, corporate-controlled leave portal. Authenticate with your secure company profile to begin managing schedules.
-          </p>
+          <div className="hidden sm:block">
+            <div className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-lg border border-orange-100 bg-white shadow-premium-sm">
+              <img src="/images/niyai-logo.png" alt="NiyAI logo" className="h-auto w-9" />
+            </div>
 
-          <div className="mt-8 flex justify-center">
-            {user ? (
-              <Link
-                className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-4.5 py-2 text-xs font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
-                href="/dashboard"
-              >
-                Access Portal <ArrowRight size={13} />
-              </Link>
-            ) : (
-              <Link
-                className="flex items-center gap-1 rounded-lg bg-orange-600 px-4.5 py-2.5 text-xs font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
-                href="/login"
-              >             Sign In to Portal <ArrowRight size={14} />
-              </Link>
-            )}
+            <h2 className="text-2xl font-medium tracking-tight sm:text-3xl text-neutral-800">
+              Ready to streamline leave administration?
+            </h2>
+            <p className="mx-auto mt-4 max-w-md text-xs font-normal text-neutral-500 leading-relaxed">
+              NiyAI ELMS is a private, corporate-controlled leave portal. Authenticate with your secure company profile to begin managing schedules.
+            </p>
+
+            <div className="mt-8 flex justify-center">
+              {user ? (
+                <Link
+                  className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-4.5 py-2 text-xs font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
+                  href="/dashboard"
+                >
+                  Access Portal <ArrowRight size={13} />
+                </Link>
+              ) : (
+                <Link
+                  className="flex items-center gap-1 rounded-lg bg-orange-600 px-4.5 py-2.5 text-xs font-medium text-white hover:bg-orange-700 shadow-md hover:shadow-premium-md active:scale-98 transition-all"
+                  href="/login"
+                >
+                  Sign In to Portal <ArrowRight size={14} />
+                </Link>
+              )}
+            </div>
           </div>
 
-          <div className="mt-16 border-t border-neutral-200/60 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-neutral-400 font-medium uppercase tracking-wider">
+          <div className="border-t-0 pt-0 sm:mt-16 sm:border-t sm:border-neutral-200/60 sm:pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-neutral-400 font-medium uppercase tracking-wider">
             <div>
               &copy; {new Date().getFullYear()} NiyAI Data Co., Ltd. All rights reserved.
             </div>

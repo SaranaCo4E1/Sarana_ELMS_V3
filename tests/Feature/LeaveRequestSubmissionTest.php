@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\SystemNotification;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,7 +14,7 @@ class LeaveRequestSubmissionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_submit_leave_backdated_by_seven_days_without_a_reason(): void
+    public function test_user_can_submit_leave_for_today_without_a_reason(): void
     {
         $this->travelTo(Carbon::parse('2026-07-29 12:00:00'));
         $user = User::factory()->create();
@@ -26,7 +27,7 @@ class LeaveRequestSubmissionTest extends TestCase
             'deducts_balance' => true,
             'is_active' => true,
         ]);
-        $leaveDate = now()->subDays(7)->toDateString();
+        $leaveDate = now()->toDateString();
 
         $response = $this
             ->actingAs($user)
@@ -50,7 +51,7 @@ class LeaveRequestSubmissionTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_submit_leave_backdated_by_more_than_seven_days(): void
+    public function test_user_cannot_submit_any_backdated_leave(): void
     {
         $this->travelTo(Carbon::parse('2026-07-29 12:00:00'));
         $user = User::factory()->create();
@@ -63,7 +64,7 @@ class LeaveRequestSubmissionTest extends TestCase
             'deducts_balance' => true,
             'is_active' => true,
         ]);
-        $leaveDate = now()->subDays(8)->toDateString();
+        $leaveDate = now()->subDay()->toDateString();
 
         $response = $this
             ->actingAs($user)
@@ -76,7 +77,7 @@ class LeaveRequestSubmissionTest extends TestCase
 
         $response
             ->assertSessionHasErrors([
-                'starts_at' => 'Leave requests cannot be backdated by more than 7 days.',
+                'starts_at' => 'Leave requests cannot be backdated.',
             ])
             ->assertRedirect();
 
@@ -84,5 +85,42 @@ class LeaveRequestSubmissionTest extends TestCase
             'user_id' => $user->id,
             'starts_at' => $leaveDate,
         ]);
+    }
+
+    public function test_submission_notifies_the_manager_and_global_approval_reviewers(): void
+    {
+        $this->travelTo(Carbon::parse('2026-07-29 12:00:00'));
+        $manager = User::factory()->create(['role' => 'manager']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $hr = User::factory()->create(['role' => 'hr admin']);
+        $user = User::factory()->create(['manager_id' => $manager->id]);
+        $leaveType = LeaveType::query()->create([
+            'name' => 'Annual Leave',
+            'code' => 'annual',
+            'default_allowance_days' => 18,
+            'paid' => true,
+            'requires_attachment' => false,
+            'deducts_balance' => true,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)->post(route('leave-requests.store'), [
+            'leave_type_id' => $leaveType->id,
+            'starts_at' => '2026-07-30',
+            'ends_at' => '2026-07-30',
+            'duration' => 'full_day',
+        ])->assertSessionHasNoErrors();
+
+        $leaveRequest = LeaveRequest::query()->sole();
+
+        foreach ([$manager, $admin, $hr] as $reviewer) {
+            $this->assertDatabaseHas(SystemNotification::class, [
+                'user_id' => $reviewer->id,
+                'type' => 'leave_submitted',
+                'action_url' => route('approvals.index').'#request-'.$leaveRequest->id,
+            ]);
+        }
+
+        $this->assertDatabaseCount(SystemNotification::class, 3);
     }
 }

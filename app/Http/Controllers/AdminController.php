@@ -64,19 +64,23 @@ class AdminController extends Controller
             'code' => ['required', 'string', 'max:20', 'unique:departments,code'],
             'manager_id' => ['nullable', 'exists:users,id'],
         ]));
-        Audit::record($request, 'admin.department.created', $department);
+        Audit::recordChange($request, 'admin.department.created', $department, [], $department->only([
+            'name', 'code', 'manager_id', 'is_active',
+        ]));
 
         return back()->with('success', 'Department created.');
     }
 
     public function updateDepartment(Request $request, Department $department): RedirectResponse
     {
-        $department->update($request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('departments', 'name')->ignore($department)],
             'code' => ['required', 'string', 'max:20', Rule::unique('departments', 'code')->ignore($department)],
             'manager_id' => ['nullable', 'exists:users,id'],
-        ]));
-        Audit::record($request, 'admin.department.updated', $department);
+        ]);
+        $before = $department->only(array_keys($data));
+        $department->update($data);
+        Audit::recordChange($request, 'admin.department.updated', $department, $before, $department->only(array_keys($data)));
 
         return back()->with('success', 'Department updated.');
     }
@@ -91,22 +95,26 @@ class AdminController extends Controller
             'requires_attachment' => ['boolean'],
             'deducts_balance' => ['boolean'],
         ]));
-        Audit::record($request, 'admin.leave_type.created', $leaveType);
+        Audit::recordChange($request, 'admin.leave_type.created', $leaveType, [], $leaveType->only([
+            'name', 'code', 'default_allowance_days', 'paid', 'requires_attachment', 'deducts_balance', 'is_active',
+        ]));
 
         return back()->with('success', 'Leave type created.');
     }
 
     public function updateLeaveType(Request $request, LeaveType $leaveType): RedirectResponse
     {
-        $leaveType->update($request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('leave_types', 'name')->ignore($leaveType)],
             'code' => ['required', 'string', 'max:30', Rule::unique('leave_types', 'code')->ignore($leaveType)],
             'default_allowance_days' => ['required', 'numeric', 'min:0', 'max:366'],
             'paid' => ['boolean'],
             'requires_attachment' => ['boolean'],
             'deducts_balance' => ['boolean'],
-        ]));
-        Audit::record($request, 'admin.leave_type.updated', $leaveType);
+        ]);
+        $before = $leaveType->only(array_keys($data));
+        $leaveType->update($data);
+        Audit::recordChange($request, 'admin.leave_type.updated', $leaveType, $before, $leaveType->only(array_keys($data)));
 
         return back()->with('success', 'Leave type updated.');
     }
@@ -117,18 +125,22 @@ class AdminController extends Controller
             'holiday_date' => ['required', 'date', 'unique:public_holidays,holiday_date'],
             'name' => ['required', 'string', 'max:255'],
         ]));
-        Audit::record($request, 'admin.holiday.created', $holiday);
+        Audit::recordChange($request, 'admin.holiday.created', $holiday, [], $holiday->only([
+            'name', 'holiday_date', 'is_active',
+        ]));
 
         return back()->with('success', 'Holiday added.');
     }
 
     public function updateHoliday(Request $request, PublicHoliday $holiday): RedirectResponse
     {
-        $holiday->update($request->validate([
+        $data = $request->validate([
             'holiday_date' => ['required', 'date', Rule::unique('public_holidays', 'holiday_date')->ignore($holiday)],
             'name' => ['required', 'string', 'max:255'],
-        ]));
-        Audit::record($request, 'admin.holiday.updated', $holiday);
+        ]);
+        $before = $holiday->only(array_keys($data));
+        $holiday->update($data);
+        Audit::recordChange($request, 'admin.holiday.updated', $holiday, $before, $holiday->only(array_keys($data)));
 
         return back()->with('success', 'Holiday updated.');
     }
@@ -166,7 +178,10 @@ class AdminController extends Controller
 
             return $user;
         });
-        Audit::record($request, 'admin.user.created', $user);
+        Audit::recordChange($request, 'admin.user.created', $user, [], $user->only([
+            'name', 'email', 'role', 'phone', 'employee_code', 'department_id', 'manager_id',
+            'job_title', 'hire_date', 'two_factor_enabled', 'is_active',
+        ]));
         $attendance->createDefaultSchedule($user);
 
         return back()->with('success', 'User created.');
@@ -201,8 +216,17 @@ class AdminController extends Controller
             ? User::formatEmployeeCode($department, $user->id)
             : null;
 
+        $before = $user->only(array_keys($data));
+        $passwordChanged = array_key_exists('password', $data);
         $user->update($data);
-        Audit::record($request, 'admin.user.updated', $user);
+        Audit::recordChange(
+            $request,
+            'admin.user.updated',
+            $user,
+            $before,
+            $user->only(array_keys($data)),
+            ['password_changed' => $passwordChanged]
+        );
 
         return back()->with('success', 'User updated.');
     }
@@ -225,16 +249,22 @@ class AdminController extends Controller
                 ['allowance_days' => $leaveType->default_allowance_days]
             );
             $balance = LeaveBalance::query()->lockForUpdate()->findOrFail($balance->id);
-            $previousAvailableDays = $balance->available_days;
+            $before = [
+                'adjustment_days' => (float) $balance->adjustment_days,
+                'available_days' => (float) $balance->available_days,
+                'override_reason' => $balance->override_reason,
+            ];
             $balance->adjustment_days = (float) $balance->adjustment_days + (float) $data['delta_days'];
             $balance->override_reason = $data['override_reason'];
             $balance->save();
 
-            Audit::record($request, 'admin.balance.overridden', $balance, [
+            Audit::recordChange($request, 'admin.balance.overridden', $balance, $before, [
+                'adjustment_days' => (float) $balance->adjustment_days,
+                'available_days' => (float) $balance->available_days,
+                'override_reason' => $balance->override_reason,
+            ], [
                 'delta_days' => (float) $data['delta_days'],
                 'year' => $currentYear,
-                'previous_available_days' => $previousAvailableDays,
-                'new_available_days' => $balance->available_days,
                 'reason' => $data['override_reason'],
             ]);
         });
@@ -247,8 +277,9 @@ class AdminController extends Controller
         $data = $request->validate(['is_active' => ['required', 'boolean']]);
         abort_if($request->user()->is($user) && ! $data['is_active'], 422, 'You cannot deactivate your own account.');
 
+        $before = $user->only(['is_active']);
         $user->update($data);
-        Audit::record($request, $data['is_active'] ? 'admin.user.activated' : 'admin.user.deactivated', $user);
+        Audit::recordChange($request, $data['is_active'] ? 'admin.user.activated' : 'admin.user.deactivated', $user, $before, $user->only(['is_active']));
 
         return back()->with('success', 'User status updated.');
     }
@@ -256,8 +287,9 @@ class AdminController extends Controller
     public function updateLeaveTypeStatus(Request $request, LeaveType $leaveType): RedirectResponse
     {
         $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $before = $leaveType->only(['is_active']);
         $leaveType->update($data);
-        Audit::record($request, $data['is_active'] ? 'admin.leave_type.activated' : 'admin.leave_type.deactivated', $leaveType);
+        Audit::recordChange($request, $data['is_active'] ? 'admin.leave_type.activated' : 'admin.leave_type.deactivated', $leaveType, $before, $leaveType->only(['is_active']));
 
         return back()->with('success', 'Leave type status updated.');
     }
@@ -265,8 +297,9 @@ class AdminController extends Controller
     public function updateDepartmentStatus(Request $request, Department $department): RedirectResponse
     {
         $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $before = $department->only(['is_active']);
         $department->update($data);
-        Audit::record($request, $data['is_active'] ? 'admin.department.activated' : 'admin.department.deactivated', $department);
+        Audit::recordChange($request, $data['is_active'] ? 'admin.department.activated' : 'admin.department.deactivated', $department, $before, $department->only(['is_active']));
 
         return back()->with('success', 'Department status updated.');
     }
@@ -274,8 +307,9 @@ class AdminController extends Controller
     public function updateHolidayStatus(Request $request, PublicHoliday $holiday): RedirectResponse
     {
         $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $before = $holiday->only(['is_active']);
         $holiday->update($data);
-        Audit::record($request, $data['is_active'] ? 'admin.holiday.activated' : 'admin.holiday.deactivated', $holiday);
+        Audit::recordChange($request, $data['is_active'] ? 'admin.holiday.activated' : 'admin.holiday.deactivated', $holiday, $before, $holiday->only(['is_active']));
 
         return back()->with('success', 'Holiday status updated.');
     }

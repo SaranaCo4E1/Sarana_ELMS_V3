@@ -51,6 +51,11 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
     });
   }, [query, roleFilter, deptFilter, members]);
 
+  const pendingApprovalHref = (member: User) => {
+    const request = pendingRequests.find((item) => item.user?.id === member.id);
+    return request ? `/approvals#request-${request.id}` : '/approvals';
+  };
+
   const [rosterPage, setRosterPage] = useState(1);
   const rosterItemsPerPage = 10;
 
@@ -193,7 +198,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                   <div className="pt-3.5 border-t border-neutral-100 flex items-center justify-between text-sm font-medium text-neutral-500">
                     <span>Leave Summary:</span>
                     <div className="font-medium">
-                      <Link className="rounded text-amber-700 hover:text-amber-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30" href="/approvals">
+                      <Link className="rounded text-amber-700 hover:text-amber-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30" href={pendingApprovalHref(member)}>
                         {member.pending_leave_requests_count ?? 0} pending
                       </Link>
                       <span className="mx-1.5 text-neutral-300">·</span>
@@ -257,7 +262,7 @@ export default function Team({ members, leaveCalendar, pendingRequests, teamStat
                         {member.manager?.name ?? '—'}
                       </td>
                       <td className="px-4 py-4.5 whitespace-nowrap text-neutral-600 font-medium">
-                        <Link className="rounded text-amber-700 font-medium hover:text-amber-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30" href="/approvals">
+                        <Link className="rounded text-amber-700 font-medium hover:text-amber-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/30" href={pendingApprovalHref(member)}>
                           {member.pending_leave_requests_count ?? 0} pending
                         </Link>
                         <span className="mx-1.5 text-neutral-300">·</span>

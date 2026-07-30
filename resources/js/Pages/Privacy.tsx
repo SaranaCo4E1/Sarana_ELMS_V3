@@ -1,10 +1,16 @@
 import { ArrowLeft, ShieldAlert, Lock, CheckCircle2 } from 'lucide-react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import type React from 'react';
+import type { PageProps } from '../types';
 
 export default function Privacy() {
+  const user = usePage<PageProps>().props.auth?.user;
+  const returnHref = user ? '/dashboard' : '/';
+  const returnLabel = user ? 'Back to Dashboard' : 'Back to Home';
+
   return (
     <div className="relative min-h-screen bg-slate-50/40 text-neutral-800 antialiased selection:bg-orange-500 selection:text-white">
+      <Head title="Privacy Policy" />
       {/* Background glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-0 left-0 -translate-x-1/3 -translate-y-1/3 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-orange-400/8 to-amber-500/8 blur-3xl"></div>
@@ -15,11 +21,11 @@ export default function Privacy() {
         {/* Navigation Header */}
         <div className="mb-10 flex items-center justify-between">
           <Link
-            href="/"
+            href={returnHref}
             className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-900 transition-colors uppercase tracking-wider group"
           >
             <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-            Back to Portal
+            {returnLabel}
           </Link>
           <div className="flex items-center gap-2.5 text-sm font-semibold text-neutral-400 uppercase tracking-wider bg-neutral-200/50 px-4 py-2 rounded-lg border border-neutral-200/20">
             <Lock size={12} className="text-orange-500" />

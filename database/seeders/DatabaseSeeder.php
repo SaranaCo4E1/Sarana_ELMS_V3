@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AiFaq;
+use App\Models\AuditLog;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceSchedule;
@@ -11,10 +12,12 @@ use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\Role;
 use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\AttendanceService;
 use App\Services\LeaveBalanceService;
+use App\Support\Audit;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -332,6 +335,8 @@ class DatabaseSeeder extends Seeder
             [$users['sales_manager'], 'annual', 12, 14, 'approved', $ceo, 'Family holiday already booked'],
             [$users['hr_manager'], 'sick', -24, -23, 'approved', $ceo, 'Stomache problem, doctor advised to rest two days'],
             [$ceo, 'annual', 20, 21, 'pending', null, 'Short personal trip before next meeting'],
+            [$admin, 'annual', -31, -30, 'approved', $ceo, 'Taking a short break to visit family in Kampong Thom'],
+            [$admin, 'annual', 9, 10, 'pending', $ceo, 'Personal appointment and family commitments'],
         ];
 
         // Create matching in-app notifications so demo accounts show realistic unread state.
@@ -345,36 +350,49 @@ class DatabaseSeeder extends Seeder
             }
 
             $requestedDays = max(1, $balanceService->workingDays($startsAt->toDateString(), $endsAt->toDateString()));
-            $submittedAt = $this->workingTime(
-                $startsAt->copy()->subDays($status === 'pending' ? 2 : 10),
-                "submitted:{$fixtureKey}",
-            );
+            $submissionDate = $startsAt->copy()->subDays($status === 'pending' ? 2 : 10);
+            if ($submissionDate->gte($today)) {
+                $minimumAge = $status === 'pending' ? 1 : 3;
+                $maximumAge = $status === 'pending' ? 4 : 6;
+                $submissionDate = $today->copy()->subDays(
+                    $this->seededNumber("submitted-age:{$fixtureKey}", $minimumAge, $maximumAge)
+                );
+            }
+            $submittedAt = $this->workingTime($submissionDate, "submitted:{$fixtureKey}");
             $decidedAt = in_array($status, ['approved', 'rejected'], true)
                 ? $this->workingTime($submittedAt->copy()->addDay(), "decided:{$fixtureKey}")
                 : null;
 
-            $leaveRequest = LeaveRequest::query()->updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'leave_type_id' => $types[$typeCode]->id,
-                    'starts_at' => $startsAt->toDateString(),
-                ],
-                [
-                    'department_id' => $user->department_id,
-                    'approver_id' => $approver?->id,
-                    'ends_at' => $endsAt->toDateString(),
-                    'requested_days' => $requestedDays,
-                    'status' => $status,
-                    'reason' => $reason,
-                    'manager_comment' => match ($status) {
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected due to coverage needs.',
-                        default => null,
-                    },
-                    'submitted_at' => $submittedAt,
-                    'decided_at' => $decidedAt,
-                ]
-            );
+            $matchingFixtures = LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('leave_type_id', $types[$typeCode]->id)
+                ->where('reason', $reason)
+                ->orderBy('id')
+                ->get();
+            $leaveRequest = $matchingFixtures->shift() ?? new LeaveRequest;
+
+            // Relative dates move with "today", so use stable fixture identity and
+            // clean up duplicates produced by older date-keyed seeder runs.
+            $matchingFixtures->each(fn (LeaveRequest $duplicate) => $duplicate->delete());
+
+            $leaveRequest->fill([
+                'user_id' => $user->id,
+                'leave_type_id' => $types[$typeCode]->id,
+                'starts_at' => $startsAt->toDateString(),
+                'department_id' => $user->department_id,
+                'approver_id' => $approver?->id,
+                'ends_at' => $endsAt->toDateString(),
+                'requested_days' => $requestedDays,
+                'status' => $status,
+                'reason' => $reason,
+                'manager_comment' => match ($status) {
+                    'approved' => 'Approved',
+                    'rejected' => 'Rejected due to coverage needs.',
+                    default => null,
+                },
+                'submitted_at' => $submittedAt,
+                'decided_at' => $decidedAt,
+            ])->save();
             $leaveRequest->forceFill([
                 'created_at' => $submittedAt,
                 'updated_at' => $decidedAt ?? $submittedAt,
@@ -386,7 +404,30 @@ class DatabaseSeeder extends Seeder
                     'leave_submitted',
                     'Leave request awaiting review',
                     $user->name.' requested '.$requestedDays.' day(s) of '.$types[$typeCode]->name.'.',
-                    '/approvals'
+                    '/approvals#request-'.$leaveRequest->id,
+                    $submittedAt,
+                );
+            }
+
+            if ($status === 'pending' && $user->isNot($admin)) {
+                $this->seedNotification(
+                    $admin,
+                    'leave_submitted',
+                    'Leave request awaiting review',
+                    $user->name.' requested '.$requestedDays.' day(s) of '.$types[$typeCode]->name.'.',
+                    '/approvals#request-'.$leaveRequest->id,
+                    $submittedAt,
+                );
+            }
+
+            if ($status === 'pending' && $user->is($admin)) {
+                $this->seedNotification(
+                    $admin,
+                    'leave_submitted',
+                    'Leave request submitted',
+                    'Your '.$types[$typeCode]->name.' request is awaiting review.',
+                    '/apply-leave',
+                    $submittedAt,
                 );
             }
 
@@ -397,6 +438,7 @@ class DatabaseSeeder extends Seeder
                     'Leave request '.$status,
                     'Your '.$types[$typeCode]->name.' request was '.$status.'.',
                     '/dashboard',
+                    $decidedAt ?? $submittedAt,
                     $leaveRequest->decided_at
                         ? $this->workingTime(
                             Carbon::parse($leaveRequest->decided_at)->addDay(),
@@ -462,6 +504,209 @@ class DatabaseSeeder extends Seeder
             ->values()
             ->all();
         $this->seedAttendanceHistory($attendance, $defaultAttendanceSite, $demoUserIds);
+        $this->seedAuditHistory($admin, $ceo, $departments, $types, $users, $today);
+    }
+
+    private function seedAuditHistory(
+        User $admin,
+        User $ceo,
+        $departments,
+        $types,
+        $users,
+        Carbon $today
+    ): void {
+        AuditLog::query()->where('metadata->seeded', true)->delete();
+
+        LeaveRequest::query()
+            ->with(['user', 'approver', 'leaveType'])
+            ->whereIn('user_id', $users->pluck('id')->push($admin->id)->push($ceo->id))
+            ->orderBy('submitted_at')
+            ->get()
+            ->each(function (LeaveRequest $leaveRequest): void {
+                $this->seedAuditLog(
+                    $leaveRequest->user,
+                    'leave.request.submitted',
+                    $leaveRequest,
+                    [
+                        'changes' => Audit::changes([], $leaveRequest->only([
+                            'leave_type_id', 'starts_at', 'ends_at', 'requested_days', 'status', 'reason',
+                        ])),
+                        'changed_fields' => ['leave_type_id', 'starts_at', 'ends_at', 'requested_days', 'status', 'reason'],
+                        'attachment_count' => 0,
+                        'leave_type_name' => $leaveRequest->leaveType->name,
+                    ],
+                    Carbon::parse($leaveRequest->submitted_at)
+                );
+
+                if (in_array($leaveRequest->status, ['approved', 'rejected'], true) && $leaveRequest->decided_at) {
+                    $after = [
+                        'status' => $leaveRequest->status,
+                        'manager_comment' => $leaveRequest->manager_comment,
+                        'approver_id' => $leaveRequest->approver_id,
+                    ];
+                    $this->seedAuditLog(
+                        $leaveRequest->approver,
+                        'leave.request.'.$leaveRequest->status,
+                        $leaveRequest,
+                        [
+                            'changes' => Audit::changes([
+                                'status' => 'pending',
+                                'manager_comment' => null,
+                                'approver_id' => null,
+                            ], $after),
+                            'changed_fields' => array_keys($after),
+                            'decision_reason' => $leaveRequest->manager_comment,
+                        ],
+                        Carbon::parse($leaveRequest->decided_at)
+                    );
+                }
+            });
+
+        $itManager = $users['it_manager'];
+        $itEngineer = $users['it_engineer'];
+        $sickType = $types['sick'];
+        $managerRole = Role::query()->where('slug', 'manager')->with('permissions')->first();
+
+        $this->seedAuditLog($admin, 'admin.user.updated', $itEngineer, [
+            'changes' => Audit::changes([
+                'job_title' => 'Junior Backend Engineer',
+                'manager_id' => null,
+            ], [
+                'job_title' => $itEngineer->job_title,
+                'manager_id' => $itManager->id,
+            ]),
+            'changed_fields' => ['job_title', 'manager_id'],
+        ], $today->copy()->subDays(74)->setTime(10, 18));
+
+        $this->seedAuditLog($admin, 'admin.leave_type.updated', $sickType, [
+            'changes' => Audit::changes([
+                'requires_attachment' => false,
+                'default_allowance_days' => 5,
+            ], [
+                'requires_attachment' => (bool) $sickType->requires_attachment,
+                'default_allowance_days' => $sickType->default_allowance_days,
+            ]),
+            'changed_fields' => ['requires_attachment', 'default_allowance_days'],
+            'reason' => 'Aligned the sick-leave policy with the updated HR handbook.',
+        ], $today->copy()->subDays(68)->setTime(14, 5));
+
+        $this->seedAuditLog($admin, 'admin.department.updated', $departments['IT'], [
+            'changes' => Audit::changes(['manager_id' => null], ['manager_id' => $itManager->id]),
+            'changed_fields' => ['manager_id'],
+            'reason' => 'Assigned the new IT reporting owner.',
+        ], $today->copy()->subDays(61)->setTime(9, 32));
+
+        if ($managerRole) {
+            $currentPermissions = $managerRole->permissions->sortBy('key')->pluck('key')->values()->all();
+            $previousPermissions = array_values(array_filter(
+                $currentPermissions,
+                fn (string $permission): bool => $permission !== 'attendance.team.manage'
+            ));
+            $this->seedAuditLog($admin, 'admin.role.permissions_updated', $managerRole, [
+                'changes' => Audit::changes(
+                    ['permissions' => $previousPermissions],
+                    ['permissions' => $currentPermissions]
+                ),
+                'changed_fields' => ['permissions'],
+                'permissions_added' => array_values(array_diff($currentPermissions, $previousPermissions)),
+                'permissions_removed' => [],
+                'reason' => 'Managers need access to their team attendance overview.',
+            ], $today->copy()->subDays(44)->setTime(16, 20));
+        }
+
+        $balance = LeaveBalance::query()
+            ->where('user_id', $itEngineer->id)
+            ->where('leave_type_id', $types['annual']->id)
+            ->first();
+        if ($balance) {
+            $this->seedAuditLog($admin, 'admin.balance.overridden', $balance, [
+                'changes' => Audit::changes([
+                    'adjustment_days' => -1,
+                    'available_days' => (float) $balance->available_days - 1.5,
+                    'override_reason' => null,
+                ], [
+                    'adjustment_days' => 0.5,
+                    'available_days' => (float) $balance->available_days,
+                    'override_reason' => 'Carried forward 1.5 days after payroll reconciliation.',
+                ]),
+                'changed_fields' => ['adjustment_days', 'available_days', 'override_reason'],
+                'delta_days' => 1.5,
+                'year' => (int) $today->year,
+                'reason' => 'Carried forward 1.5 days after payroll reconciliation.',
+            ], $today->copy()->subDays(27)->setTime(11, 47));
+        }
+
+        $this->seedAuditLog($itEngineer, 'profile.updated', $itEngineer, [
+            'changes' => Audit::changes([
+                'emergency_contact_phone' => '078 000 000',
+                'bank_account_number' => '001234567890',
+            ], [
+                'emergency_contact_phone' => $itEngineer->profile?->emergency_contact_phone,
+                'bank_account_number' => '001234569999',
+            ]),
+            'changed_fields' => ['emergency_contact_phone', 'bank_account_number'],
+        ], $today->copy()->subDays(12)->setTime(8, 55));
+
+        foreach ([9, 6, 3, 1] as $daysAgo) {
+            $this->seedAuditLog($admin, 'auth.login.succeeded', $admin, [
+                'remembered' => $daysAgo === 9,
+                'two_factor_used' => true,
+                'security_event' => true,
+            ], $today->copy()->subDays($daysAgo)->setTime(8 + ($daysAgo % 2), 12));
+        }
+
+        $this->seedAuditLog(null, 'auth.login.failed', null, [
+            'attempted_email' => $admin->email,
+            'reason' => 'invalid_credentials',
+            'security_event' => true,
+        ], $today->copy()->subDays(2)->setTime(21, 16), '203.0.113.42');
+
+        $correctedEvent = AttendanceEvent::query()
+            ->with('day')
+            ->whereNotNull('correction_reason')
+            ->latest('effective_at')
+            ->first();
+        if ($correctedEvent) {
+            $this->seedAuditLog($admin, 'attendance.event.corrected', $correctedEvent, [
+                'changes' => Audit::changes([
+                    'effective_at' => $correctedEvent->effective_at->copy()->subMinutes(12),
+                    'verification_status' => 'flagged',
+                ], [
+                    'effective_at' => $correctedEvent->effective_at,
+                    'verification_status' => $correctedEvent->verification_status,
+                ]),
+                'changed_fields' => ['effective_at', 'verification_status'],
+                'reason' => $correctedEvent->correction_reason,
+                'employee_name' => $correctedEvent->day?->user?->name,
+            ], Carbon::parse($correctedEvent->updated_at));
+        }
+    }
+
+    private function seedAuditLog(
+        ?User $actor,
+        string $action,
+        $subject,
+        array $metadata,
+        Carbon $occurredAt,
+        string $ipAddress = '10.10.0.24'
+    ): void {
+        $log = AuditLog::query()->create([
+            'actor_id' => $actor?->id,
+            'action' => $action,
+            'subject_type' => $subject ? $subject::class : null,
+            'subject_id' => $subject?->getKey(),
+            'metadata' => [
+                ...$metadata,
+                'seeded' => true,
+                'request' => [
+                    'method' => 'SEED',
+                    'route' => 'demo.fixture',
+                    'user_agent' => 'Seeded demo history',
+                ],
+            ],
+            'ip_address' => $ipAddress,
+        ]);
+        $log->forceFill(['created_at' => $occurredAt, 'updated_at' => $occurredAt])->saveQuietly();
     }
 
     private function seedAttendanceHistory(
@@ -678,19 +923,31 @@ class DatabaseSeeder extends Seeder
         string $title,
         string $body,
         string $actionUrl,
+        Carbon $createdAt,
         ?Carbon $readAt = null
     ): void {
-        // Match runtime notification uniqueness closely enough to keep db:seed rerunnable.
-        SystemNotification::query()->updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'type' => $type,
-                'title' => $title,
-                'body' => $body,
-                'action_url' => $actionUrl,
-            ],
-            ['read_at' => $readAt]
-        );
+        $matchingFixtures = SystemNotification::query()
+            ->where('user_id', $user->id)
+            ->where('type', $type)
+            ->where('title', $title)
+            ->where('body', $body)
+            ->orderBy('id')
+            ->get();
+        $notification = $matchingFixtures->shift() ?? new SystemNotification;
+        $matchingFixtures->each(fn (SystemNotification $duplicate) => $duplicate->delete());
+
+        $notification->fill([
+            'user_id' => $user->id,
+            'type' => $type,
+            'title' => $title,
+            'body' => $body,
+            'action_url' => $actionUrl,
+            'read_at' => $readAt,
+        ])->save();
+        $notification->forceFill([
+            'created_at' => $createdAt,
+            'updated_at' => $readAt ?? $createdAt,
+        ])->saveQuietly();
     }
 
     private function seedUser(string $email, array $attributes, array $legacyEmails = []): User

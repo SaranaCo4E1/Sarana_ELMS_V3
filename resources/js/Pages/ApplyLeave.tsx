@@ -46,7 +46,6 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
   const earliestLeaveDate = useMemo(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - 7);
     return date;
   }, []);
 
@@ -74,6 +73,8 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     }
     return form.duration === 'half_day' && form.starts_at === form.ends_at && days === 1 ? 0.5 : days;
   }, [form.duration, form.starts_at, form.ends_at, holidays]);
+  const hasRequiredAttachment = !selectedType?.requires_attachment || form.attachments.length > 0;
+  const canSubmit = Boolean(form.starts_at && form.ends_at && projectedDays > 0 && hasRequiredAttachment);
 
   const handleSingleDateChange = (date: Date | null) => {
     setStartDate(date);
@@ -167,7 +168,12 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
     }
     const requestedStartDate = parseDateParam(form.starts_at);
     if (!requestedStartDate || requestedStartDate < earliestLeaveDate) {
-      setDateSelectionError('Leave requests cannot be backdated by more than 7 days.');
+      setDateSelectionError('Leave requests must start today or later.');
+
+      return;
+    }
+    if (projectedDays <= 0) {
+      setDateSelectionError('Choose at least one working day. Weekends and public holidays are not counted.');
 
       return;
     }
@@ -370,6 +376,11 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                     {dateSelectionError}
                   </p>
                 )}
+                {!dateSelectionError && (
+                  <p className="mt-2 text-xs font-normal normal-case tracking-normal text-neutral-400">
+                    Requests must start today or later. Weekends and public holidays are excluded from the total.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -423,7 +434,7 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
               <button
                 className="flex items-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 px-4.5 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:hover:translate-y-0 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200 cursor-pointer"
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !canSubmit}
               >
                 {isSubmitting ? (
                   <>

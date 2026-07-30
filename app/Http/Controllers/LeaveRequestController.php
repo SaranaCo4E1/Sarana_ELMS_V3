@@ -6,6 +6,7 @@ use App\Models\LeaveAttachment;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\SystemNotification;
+use App\Models\User;
 use App\Notifications\LeaveRequestSubmitted;
 use App\Services\LeaveBalanceService;
 use App\Support\Audit;
@@ -33,13 +34,13 @@ class LeaveRequestController extends Controller
 
         $data = $request->validate([
             'leave_type_id' => ['required', 'exists:leave_types,id'],
-            'starts_at' => ['required', 'date', 'after_or_equal:'.today()->subDays(7)->toDateString()],
+            'starts_at' => ['required', 'date', 'after_or_equal:'.today()->toDateString()],
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
             'duration' => ['required', 'in:full_day,half_day'],
             'reason' => ['nullable', 'string', 'max:2000'],
             'attachments.*' => ['file', 'max:20480', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx'],
         ], [
-            'starts_at.after_or_equal' => 'Leave requests cannot be backdated by more than 7 days.',
+            'starts_at.after_or_equal' => 'Leave requests cannot be backdated.',
             'attachments.*.file' => 'One of your attachments failed to upload. Please ensure the file is valid and try again.',
             'attachments.*.max' => 'Each attachment must not exceed 20 MB in size.',
             'attachments.*.mimes' => 'Attachments must be a PDF, image (JPG, PNG, WEBP), or Word document (DOC, DOCX).',
@@ -101,16 +102,34 @@ class LeaveRequestController extends Controller
 
         if ($leaveRequest->user->manager) {
             $leaveRequest->user->manager->notify(new LeaveRequestSubmitted($leaveRequest));
+        }
+
+        $reviewers = User::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($leaveRequest): void {
+                $query
+                    ->whereKey($leaveRequest->user->manager_id)
+                    ->orWhereIn('role', ['hr admin', 'admin']);
+            })
+            ->whereKeyNot($user->id)
+            ->get();
+
+        foreach ($reviewers as $reviewer) {
             SystemNotification::query()->create([
-                'user_id' => $leaveRequest->user->manager_id,
+                'user_id' => $reviewer->id,
                 'type' => 'leave_submitted',
                 'title' => 'Leave request awaiting review',
                 'body' => $user->name.' requested '.$leaveRequest->requested_days.' day(s) of '.$leaveRequest->leaveType->name.'.',
-                'action_url' => route('approvals.index'),
+                'action_url' => route('approvals.index').'#request-'.$leaveRequest->id,
             ]);
         }
 
-        Audit::record($request, 'leave.request.submitted', $leaveRequest);
+        Audit::recordChange($request, 'leave.request.submitted', $leaveRequest, [], $leaveRequest->only([
+            'leave_type_id', 'starts_at', 'ends_at', 'requested_days', 'status', 'reason',
+        ]), [
+            'attachment_count' => $leaveRequest->attachments()->count(),
+            'leave_type_name' => $leaveRequest->leaveType->name,
+        ]);
 
         return back()->with('success', 'Leave request submitted.');
     }
@@ -119,8 +138,9 @@ class LeaveRequestController extends Controller
     {
         abort_unless($leaveRequest->user_id === $request->user()->id && $leaveRequest->status === 'pending', 403);
         $balances->releasePending($leaveRequest->load('leaveType'));
+        $before = $leaveRequest->only(['status']);
         $leaveRequest->update(['status' => 'cancelled']);
-        Audit::record($request, 'leave.request.cancelled', $leaveRequest);
+        Audit::recordChange($request, 'leave.request.cancelled', $leaveRequest, $before, $leaveRequest->only(['status']));
 
         return back()->with('success', 'Leave request cancelled.');
     }

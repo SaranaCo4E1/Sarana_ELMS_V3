@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';
 import AttendancePunchButton from '../Components/AttendancePunchButton';
+import type { AttendancePunchPreview } from '../Components/AttendanceTimingNotice';
 import AppLayout from '../Layouts/AppLayout';
 
 type Event = {
@@ -66,6 +67,8 @@ type Schedule = {
 type Props = {
   today?: Day | null;
   nextDirection?: 'in' | 'out' | null;
+  punchCooldownUntil?: string | null;
+  punchPreview?: AttendancePunchPreview | null;
   attendanceUnavailableReason?: string | null;
   personalRecord?: Day | null;
   selectedPersonalDate: string;
@@ -101,7 +104,7 @@ const statusClass = (status: string) => {
   return 'bg-neutral-50 text-neutral-600 border-neutral-200';
 };
 
-export default function Attendance({ today, nextDirection, attendanceUnavailableReason, personalRecord, selectedPersonalDate, recentRecords, historyRecords, selectedHistoryMonth, historyUsers, selectedHistoryUser, teamToday, records, selectedDate, recordUsers, sites, schedules, manageableUsers, currentIp, capabilities }: Props) {
+export default function Attendance({ today, nextDirection, punchCooldownUntil, punchPreview, attendanceUnavailableReason, personalRecord, selectedPersonalDate, recentRecords, historyRecords, selectedHistoryMonth, historyUsers, selectedHistoryUser, teamToday, records, selectedDate, recordUsers, sites, schedules, manageableUsers, currentIp, capabilities }: Props) {
   const canManageRecords = capabilities.all_records || capabilities.team_records;
   const availableTabs = useMemo<AttendanceTab[]>(
     () => [
@@ -141,6 +144,8 @@ export default function Attendance({ today, nextDirection, attendanceUnavailable
             <AttendancePunchButton
               direction={nextDirection}
               branchName={today?.primary_site?.name}
+              cooldownUntil={punchCooldownUntil}
+              preview={punchPreview}
               unavailableReason={attendanceUnavailableReason}
               className="w-full"
             />

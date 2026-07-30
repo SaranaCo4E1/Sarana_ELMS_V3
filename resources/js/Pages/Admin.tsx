@@ -19,8 +19,19 @@ type AuditLog = {
   created_at: string;
   actor?: User | null;
   subject?: any | null;
-  metadata?: Record<string, unknown> | null;
+  description?: string;
+  metadata?: {
+    changes?: AuditChange[];
+    changed_fields?: string[];
+    reason?: string;
+    decision_reason?: string | null;
+    note?: string;
+    leave_type_name?: string;
+    request?: { method?: string; route?: string; user_agent?: string };
+    [key: string]: unknown;
+  } | null;
 };
+type AuditChange = { field: string; label?: string; from: unknown; to: unknown };
 type Stats = { active_users: number; inactive_users: number; pending_requests: number; approved_this_month: number; departments: number; leave_types: number };
 type EmployeeOption = { value: string; label: string };
 type AdminModal =
@@ -67,6 +78,23 @@ const AuditIcon = ({ type }: { type: string }) => {
     default:
       return <ClipboardList size={12} />;
   }
+};
+
+const formatAuditValue = (value: unknown, field = '', metadata?: AuditLog['metadata']): string => {
+  if (value === null || value === undefined || value === '') return 'Not set';
+  if (field === 'leave_type_id' && metadata?.leave_type_name) return `${metadata.leave_type_name} (#${String(value)})`;
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.length ? value.map((item) => formatAuditValue(item)).join(', ') : 'None';
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'string' && /(date|_at$|effective_)/.test(field) && !Number.isNaN(Date.parse(value))) {
+    return field.includes('date') || ['starts_at', 'ends_at', 'hire_date', 'join_date', 'date_of_birth'].includes(field)
+      ? new Date(value).toLocaleDateString()
+      : new Date(value).toLocaleString();
+  }
+  if (typeof value === 'string' && ['status', 'role', 'source', 'verification_status'].includes(field)) {
+    return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+  return String(value);
 };
 
 function formatAuditLog(log: AuditLog) {
@@ -233,7 +261,11 @@ function formatAuditLog(log: AuditLog) {
       iconType = 'default';
   }
 
-  return { actorText, description, iconType };
+  if (log.action.startsWith('auth.')) iconType = 'security';
+  if (log.action.startsWith('attendance.')) iconType = 'leave_request';
+  if (log.action.startsWith('report.')) iconType = 'default';
+
+  return { actorText, description: log.description || description, iconType };
 }
 
 export default function Admin({ roles, managerEligibleRoleSlugs, departments, leaveTypes, holidays, users, auditLogs, stats }: { roles: Role[]; managerEligibleRoleSlugs: string[]; departments: Department[]; leaveTypes: LeaveType[]; holidays: Holiday[]; users: User[]; auditLogs: AuditLog[]; stats: Stats }) {
@@ -541,7 +573,7 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
 
   const filteredAuditLogs = useMemo(() => auditLogs.filter((item) => {
     const formatted = formatAuditLog(item);
-    const haystack = `${item.action} ${item.subject_type ?? ''} ${item.ip_address ?? ''} ${item.actor?.name ?? ''} ${formatted.description}`.toLowerCase();
+    const haystack = `${item.action} ${item.subject_type ?? ''} ${item.ip_address ?? ''} ${item.actor?.name ?? ''} ${formatted.description} ${JSON.stringify(item.metadata ?? {})}`.toLowerCase();
     return haystack.includes(auditQuery.toLowerCase());
   }), [auditQuery, auditLogs]);
 
@@ -1390,6 +1422,53 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                             {description}
                           </p>
 
+                          {Boolean(log.metadata?.changes?.length) && (
+                            <div className="rounded-lg border border-neutral-200 bg-neutral-50/70 p-3">
+                              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                <span className="font-semibold text-neutral-500">
+                                  {log.action.endsWith('.created') || log.action === 'leave.request.submitted' ? 'Recorded:' : 'Changed:'}
+                                </span>
+                                {log.metadata!.changes!.map((change) => (
+                                  <span key={change.field} className="rounded-md border border-neutral-200 bg-white px-2 py-0.5 font-semibold text-neutral-700">
+                                    {change.label || change.field}
+                                  </span>
+                                ))}
+                              </div>
+                              <details className="group mt-2">
+                                <summary className="cursor-pointer select-none text-xs font-semibold text-orange-700 hover:text-orange-800">
+                                  View before and after values
+                                </summary>
+                                <div className="mt-2 overflow-x-auto rounded-md border border-neutral-200 bg-white">
+                                  <table className="min-w-full text-left text-xs">
+                                    <thead className="bg-neutral-50 text-[10px] uppercase tracking-wide text-neutral-500">
+                                      <tr>
+                                        <th className="px-3 py-2 font-bold">Field</th>
+                                        <th className="px-3 py-2 font-bold">Before</th>
+                                        <th className="px-3 py-2 font-bold">After</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-100">
+                                      {log.metadata!.changes!.map((change) => (
+                                        <tr key={`detail-${change.field}`} className="align-top">
+                                          <td className="px-3 py-2 font-semibold text-neutral-700">{change.label || change.field}</td>
+                                          <td className="max-w-xs whitespace-pre-wrap break-words px-3 py-2 text-neutral-500">{formatAuditValue(change.from, change.field, log.metadata)}</td>
+                                          <td className="max-w-xs whitespace-pre-wrap break-words px-3 py-2 font-medium text-neutral-800">{formatAuditValue(change.to, change.field, log.metadata)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </details>
+                            </div>
+                          )}
+
+                          {(log.metadata?.reason || log.metadata?.decision_reason || log.metadata?.note) && (
+                            <p className="rounded-md border border-amber-100 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+                              <span className="font-bold">Reason / note:</span>{' '}
+                              {String(log.metadata.reason || log.metadata.decision_reason || log.metadata.note)}
+                            </p>
+                          )}
+
                           {/* Secondary Metadata */}
                           <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-neutral-400 font-semibold tracking-wide">
                             <span className="flex items-center gap-1 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-100/60">
@@ -1399,6 +1478,11 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                             {log.subject_type && (
                               <span className="flex items-center gap-1 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-100/60 font-mono text-[10px]">
                                 {log.subject_type.split('\\').pop()} #{log.subject_id}
+                              </span>
+                            )}
+                            {log.metadata?.request?.route && (
+                              <span className="flex items-center gap-1 rounded border border-neutral-100/60 bg-neutral-50 px-2 py-0.5 font-mono text-[10px]">
+                                {log.metadata.request.method} {log.metadata.request.route}
                               </span>
                             )}
                           </div>

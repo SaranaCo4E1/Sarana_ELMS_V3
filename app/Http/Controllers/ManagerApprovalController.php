@@ -22,7 +22,13 @@ class ManagerApprovalController extends Controller
     {
         $user = $request->user();
         $scope = LeaveRequest::query()
-            ->with(['user.department', 'leaveType', 'attachments'])
+            ->with([
+                'user.department',
+                'user.leaveBalances' => fn ($query) => $query->where('year', now()->year),
+                'leaveType',
+                'attachments',
+            ])
+            ->where('user_id', '!=', $user->id)
             ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id));
 
         return Inertia::render('Approvals', [
@@ -50,16 +56,24 @@ class ManagerApprovalController extends Controller
     {
         $data = $request->validate([
             'decision' => ['required', 'in:approved,rejected'],
-            'manager_comment' => ['nullable', 'string', 'max:1000'],
+            'manager_comment' => ['nullable', 'string', 'max:1000', 'required_if:decision,rejected'],
+        ], [
+            'manager_comment.required_if' => 'Add a reason before rejecting this request.',
         ]);
 
         $actor = $request->user();
+        abort_if($leaveRequest->user_id === $actor->id, 403);
         abort_unless($actor->isHr() || $leaveRequest->user->manager_id === $actor->id, 403);
         abort_unless($leaveRequest->status === 'pending', 422, 'Only pending requests can be decided.');
+        $leaveRequest->loadMissing(['leaveType', 'attachments']);
+        if ($data['decision'] === 'approved' && $leaveRequest->leaveType->requires_attachment && $leaveRequest->attachments->isEmpty()) {
+            return back()->with('error', 'This request cannot be approved until the required attachment is provided.');
+        }
         if ($data['decision'] === 'approved' && $this->overlapsApprovedRequest($leaveRequest)) {
             abort(422, 'This employee already has approved leave on one of these dates.');
         }
 
+        $before = $leaveRequest->only(['status', 'manager_comment', 'approver_id', 'decided_at']);
         $leaveRequest->update([
             'status' => $data['decision'],
             'manager_comment' => $data['manager_comment'] ?? null,
@@ -82,7 +96,14 @@ class ManagerApprovalController extends Controller
             'action_url' => route('dashboard'),
         ]);
 
-        Audit::record($request, 'leave.request.'.$data['decision'], $leaveRequest);
+        Audit::recordChange(
+            $request,
+            'leave.request.'.$data['decision'],
+            $leaveRequest,
+            $before,
+            $leaveRequest->only(['status', 'manager_comment', 'approver_id', 'decided_at']),
+            ['decision_reason' => $data['manager_comment'] ?? null]
+        );
 
         return back()->with('success', 'Leave request '.$data['decision'].'.');
     }

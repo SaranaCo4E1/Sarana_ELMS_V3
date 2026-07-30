@@ -2,10 +2,13 @@ import { router } from '@inertiajs/react';
 import { LogIn, LogOut, MapPin, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import AttendanceTimingNotice, { type AttendancePunchPreview } from './AttendanceTimingNotice';
 
 type Props = {
   direction?: 'in' | 'out' | null;
   branchName?: string | null;
+  cooldownUntil?: string | null;
+  preview?: AttendancePunchPreview | null;
   unavailableReason?: string | null;
   className?: string;
 };
@@ -13,17 +16,30 @@ type Props = {
 export default function AttendancePunchButton({
   direction,
   branchName,
+  cooldownUntil,
+  preview,
   unavailableReason,
   className = '',
 }: Props) {
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const available = Boolean(direction) && !unavailableReason;
+  const [cooldownSeconds, setCooldownSeconds] = useState(() => secondsUntil(cooldownUntil));
+  const available = Boolean(direction) && !unavailableReason && cooldownSeconds === 0;
   const Icon = direction === 'out' ? LogOut : LogIn;
   const label = unavailableReason
     ? 'Attendance unavailable'
+    : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s`
     : direction === 'out' ? 'Check out' : 'Check in';
+
+  useEffect(() => {
+    const updateCooldown = () => setCooldownSeconds(secondsUntil(cooldownUntil));
+    updateCooldown();
+    if (!cooldownUntil) return;
+
+    const timer = window.setInterval(updateCooldown, 250);
+    return () => window.clearInterval(timer);
+  }, [cooldownUntil]);
 
   useEffect(() => {
     if (!available) setConfirming(false);
@@ -90,7 +106,11 @@ export default function AttendancePunchButton({
         {processing ? 'Recording…' : label}
       </button>
       <p className={`mt-1.5 text-center text-xs ${unavailableReason ? 'text-amber-700' : 'text-neutral-400'}`}>
-        {unavailableReason ?? status ?? (branchName ? `Primary branch: ${branchName}` : 'Location or branch network verification applies')}
+        {unavailableReason
+          ?? status
+          ?? (cooldownSeconds > 0
+            ? `Previous punch recorded. Next action available in ${cooldownSeconds}s.`
+            : branchName ? `Primary branch: ${branchName}` : 'Location or branch network verification applies')}
       </p>
       {confirming && createPortal(
         <div
@@ -131,6 +151,7 @@ export default function AttendancePunchButton({
                   </p>
                 </div>
               </div>
+              <AttendanceTimingNotice preview={preview} />
               {status && <p className="text-center text-xs text-neutral-500" role="status">{status}</p>}
             </div>
             <footer className="flex justify-end gap-3 border-t border-neutral-100 p-5">
@@ -158,6 +179,13 @@ export default function AttendancePunchButton({
       )}
     </div>
   );
+}
+
+function secondsUntil(timestamp?: string | null): number {
+  if (!timestamp) return 0;
+  const milliseconds = Date.parse(timestamp) - Date.now();
+
+  return Number.isFinite(milliseconds) ? Math.max(0, Math.ceil(milliseconds / 1000)) : 0;
 }
 
 function uuid(): string {

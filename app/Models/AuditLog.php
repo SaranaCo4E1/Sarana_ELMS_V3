@@ -10,6 +10,8 @@ class AuditLog extends Model
 {
     protected $fillable = ['actor_id', 'action', 'subject_type', 'subject_id', 'metadata', 'ip_address'];
 
+    protected $appends = ['description'];
+
     protected function casts(): array
     {
         return ['metadata' => 'array'];
@@ -23,6 +25,11 @@ class AuditLog extends Model
     public function subject(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function getDescriptionAttribute(): string
+    {
+        return $this->formatDescription();
     }
 
     public function formatDescription(): string
@@ -70,6 +77,10 @@ class AuditLog extends Model
                 return "Activated user account for \"{$subjectName}\"";
             case 'admin.user.deactivated':
                 return "Deactivated user account for \"{$subjectName}\"";
+            case 'admin.role.created':
+                return "Created role \"{$subjectName}\"";
+            case 'admin.role.permissions_updated':
+                return "Updated permissions for role \"{$subjectName}\"";
 
                 // Balance Override
             case 'admin.balance.overridden':
@@ -88,28 +99,28 @@ class AuditLog extends Model
                 $daysFormatted = (float) $days == (int) $days ? (int) $days : (float) $days;
                 $requesterName = $subject?->user?->name ?? $this->actor?->name ?? 'Employee';
 
-                return "{$requesterName} submitted a request for {$leaveTypeName} ({$daysFormatted} days)";
+                return "{$requesterName} submitted a request for {$leaveTypeName} ({$daysFormatted} ".((float) $daysFormatted === 1.0 ? 'day' : 'days').')';
             case 'leave.request.cancelled':
                 $leaveTypeName = $subject?->leaveType?->name ?? 'Leave Type';
                 $days = $subject?->requested_days ?? '—';
                 $daysFormatted = (float) $days == (int) $days ? (int) $days : (float) $days;
                 $requesterName = $subject?->user?->name ?? $this->actor?->name ?? 'Employee';
 
-                return "{$requesterName} cancelled request for {$leaveTypeName} ({$daysFormatted} days)";
+                return "{$requesterName} cancelled request for {$leaveTypeName} ({$daysFormatted} ".((float) $daysFormatted === 1.0 ? 'day' : 'days').')';
             case 'leave.request.approved':
                 $leaveTypeName = $subject?->leaveType?->name ?? 'Leave Type';
                 $days = $subject?->requested_days ?? '—';
                 $daysFormatted = (float) $days == (int) $days ? (int) $days : (float) $days;
                 $employeeName = $subject?->user?->name ?? 'Employee';
 
-                return "Approved leave request for {$employeeName} ({$leaveTypeName}, {$daysFormatted} days)";
+                return "Approved leave request for {$employeeName} ({$leaveTypeName}, {$daysFormatted} ".((float) $daysFormatted === 1.0 ? 'day' : 'days').')';
             case 'leave.request.rejected':
                 $leaveTypeName = $subject?->leaveType?->name ?? 'Leave Type';
                 $days = $subject?->requested_days ?? '—';
                 $daysFormatted = (float) $days == (int) $days ? (int) $days : (float) $days;
                 $employeeName = $subject?->user?->name ?? 'Employee';
 
-                return "Rejected leave request for {$employeeName} ({$leaveTypeName}, {$daysFormatted} days)";
+                return "Rejected leave request for {$employeeName} ({$leaveTypeName}, {$daysFormatted} ".((float) $daysFormatted === 1.0 ? 'day' : 'days').')';
 
                 // Profile
             case 'profile.updated':
@@ -120,6 +131,38 @@ class AuditLog extends Model
                 return 'Enabled Two-Factor Authentication';
             case 'profile.two_factor.disabled':
                 return 'Disabled Two-Factor Authentication';
+            case 'auth.login.succeeded':
+                return 'Signed in successfully';
+            case 'auth.login.failed':
+                return 'Failed sign-in attempt';
+            case 'auth.logout':
+                return 'Signed out';
+            case 'auth.two_factor.challenge_sent':
+                return 'Sent a two-factor authentication challenge';
+            case 'attendance.site.created':
+                return "Created attendance branch \"{$subjectName}\"";
+            case 'attendance.site.updated':
+                return "Updated attendance branch \"{$subjectName}\"";
+            case 'attendance.qr.regenerated':
+                return 'Regenerated an attendance QR code';
+            case 'attendance.schedule.created':
+                return 'Created an attendance schedule';
+            case 'attendance.schedule.updated':
+                return 'Updated an attendance schedule';
+            case 'attendance.event.created_manually':
+                return 'Added a manual attendance event';
+            case 'attendance.event.corrected':
+                return 'Corrected an attendance event';
+            case 'attendance.event.reviewed':
+                return 'Reviewed a flagged attendance event';
+            case 'attendance.event.recorded':
+                $direction = ($this->metadata['changes'][0]['to'] ?? null) === 'out' ? 'check-out' : 'check-in';
+
+                return "Recorded an attendance {$direction}";
+            case 'report.audit_logs.exported':
+                return 'Exported the audit trail';
+            case 'report.leave.exported':
+                return 'Exported a leave report';
 
             default:
                 $shortSubjectType = $this->subject_type ? class_basename($this->subject_type) : 'System';
