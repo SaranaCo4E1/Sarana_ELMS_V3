@@ -127,8 +127,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/balances', [AdminController::class, 'overrideBalance'])->name('admin.balances.override');
     });
 
-    Route::middleware('permission:reports.view')->group(function () {
+    Route::middleware('permission:reports.self.view,reports.team.view,reports.view')->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export/leave', [ReportController::class, 'exportLeave'])->name('reports.export.leave');
+        Route::get('/reports/export/attendance', [ReportController::class, 'exportAttendance'])->name('reports.export.attendance');
+    });
+
+    Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     });
 

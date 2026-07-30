@@ -280,7 +280,8 @@ function NavContent({ isCollapsed = false }: NavContentProps) {
   const canApprove = permissions.includes('approvals.manage');
   const canAdmin = ADMIN_PANEL_PERMISSIONS.some((permission) => permissions.includes(permission));
   const canViewSupportTickets = permissions.includes('support_tickets.manage');
-  const canViewReports = permissions.includes('reports.view');
+  const canViewReports = ['reports.self.view', 'reports.team.view', 'reports.view']
+    .some((permission) => permissions.includes(permission));
   const canManageRoles = user.role === 'admin';
 
   const isActive = (path: string) => {

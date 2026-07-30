@@ -2,69 +2,63 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReportRequest;
+use App\Models\AttendanceDay;
 use App\Models\AuditLog;
-use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
-use App\Models\LeaveType;
-use App\Models\User;
+use App\Models\PublicHoliday;
+use App\Services\ReportAnalyticsService;
+use App\Services\ReportScope;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
-    public function index(): Response
+    public function index(ReportRequest $request, ReportAnalyticsService $reports): Response
     {
-        return Inertia::render('Reports', [
-            'users' => User::query()
-                ->with(['department', 'leaveBalances.leaveType'])
-                ->orderBy('name')
-                ->get(),
-            'leaveTypes' => LeaveType::query()->orderBy('name')->get(),
-            'departments' => Department::query()->orderBy('name')->get(['id', 'name']),
-        ]);
+        return Inertia::render('Reports', $reports->build($request->user(), $request->filters()));
     }
 
-    public function monthly(Request $request): StreamedResponse
-    {
-        $data = $request->validate([
-            'month' => ['nullable', 'date_format:Y-m'],
-            'start_month' => ['nullable', 'date_format:Y-m', 'required_without:month'],
-            'end_month' => ['nullable', 'date_format:Y-m', 'required_without:month'],
-        ]);
-
-        $startMonth = $data['start_month'] ?? $data['month'] ?? null;
-        $endMonth = $data['end_month'] ?? $data['month'] ?? null;
-
-        if (! $startMonth || ! $endMonth) {
-            abort(422, 'Invalid date range parameters.');
-        }
-
-        $startDate = Carbon::parse($startMonth)->startOfMonth();
-        $endDate = Carbon::parse($endMonth)->endOfMonth();
+    public function exportLeave(
+        ReportRequest $request,
+        ReportAnalyticsService $reports,
+        ReportScope $scope
+    ): StreamedResponse {
+        $filters = $request->filters();
+        $resolved = $scope->resolve($request->user(), $filters);
+        $userIds = $resolved['users']->pluck('id');
+        $holidays = $this->holidays($filters->startDate, $filters->endDate);
 
         $rows = LeaveRequest::query()
             ->with(['user.department', 'leaveType', 'approver', 'attachments'])
-            ->whereBetween('starts_at', [$startDate, $endDate])
+            ->whereIn('user_id', $userIds)
+            ->whereDate('starts_at', '<=', $filters->endDate)
+            ->whereDate('ends_at', '>=', $filters->startDate)
+            ->when($filters->leaveTypeIds, fn ($query) => $query->whereIn('leave_type_id', $filters->leaveTypeIds))
+            ->when($filters->leaveStatuses, fn ($query) => $query->whereIn('status', $filters->leaveStatuses))
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
         Audit::record($request, 'report.leave.exported', null, [
-            'start_month' => $startMonth,
-            'end_month' => $endMonth,
+            'scope' => $resolved['scope'],
+            'filters' => $filters->toArray(),
             'row_count' => $rows->count(),
         ]);
 
-        $filename = ($startMonth === $endMonth)
-            ? 'leave-report-'.$startMonth.'.csv'
-            : 'leave-report-'.$startMonth.'-to-'.$endMonth.'.csv';
+        $filename = sprintf(
+            'leave-report-%s-to-%s.csv',
+            $filters->startDate->toDateString(),
+            $filters->endDate->toDateString(),
+        );
 
-        return response()->streamDownload(function () use ($rows) {
+        return response()->streamDownload(function () use ($rows, $reports, $filters, $holidays) {
             $out = fopen('php://output', 'w');
             fputcsv($out, [
                 'Leave Request ID',
@@ -77,6 +71,7 @@ class ReportController extends Controller
                 'Start Date',
                 'End Date',
                 'Requested Days',
+                'Days In Selected Period',
                 'Status',
                 'Approver ID',
                 'Approver Name',
@@ -92,6 +87,7 @@ class ReportController extends Controller
             foreach ($rows as $row) {
                 $days = (float) $row->requested_days;
                 $daysFormatted = ($days == (int) $days) ? (int) $days : $days;
+                $inRangeDays = $reports->workingDaysWithin($row, $filters, $holidays);
                 $attachmentsList = $row->attachments->pluck('original_name')->implode(', ');
 
                 fputcsv($out, [
@@ -105,6 +101,7 @@ class ReportController extends Controller
                     $row->starts_at?->toDateString(),
                     $row->ends_at?->toDateString(),
                     $daysFormatted,
+                    $inRangeDays,
                     ucfirst($row->status),
                     $row->approver_id,
                     $row->approver?->name,
@@ -119,6 +116,90 @@ class ReportController extends Controller
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportAttendance(ReportRequest $request, ReportScope $scope): StreamedResponse
+    {
+        $filters = $request->filters();
+        $resolved = $scope->resolve($request->user(), $filters);
+
+        $rows = AttendanceDay::query()
+            ->with(['user.department', 'primarySite', 'slots.event', 'events'])
+            ->whereIn('user_id', $resolved['users']->pluck('id'))
+            ->whereBetween('work_date', [$filters->startDate, $filters->endDate])
+            ->when($filters->attendanceStatuses, fn ($query) => $query->whereIn('status', $filters->attendanceStatuses))
+            ->when($filters->siteIds, fn ($query) => $query->whereIn('primary_site_id', $filters->siteIds))
+            ->orderByDesc('work_date')
+            ->orderBy('user_id')
+            ->get();
+
+        Audit::record($request, 'report.attendance.exported', null, [
+            'scope' => $resolved['scope'],
+            'filters' => $filters->toArray(),
+            'row_count' => $rows->count(),
+        ]);
+
+        $filename = sprintf(
+            'attendance-report-%s-to-%s.csv',
+            $filters->startDate->toDateString(),
+            $filters->endDate->toDateString(),
+        );
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, [
+                'Employee ID',
+                'Employee Name',
+                'Employee Code',
+                'Department',
+                'Work Date',
+                'Branch',
+                'Status',
+                'Morning In',
+                'Morning In Status',
+                'Lunch Out',
+                'Lunch Out Status',
+                'Lunch In',
+                'Lunch In Status',
+                'Final Out',
+                'Final Out Status',
+                'Unresolved Flags',
+            ]);
+
+            foreach ($rows as $day) {
+                $slots = $day->slots->keyBy('type');
+                $value = fn (string $type) => $slots[$type]?->event?->effective_at
+                    ? $slots[$type]->event->effective_at->setTimezone($day->timezone)->format('H:i:s')
+                    : null;
+                fputcsv($out, [
+                    $day->user_id,
+                    $day->user?->name,
+                    $day->user?->employee_code,
+                    $day->user?->department?->name,
+                    $day->work_date?->toDateString(),
+                    $day->primarySite?->name,
+                    ucfirst($day->status),
+                    $value('morning_in'),
+                    $slots['morning_in']?->status,
+                    $value('lunch_out'),
+                    $slots['lunch_out']?->status,
+                    $value('lunch_in'),
+                    $slots['lunch_in']?->status,
+                    $value('final_out'),
+                    $slots['final_out']?->status,
+                    $day->events->where('verification_status', 'flagged')->whereNull('reviewed_at')->count(),
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function monthly(
+        ReportRequest $request,
+        ReportAnalyticsService $reports,
+        ReportScope $scope
+    ): StreamedResponse {
+        return $this->exportLeave($request, $reports, $scope);
     }
 
     public function auditLogs(Request $request): StreamedResponse
@@ -238,5 +319,15 @@ class ReportController extends Controller
         }
 
         return (string) $value;
+    }
+
+    private function holidays(Carbon $startDate, Carbon $endDate): Collection
+    {
+        return PublicHoliday::query()
+            ->where('is_active', true)
+            ->whereBetween('holiday_date', [$startDate, $endDate])
+            ->pluck('holiday_date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->flip();
     }
 }

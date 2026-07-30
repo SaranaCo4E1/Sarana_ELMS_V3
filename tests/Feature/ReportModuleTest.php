@@ -1,0 +1,267 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\AttendanceDay;
+use App\Models\AttendanceSlot;
+use App\Models\AuditLog;
+use App\Models\Department;
+use App\Models\LeaveBalance;
+use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use App\Models\Permission;
+use App\Models\PublicHoliday;
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
+
+class ReportModuleTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_staff_can_only_view_their_own_individual_report(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'is_active' => true]);
+        User::factory()->create(['role' => 'staff', 'is_active' => true]);
+
+        $this->actingAs($staff)
+            ->get(route('reports.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Reports')
+                ->where('scope', 'individual')
+                ->where('summary.employees', 1)
+                ->has('filterOptions.employees', 1)
+                ->where('filterOptions.employees.0.id', $staff->id)
+                ->where('capabilities.team', false)
+                ->where('capabilities.organization', false));
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', ['view' => 'multi']))
+            ->assertForbidden();
+    }
+
+    public function test_manager_multi_view_is_limited_to_direct_reports_and_rejects_forged_filters(): void
+    {
+        $manager = User::factory()->create(['role' => 'manager', 'is_active' => true]);
+        $direct = User::factory()->create(['role' => 'staff', 'manager_id' => $manager->id, 'is_active' => true]);
+        $inactiveDirect = User::factory()->create(['role' => 'staff', 'manager_id' => $manager->id, 'is_active' => false]);
+        $outsider = User::factory()->create(['role' => 'staff', 'is_active' => true]);
+
+        $this->actingAs($manager)
+            ->get(route('reports.index', ['view' => 'multi']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('scope', 'team')
+                ->where('summary.employees', 1)
+                ->has('filterOptions.employees', 2)
+                ->where('filterOptions.employees', fn ($employees) => $employees
+                    ->pluck('id')
+                    ->sort()
+                    ->values()
+                    ->all() === collect([$direct->id, $inactiveDirect->id])->sort()->values()->all()));
+
+        $this->actingAs($manager)
+            ->get(route('reports.index', [
+                'view' => 'multi',
+                'employee_ids' => [$outsider->id],
+            ]))
+            ->assertForbidden();
+    }
+
+    public function test_organization_filters_cascade_and_only_selected_department_is_aggregated(): void
+    {
+        $hr = User::factory()->create(['role' => 'hr admin', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'manager', 'is_active' => true]);
+        $engineering = Department::query()->create(['name' => 'Engineering', 'code' => 'ENG', 'is_active' => true]);
+        $sales = Department::query()->create(['name' => 'Sales', 'code' => 'SALES', 'is_active' => true]);
+        $engineer = User::factory()->create([
+            'role' => 'staff',
+            'department_id' => $engineering->id,
+            'manager_id' => $manager->id,
+            'is_active' => true,
+        ]);
+        User::factory()->create([
+            'role' => 'staff',
+            'department_id' => $sales->id,
+            'manager_id' => $manager->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($hr)
+            ->get(route('reports.index', [
+                'view' => 'multi',
+                'department_ids' => [$engineering->id],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('scope', 'organization')
+                ->where('summary.employees', 1)
+                ->where('details.data.0.id', $engineer->id)
+                ->where('filterOptions.departments', fn ($departments) => $departments->pluck('id')->contains($sales->id)));
+    }
+
+    public function test_report_calculates_in_range_working_days_balance_year_and_attendance_compliance(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'is_active' => true]);
+        $type = LeaveType::query()->create([
+            'name' => 'Annual Leave',
+            'code' => 'AL',
+            'default_allowance_days' => 18,
+            'paid' => true,
+            'requires_attachment' => false,
+            'deducts_balance' => true,
+            'is_active' => true,
+        ]);
+        LeaveRequest::query()->create([
+            'user_id' => $staff->id,
+            'leave_type_id' => $type->id,
+            'starts_at' => '2026-07-03',
+            'ends_at' => '2026-07-06',
+            'requested_days' => 2,
+            'status' => 'approved',
+        ]);
+        PublicHoliday::query()->create([
+            'holiday_date' => '2026-07-06',
+            'name' => 'Test Holiday',
+            'is_active' => true,
+        ]);
+        LeaveBalance::query()->create([
+            'user_id' => $staff->id,
+            'leave_type_id' => $type->id,
+            'year' => 2026,
+            'allowance_days' => 18,
+            'used_days' => 2,
+            'pending_days' => 1,
+        ]);
+
+        $this->attendanceDay($staff, '2026-07-03', 'complete', ['on_time', 'on_time', 'on_time', 'on_time']);
+        $this->attendanceDay($staff, '2026-07-06', 'issues', ['late', 'on_time', 'on_time', 'missing']);
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-07',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.approved_leave_days', 1)
+                ->where('summary.available_balance', 15)
+                ->where('summary.attendance_compliance', 50)
+                ->where('summary.late', 1)
+                ->where('summary.missing', 1)
+                ->where('leave.balance_year', 2026));
+    }
+
+    public function test_scoped_csv_exports_exclude_other_employees_and_are_audited(): void
+    {
+        $staff = User::factory()->create([
+            'role' => 'staff',
+            'name' => 'Scoped Employee',
+            'is_active' => true,
+        ]);
+        $outsider = User::factory()->create([
+            'role' => 'staff',
+            'name' => 'Hidden Employee',
+            'is_active' => true,
+        ]);
+        $type = LeaveType::query()->create([
+            'name' => 'Annual Leave',
+            'code' => 'AL',
+            'default_allowance_days' => 18,
+            'paid' => true,
+            'requires_attachment' => false,
+            'deducts_balance' => true,
+            'is_active' => true,
+        ]);
+        foreach ([$staff, $outsider] as $employee) {
+            LeaveRequest::query()->create([
+                'user_id' => $employee->id,
+                'leave_type_id' => $type->id,
+                'starts_at' => '2026-07-01',
+                'ends_at' => '2026-07-01',
+                'requested_days' => 1,
+                'status' => 'approved',
+            ]);
+            $this->attendanceDay($employee, '2026-07-01', 'complete', ['on_time', 'on_time', 'on_time', 'on_time']);
+        }
+
+        $leave = $this->actingAs($staff)->get(route('reports.export.leave', [
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-07-31',
+        ]));
+        $leave->assertOk();
+        $this->assertStringContainsString('Scoped Employee', $leave->streamedContent());
+        $this->assertStringNotContainsString('Hidden Employee', $leave->streamedContent());
+
+        $attendance = $this->actingAs($staff)->get(route('reports.export.attendance', [
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-07-31',
+        ]));
+        $attendance->assertOk();
+        $this->assertStringContainsString('Scoped Employee', $attendance->streamedContent());
+        $this->assertStringNotContainsString('Hidden Employee', $attendance->streamedContent());
+
+        $this->assertDatabaseHas(AuditLog::class, ['actor_id' => $staff->id, 'action' => 'report.leave.exported']);
+        $this->assertDatabaseHas(AuditLog::class, ['actor_id' => $staff->id, 'action' => 'report.attendance.exported']);
+    }
+
+    public function test_custom_role_with_only_self_permission_cannot_open_multi_view(): void
+    {
+        $role = Role::query()->create([
+            'name' => 'Report Reader',
+            'slug' => 'report-reader',
+            'description' => 'Personal report access only.',
+            'is_system' => false,
+        ]);
+        $role->permissions()->attach(Permission::query()->where('key', 'reports.self.view')->firstOrFail());
+        $reader = User::factory()->create(['role' => $role->slug, 'is_active' => true]);
+        User::factory()->create(['role' => 'staff', 'is_active' => true]);
+
+        $this->actingAs($reader)
+            ->get(route('reports.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('scope', 'individual')
+                ->where('summary.employees', 1));
+
+        $this->actingAs($reader)
+            ->get(route('reports.index', ['view' => 'multi']))
+            ->assertForbidden();
+    }
+
+    public function test_legacy_monthly_export_delegates_to_scoped_leave_export(): void
+    {
+        $hr = User::factory()->create(['role' => 'hr admin', 'is_active' => true]);
+
+        $this->actingAs($hr)
+            ->get(route('reports.monthly', ['month' => '2026-07']))
+            ->assertOk()
+            ->assertDownload('leave-report-2026-07-01-to-2026-07-31.csv');
+    }
+
+    private function attendanceDay(User $user, string $date, string $status, array $slotStatuses): AttendanceDay
+    {
+        $day = AttendanceDay::query()->create([
+            'user_id' => $user->id,
+            'work_date' => $date,
+            'timezone' => 'Asia/Phnom_Penh',
+            'schedule_snapshot' => [],
+            'status' => $status,
+            'finalized_at' => now(),
+        ]);
+
+        foreach (array_combine(['morning_in', 'lunch_out', 'lunch_in', 'final_out'], $slotStatuses) as $type => $slotStatus) {
+            AttendanceSlot::query()->create([
+                'attendance_day_id' => $day->id,
+                'type' => $type,
+                'expected_at' => $date.' 08:00:00',
+                'status' => $slotStatus,
+            ]);
+        }
+
+        return $day;
+    }
+}

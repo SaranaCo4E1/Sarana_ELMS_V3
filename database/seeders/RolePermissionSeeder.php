@@ -16,7 +16,9 @@ class RolePermissionSeeder extends Seeder
             ['key' => 'leave_types.manage', 'name' => 'Manage Leave Types', 'group' => 'Leave Types', 'description' => 'Create, edit, and activate/deactivate leave policies.'],
             ['key' => 'holidays.manage', 'name' => 'Manage Public Holidays', 'group' => 'Holidays', 'description' => 'Create, edit, and activate/deactivate public holidays.'],
             ['key' => 'balances.override', 'name' => 'Override Leave Balances', 'group' => 'Balances', 'description' => 'Directly adjust or set leave balance quotas for staff.'],
-            ['key' => 'reports.view', 'name' => 'View Monthly Reports', 'group' => 'Reports', 'description' => 'View and export monthly leave reports.'],
+            ['key' => 'reports.self.view', 'name' => 'View Personal Reports', 'group' => 'Reports', 'description' => 'View and export personal leave and attendance reports.'],
+            ['key' => 'reports.team.view', 'name' => 'View Team Reports', 'group' => 'Reports', 'description' => 'View and export reports for direct reports.'],
+            ['key' => 'reports.view', 'name' => 'View Organization Reports', 'group' => 'Reports', 'description' => 'View and export organization-wide leave and attendance reports.'],
             ['key' => 'audit_logs.view', 'name' => 'View Audit Logs', 'group' => 'Reports', 'description' => 'View and export system audit logs.'],
             ['key' => 'team.view', 'name' => 'View Team Center', 'group' => 'Team', 'description' => 'View team members and their leave activity.'],
             ['key' => 'approvals.manage', 'name' => 'Manage Leave Approvals', 'group' => 'Approvals', 'description' => 'Approve or reject leave requests.'],
@@ -47,13 +49,13 @@ class RolePermissionSeeder extends Seeder
                 'slug' => 'manager',
                 'name' => 'Manager',
                 'description' => 'Views team members and approves leave requests for direct reports.',
-                'permissions' => ['team.view', 'approvals.manage', 'attendance.team.manage'],
+                'permissions' => ['team.view', 'approvals.manage', 'attendance.team.manage', 'reports.self.view', 'reports.team.view'],
             ],
             [
                 'slug' => 'staff',
                 'name' => 'Staff',
                 'description' => 'Standard employee access with no management capabilities.',
-                'permissions' => [],
+                'permissions' => ['reports.self.view'],
             ],
         ]);
 
