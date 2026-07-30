@@ -3,11 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\AiFaq;
-use App\Models\AuditLog;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSite;
+use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
@@ -27,6 +27,8 @@ use InvalidArgumentException;
 class DatabaseSeeder extends Seeder
 {
     private const WORKDAY_MINUTES = 9 * 60;
+
+    private const ATTENDANCE_MISSING_PERCENT = 15;
 
     public function run(AttendanceService $attendance): void
     {
@@ -690,6 +692,7 @@ class DatabaseSeeder extends Seeder
         Carbon $occurredAt,
         string $ipAddress = '10.10.0.24'
     ): void {
+        $request = $this->seededAuditRequest($action);
         $log = AuditLog::query()->create([
             'actor_id' => $actor?->id,
             'action' => $action,
@@ -699,14 +702,32 @@ class DatabaseSeeder extends Seeder
                 ...$metadata,
                 'seeded' => true,
                 'request' => [
-                    'method' => 'SEED',
-                    'route' => 'demo.fixture',
-                    'user_agent' => 'Seeded demo history',
+                    ...$request,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136.0 Safari/537.36',
                 ],
             ],
             'ip_address' => $ipAddress,
         ]);
         $log->forceFill(['created_at' => $occurredAt, 'updated_at' => $occurredAt])->saveQuietly();
+    }
+
+    private function seededAuditRequest(string $action): array
+    {
+        return match ($action) {
+            'leave.request.submitted' => ['method' => 'POST', 'route' => 'leave-requests.store'],
+            'leave.request.approved',
+            'leave.request.rejected' => ['method' => 'PATCH', 'route' => 'approvals.update'],
+            'admin.user.updated' => ['method' => 'PATCH', 'route' => 'admin.users.update'],
+            'admin.leave_type.updated' => ['method' => 'PATCH', 'route' => 'admin.leave-types.update'],
+            'admin.department.updated' => ['method' => 'PATCH', 'route' => 'admin.departments.update'],
+            'admin.role.permissions_updated' => ['method' => 'PATCH', 'route' => 'roles-permissions.roles.permissions.update'],
+            'admin.balance.overridden' => ['method' => 'POST', 'route' => 'admin.balances.override'],
+            'profile.updated' => ['method' => 'PATCH', 'route' => 'profile.update'],
+            'auth.login.succeeded' => ['method' => 'POST', 'route' => 'two-factor.verify'],
+            'auth.login.failed' => ['method' => 'POST', 'route' => 'login.store'],
+            'attendance.event.corrected' => ['method' => 'PATCH', 'route' => 'attendance.events.correct'],
+            default => throw new InvalidArgumentException("No seeded request route is defined for audit action [{$action}]."),
+        };
     }
 
     private function seedAttendanceHistory(
@@ -794,6 +815,18 @@ class DatabaseSeeder extends Seeder
         $morningRoll = $this->seededNumber("{$fixtureKey}:morning-roll", 0, 99);
         $lunchRoll = $this->seededNumber("{$fixtureKey}:lunch-roll", 0, 99);
         $checkoutRoll = $this->seededNumber("{$fixtureKey}:checkout-roll", 0, 99);
+        $lunchMissing = $this->seededNumber("{$fixtureKey}:lunch-missing-roll", 0, 99)
+            < self::ATTENDANCE_MISSING_PERCENT;
+        $missingMoments = [
+            'morning_in' => $this->seededNumber("{$fixtureKey}:morning-missing-roll", 0, 99)
+                < self::ATTENDANCE_MISSING_PERCENT,
+            // Keep the lunch punches as a pair so one omitted event does not make
+            // the attendance classifier treat both milestones as accidentally missing.
+            'lunch_out' => $lunchMissing,
+            'lunch_in' => $lunchMissing,
+            'final_out' => $this->seededNumber("{$fixtureKey}:checkout-missing-roll", 0, 99)
+                < self::ATTENDANCE_MISSING_PERCENT,
+        ];
 
         $moments = [
             'morning_in' => [
@@ -825,6 +858,18 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($moments as $classification => $fixture) {
+            $idempotencyKey = $this->seededUuid("attendance:{$fixtureKey}:{$classification}");
+
+            if ($missingMoments[$classification]) {
+                AttendanceEvent::query()
+                    ->where('user_id', $day->user_id)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->where('source', 'seed')
+                    ->delete();
+
+                continue;
+            }
+
             $effectiveAt = Carbon::parse(
                 $day->work_date->toDateString().' '.$fixture['scheduled'],
                 $day->timezone
@@ -836,7 +881,7 @@ class DatabaseSeeder extends Seeder
             AttendanceEvent::query()->updateOrCreate(
                 [
                     'user_id' => $day->user_id,
-                    'idempotency_key' => $this->seededUuid("attendance:{$fixtureKey}:{$classification}"),
+                    'idempotency_key' => $idempotencyKey,
                 ],
                 [
                     'attendance_day_id' => $day->id,

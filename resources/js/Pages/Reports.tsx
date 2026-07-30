@@ -112,8 +112,7 @@ type Props = {
     trend: TrendRow[];
     heatmap: { date: string; records: number; issues: number }[];
     issue_mix: { name: string; value: number }[];
-    variance: { date: string; type: string; minutes: number; employee?: string | null }[];
-    employees: { user_id: number; name: string; department: string; compliance: number; late: number; early: number; missing: number; records: number }[];
+    employees: { user_id: number; name: string; department: string; compliance: number; complete: number; issues: number; late: number; early: number; missing: number; records: number }[];
     departments: { name: string; compliance: number; late: number; early: number; missing: number }[];
   };
   details: {
@@ -134,13 +133,13 @@ const CHART_COLORS = ['#ea580c', '#f59e0b', '#0f766e', '#2563eb', '#7c3aed', '#d
 export default function Reports(props: Props) {
   const { capabilities, filterOptions, filters, summary, leave, attendance, details } = props;
   const { auth } = usePage<PageProps>().props;
+  const canSeeAttendanceCalendar = capabilities.team || capabilities.organization;
   const [draft, setDraft] = useState<Filters>(filters);
   const [loading, setLoading] = useState(false);
   const [leaveTrendMode, setLeaveTrendMode] = useState<'line' | 'bar'>('line');
   const [compositionMode, setCompositionMode] = useState<'donut' | 'treemap'>('donut');
   const [attendanceMode, setAttendanceMode] = useState<'line' | 'bar'>('line');
   const [issueMode, setIssueMode] = useState<'donut' | 'bar'>('donut');
-  const [varianceMode, setVarianceMode] = useState<'scatter' | 'boxplot'>('scatter');
 
   useEffect(() => setDraft(filters), [filters]);
   useEffect(() => {
@@ -231,6 +230,18 @@ export default function Reports(props: Props) {
 
   const apply = (overrides: Partial<Filters> = {}) => {
     router.get('/reports', queryPayload({ ...draft, ...overrides }), {
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
+    });
+  };
+
+  const selectView = (view: Filters['view']) => {
+    if (view === draft.view) return;
+
+    const next = { ...draft, view, employee_ids: [], page: 1 };
+    setDraft(next);
+    router.get('/reports', queryPayload(next), {
       preserveScroll: true,
       preserveState: true,
       replace: true,
@@ -335,17 +346,17 @@ export default function Reports(props: Props) {
               <div className="flex rounded-lg bg-neutral-100 p-1">
                 <button
                   type="button"
-                  onClick={() => updateDraft({ view: 'individual', employee_ids: [] })}
+                  onClick={() => selectView('individual')}
                   className={viewButton(draft.view === 'individual')}
                 >
                   <UserRound size={14} /> Individual
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateDraft({ view: 'multi', employee_ids: [] })}
+                  onClick={() => selectView('multi')}
                   className={viewButton(draft.view === 'multi')}
                 >
-                  <Users size={14} /> Multi-person
+                  <Users size={14} /> Group Report
                 </button>
               </div>
               <span className="text-xs font-medium text-neutral-400">
@@ -496,12 +507,14 @@ export default function Reports(props: Props) {
                   option={attendanceTrendOption}
                 />
               </ChartWithToggle>
-              <ReportChart
-                title="Attendance calendar"
-                description="Issue-day intensity across the selected calendar period."
-                filename={`attendance-calendar-${periodFilename}`}
-                option={heatmapOption(attendance.heatmap, filters.start_date, filters.end_date)}
-              />
+              {canSeeAttendanceCalendar && (
+                <ReportChart
+                  title="Attendance calendar"
+                  description="Issue-day intensity across the selected calendar period."
+                  filename={`attendance-calendar-${periodFilename}`}
+                  option={heatmapOption(attendance.heatmap, filters.start_date, filters.end_date)}
+                />
+              )}
               <ReportChart
                 title="Leave balance utilization"
                 description={`Used, pending, and available leave balances for ${leave.balance_year}.`}
@@ -576,12 +589,14 @@ export default function Reports(props: Props) {
                     option={attendanceTrendOption}
                   />
                 </ChartWithToggle>
-                <ReportChart
-                  title="Attendance calendar"
-                  description="Issue-day intensity across the selected calendar period."
-                  filename={`attendance-calendar-${periodFilename}`}
-                  option={heatmapOption(attendance.heatmap, filters.start_date, filters.end_date)}
-                />
+                {canSeeAttendanceCalendar && (
+                  <ReportChart
+                    title="Attendance calendar"
+                    description="Issue-day intensity across the selected calendar period."
+                    filename={`attendance-calendar-${periodFilename}`}
+                    option={heatmapOption(attendance.heatmap, filters.start_date, filters.end_date)}
+                  />
+                )}
                 <ChartWithToggle modes={['donut', 'bar']} value={issueMode} onChange={(value) => setIssueMode(value as 'donut' | 'bar')}>
                   <ReportChart
                     title="Attendance issue mix"
@@ -590,14 +605,12 @@ export default function Reports(props: Props) {
                     option={issueOption}
                   />
                 </ChartWithToggle>
-                <ChartWithToggle modes={['scatter', 'boxplot']} value={varianceMode} onChange={(value) => setVarianceMode(value as 'scatter' | 'boxplot')}>
-                  <ReportChart
-                    title="Timing variance"
-                    description="Minutes before or after each expected attendance milestone."
-                    filename={`attendance-variance-${periodFilename}`}
-                    option={varianceOption(attendance.variance, varianceMode)}
-                  />
-                </ChartWithToggle>
+                <ReportChart
+                  title="Complete vs issue days"
+                  description="A simple count of finalized attendance days for each employee."
+                  filename={`attendance-outcomes-${periodFilename}`}
+                  option={attendanceOutcomeOption(attendance.employees.slice(0, 15))}
+                />
                 {filters.view === 'multi' && (
                   <ReportChart
                     title="Employee attendance compliance"
@@ -867,29 +880,18 @@ function heatmapOption(rows: Props['attendance']['heatmap'], start: string, end:
   };
 }
 
-function varianceOption(rows: Props['attendance']['variance'], mode: 'scatter' | 'boxplot') {
-  const types = ['morning_in', 'lunch_out', 'lunch_in', 'final_out'];
-  if (mode === 'boxplot') {
-    return {
-      tooltip: { trigger: 'item' },
-      grid: { left: 55, right: 25, top: 25, bottom: 55 },
-      xAxis: { type: 'category', data: types.map(titleCase), axisLabel: { rotate: 20 } },
-      yAxis: { type: 'value', name: 'Minutes from expected' },
-      series: [{ type: 'boxplot', data: types.map((type) => boxplot(rows.filter((row) => row.type === type).map((row) => row.minutes))) }],
-    };
-  }
+function attendanceOutcomeOption(rows: Props['attendance']['employees']) {
+  const sorted = [...rows].sort((a, b) => b.records - a.records || a.name.localeCompare(b.name));
   return {
-    tooltip: { trigger: 'item', formatter: (params: { seriesName: string; data: [string, number, string?] }) => `${params.data[2] ?? ''}<br/>${formatDate(params.data[0])}: ${params.data[1]} min` },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     legend: { top: 8 },
-    grid: { left: 55, right: 25, top: 55, bottom: 55 },
-    xAxis: { type: 'time' },
-    yAxis: { type: 'value', name: 'Minutes from expected' },
-    series: types.map((type) => ({
-      name: titleCase(type),
-      type: 'scatter',
-      symbolSize: 8,
-      data: rows.filter((row) => row.type === type).map((row) => [row.date, row.minutes, row.employee]),
-    })),
+    grid: { left: 120, right: 30, top: 55, bottom: 35 },
+    xAxis: { type: 'value', name: 'Finalized days', minInterval: 1 },
+    yAxis: { type: 'category', data: sorted.map((row) => row.name), axisLabel: { width: 105, overflow: 'truncate' } },
+    series: [
+      { name: 'Complete', type: 'bar', stack: 'days', color: '#0f766e', data: sorted.map((row) => row.complete) },
+      { name: 'Issues', type: 'bar', stack: 'days', color: '#f97316', data: sorted.map((row) => row.issues) },
+    ],
   };
 }
 
@@ -915,18 +917,6 @@ function departmentOption(rows: Props['attendance']['departments'], radar: boole
       { name: 'Missing', type: 'bar', data: rows.map((row) => row.missing) },
     ],
   };
-}
-
-function boxplot(values: number[]): number[] {
-  if (!values.length) return [0, 0, 0, 0, 0];
-  const sorted = [...values].sort((a, b) => a - b);
-  const quantile = (p: number) => {
-    const position = (sorted.length - 1) * p;
-    const base = Math.floor(position);
-    const remainder = position - base;
-    return sorted[base + 1] !== undefined ? sorted[base] + remainder * (sorted[base + 1] - sorted[base]) : sorted[base];
-  };
-  return [sorted[0], quantile(0.25), quantile(0.5), quantile(0.75), sorted[sorted.length - 1]];
 }
 
 function periodFor(preset: string) {

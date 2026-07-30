@@ -69,6 +69,18 @@ class DatabaseSeederTest extends TestCase
                 ->whereNotNull('metadata->decision_reason')
                 ->exists()
         );
+        $this->assertFalse(
+            AuditLog::query()
+                ->where('metadata->request->route', 'demo.fixture')
+                ->exists()
+        );
+        $this->assertTrue(
+            AuditLog::query()
+                ->where('action', 'leave.request.submitted')
+                ->where('metadata->request->method', 'POST')
+                ->where('metadata->request->route', 'leave-requests.store')
+                ->exists()
+        );
 
         $this->seed();
 
@@ -189,8 +201,19 @@ class DatabaseSeederTest extends TestCase
             $historicalUsers,
             AttendanceDay::query()->whereDate('work_date', '2026-07-28')->count()
         );
-        $this->assertSame(
-            $historicalUsers * 4,
+        $attendanceDays = AttendanceDay::query()
+            ->with('slots')
+            ->whereDate('work_date', '2026-07-28')
+            ->get();
+        $applicableSlots = $attendanceDays->flatMap->slots->where('status', '!=', 'not_applicable');
+        $expectedSlots = $applicableSlots->count();
+        $missingSlots = $applicableSlots->where('status', 'missing')->count();
+        $missingRatio = $missingSlots / $expectedSlots;
+
+        $this->assertGreaterThanOrEqual(0.10, $missingRatio);
+        $this->assertLessThanOrEqual(0.15, $missingRatio);
+        $this->assertLessThan(
+            $expectedSlots,
             AttendanceEvent::query()
                 ->whereHas('day', fn ($query) => $query->whereDate('work_date', '2026-07-28'))
                 ->count()

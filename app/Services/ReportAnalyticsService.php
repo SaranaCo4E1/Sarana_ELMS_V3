@@ -262,7 +262,6 @@ class ReportAnalyticsService
         $issues = ['late' => 0, 'early' => 0, 'missing' => 0, 'flagged' => 0];
         $unresolvedFlags = 0;
         $heatmap = [];
-        $variance = [];
 
         foreach ($days as $day) {
             $bucket = $this->bucketKey(Carbon::parse($day->work_date), $filters);
@@ -277,15 +276,6 @@ class ReportAnalyticsService
             foreach ($day->slots as $slot) {
                 if (array_key_exists($slot->status, $issues)) {
                     $issues[$slot->status]++;
-                }
-                if ($slot->event?->effective_at && $slot->expected_at) {
-                    $minutes = (int) round(($slot->event->effective_at->getTimestamp() - $slot->expected_at->getTimestamp()) / 60);
-                    $variance[] = [
-                        'date' => $date,
-                        'type' => $slot->type,
-                        'minutes' => $minutes,
-                        'employee' => $day->user?->name,
-                    ];
                 }
             }
 
@@ -317,6 +307,8 @@ class ReportAnalyticsService
                 'name' => $records->first()->user?->name ?? 'Unknown',
                 'department' => $records->first()->user?->department?->name ?? 'Unassigned',
                 'compliance' => $denominator > 0 ? round(($complete / $denominator) * 100, 1) : 0,
+                'complete' => $complete,
+                'issues' => $issueDays,
                 'late' => $slots->where('status', 'late')->count(),
                 'early' => $slots->where('status', 'early')->count(),
                 'missing' => $slots->where('status', 'missing')->count(),
@@ -356,7 +348,6 @@ class ReportAnalyticsService
                 'name' => ucfirst($name),
                 'value' => $value,
             ])->values(),
-            'variance' => $variance,
             'employees' => $employeeStats,
             'departments' => $departments,
         ];
