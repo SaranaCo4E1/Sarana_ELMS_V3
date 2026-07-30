@@ -121,6 +121,7 @@ class DashboardController extends Controller
                 'cooldown_until' => $attendanceDay ? $attendance->punchCooldownUntil($attendanceDay)?->toIso8601String() : null,
                 'preview' => $attendanceDay && $nextAttendanceDirection ? $attendance->previewNextPunch($attendanceDay) : null,
                 'status' => $attendanceDay?->status,
+                'day_type' => $attendanceDay?->excuse_type,
                 'schedule' => $attendanceDay ? [
                     'work_start' => $attendanceDay->schedule_snapshot['work_start'],
                     'work_end' => $attendanceDay->schedule_snapshot['work_end'],

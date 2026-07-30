@@ -110,7 +110,7 @@ type Props = {
   };
   attendance: {
     trend: TrendRow[];
-    heatmap: { date: string; records: number; issues: number; excused: number }[];
+    heatmap: { date: string; records: number; issues: number }[];
     issue_mix: { name: string; value: number }[];
     variance: { date: string; type: string; minutes: number; employee?: string | null }[];
     employees: { user_id: number; name: string; department: string; compliance: number; late: number; early: number; missing: number; records: number }[];
@@ -127,7 +127,7 @@ type Props = {
 
 const LEAVE_STATUSES: SelectOption[] = ['approved', 'pending', 'rejected', 'cancelled']
   .map((value) => ({ value, label: titleCase(value) }));
-const ATTENDANCE_STATUSES: SelectOption[] = ['complete', 'issues', 'excused', 'pending']
+const ATTENDANCE_STATUSES: SelectOption[] = ['complete', 'issues']
   .map((value) => ({ value, label: titleCase(value) }));
 const CHART_COLORS = ['#ea580c', '#f59e0b', '#0f766e', '#2563eb', '#7c3aed', '#dc2626'];
 
@@ -571,7 +571,7 @@ export default function Reports(props: Props) {
                 <ChartWithToggle modes={['line', 'bar']} value={attendanceMode} onChange={(value) => setAttendanceMode(value as 'line' | 'bar')}>
                   <ReportChart
                     title="Attendance compliance trend"
-                    description="Complete, issue, excused, and pending attendance records over time."
+                    description="Finalized complete and issue attendance records over time. In-progress and non-working days are excluded."
                     filename={`attendance-trend-${periodFilename}`}
                     option={attendanceTrendOption}
                   />
@@ -653,11 +653,11 @@ function KpiGrid({ summary, section }: { summary: Props['summary']; section: Fil
     ['Employees', summary.employees, <Users size={17} />, 'neutral'],
     ['Approved leave', `${summary.approved_leave_days} days`, <CalendarRange size={17} />, 'orange'],
     ['Pending leave', `${summary.pending_leave_days} days`, <Clock3 size={17} />, 'amber'],
-    ['Available balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
+    ['Available leave balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
     ['Attendnace Compliance', `${summary.attendance_compliance}%`, <Activity size={17} />, 'blue'],
     ['Late / early', `${summary.late} / ${summary.early}`, <Clock3 size={17} />, 'purple'],
     ['Missing punches', summary.missing, <TriangleAlert size={17} />, 'red'],
-    ['Unresolved flags', summary.unresolved_flags, <TriangleAlert size={17} />, 'red'],
+    ['Issues', summary.unresolved_flags, <TriangleAlert size={17} />, 'red'],
   ];
   const visibleLabels = section === 'leave'
     ? ['Employees', 'Approved leave', 'Pending leave', 'Available balance']
@@ -787,18 +787,22 @@ function trendOption(rows: TrendRow[], keys: string[], mode: 'line' | 'bar', yNa
 }
 
 function attendanceTrend(rows: TrendRow[], mode: 'line' | 'bar') {
-  const option = trendOption(rows, ['complete', 'issues', 'excused', 'pending'], mode, 'Records');
-  option.series.push({
-    name: 'Compliance %',
-    type: 'line',
-    smooth: true,
-    yAxisIndex: 1,
-    itemStyle: { color: '#111827' },
-    data: rows.map((row) => row.compliance ?? 0),
-  });
+  const option = trendOption(rows, ['complete', 'issues'], mode, 'Records');
+
   return {
     ...option,
     yAxis: [{ type: 'value', name: 'Records', minInterval: 1 }, { type: 'value', name: '%', min: 0, max: 100 }],
+    series: [
+      ...option.series,
+      {
+        name: 'Compliance %',
+        type: 'line',
+        smooth: true,
+        yAxisIndex: 1,
+        itemStyle: { color: '#111827' },
+        data: rows.map((row) => row.compliance ?? 0),
+      },
+    ],
   };
 }
 

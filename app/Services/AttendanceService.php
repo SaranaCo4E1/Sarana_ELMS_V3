@@ -69,7 +69,7 @@ class AttendanceService
                 'primary_site_id' => $schedule->primary_site_id,
                 'timezone' => $schedule->primarySite->timezone,
                 'schedule_snapshot' => $snapshot,
-                'status' => $excuse ? 'excused' : 'pending',
+                'status' => $excuse ? $this->nonWorkingDayStatus($excuse['type']) : 'pending',
                 'excuse_type' => $excuse['type'] ?? null,
                 'excuse_reference_id' => $excuse['reference_id'] ?? null,
             ]
@@ -85,7 +85,7 @@ class AttendanceService
                 $day->slots()->create([
                     'type' => $type,
                     'expected_at' => $this->localMoment($day, $time),
-                    'status' => $excuse ? 'excused' : 'pending',
+                    'status' => $excuse ? 'not_applicable' : 'pending',
                 ]);
             }
         }
@@ -279,12 +279,13 @@ class AttendanceService
             $day = $this->ensureDay($user, $schedule, $localNow);
             $day = AttendanceDay::query()->lockForUpdate()->findOrFail($day->id);
             if ($day->excuse_type) {
+                $message = $this->nonWorkingDayMessage($day->excuse_type);
                 if ($source === 'self_service') {
                     throw ValidationException::withMessages([
-                        'attendance' => 'Attendance actions are unavailable on an excused day.',
+                        'attendance' => $message,
                     ]);
                 }
-                abort(422, 'Attendance actions are unavailable on an excused day.');
+                abort(422, $message);
             }
 
             if ($existing = AttendanceEvent::query()
@@ -437,7 +438,7 @@ class AttendanceService
         }
         foreach ($day->slots as $slot) {
             if ($day->excuse_type) {
-                $slot->update(['attendance_event_id' => null, 'status' => 'excused']);
+                $slot->update(['attendance_event_id' => null, 'status' => 'not_applicable']);
 
                 continue;
             }
@@ -453,7 +454,7 @@ class AttendanceService
 
         $day->refresh()->load(['slots', 'events']);
         if ($day->excuse_type) {
-            $status = 'excused';
+            $status = $this->nonWorkingDayStatus($day->excuse_type);
         } else {
             $hasIssues = $day->slots->contains(fn ($slot) => in_array($slot->status, ['late', 'early', 'missing'], true))
                 || $day->events->contains(fn ($event) => $event->verification_status === 'flagged' && ! $event->reviewed_at && ! $event->voided_at);
@@ -519,7 +520,7 @@ class AttendanceService
                 $day->update([
                     'excuse_type' => 'approved_leave',
                     'excuse_reference_id' => $leave->id,
-                    'status' => 'excused',
+                    'status' => 'on_leave',
                 ]);
                 $this->recomputeDay($day);
             });
@@ -618,6 +619,26 @@ class AttendanceService
         }
 
         return null;
+    }
+
+    private function nonWorkingDayStatus(string $type): string
+    {
+        return match ($type) {
+            'weekend' => 'weekend',
+            'public_holiday' => 'holiday',
+            'approved_leave' => 'on_leave',
+            default => 'not_applicable',
+        };
+    }
+
+    private function nonWorkingDayMessage(string $type): string
+    {
+        return match ($type) {
+            'weekend' => 'Attendance actions are unavailable on weekends.',
+            'public_holiday' => 'Attendance actions are unavailable on public holidays.',
+            'approved_leave' => 'Attendance actions are unavailable during approved leave.',
+            default => 'Attendance actions are unavailable on this non-working day.',
+        };
     }
 
     private function slotStatus(string $type, Carbon $actual, Carbon $expected, int $grace): string

@@ -26,14 +26,15 @@ type Props = {
     cooldown_until?: string | null;
     preview?: AttendancePunchPreview | null;
     unavailable_reason?: string | null;
-    status?: 'pending' | 'complete' | 'issues' | 'excused' | null;
+    status?: 'pending' | 'complete' | 'issues' | 'on_leave' | 'holiday' | 'weekend' | 'not_applicable' | null;
+    day_type?: 'approved_leave' | 'public_holiday' | 'weekend' | null;
     schedule?: {
       work_start: string;
       work_end: string;
     } | null;
     slots: Array<{
       type: 'morning_in' | 'lunch_out' | 'lunch_in' | 'final_out';
-      status: 'pending' | 'on_time' | 'early' | 'late' | 'missing' | 'excused';
+      status: 'pending' | 'on_time' | 'early' | 'late' | 'missing' | 'not_applicable';
       expected_at?: string | null;
       actual_at?: string | null;
     }>;
@@ -339,19 +340,23 @@ const attendanceSlotLabels: Record<Props['attendanceAction']['slots'][number]['t
 
 function AttendanceTodayCard({ attendance }: { attendance: Props['attendanceAction'] }) {
   const completedSlots = attendance.slots.filter((slot) => slot.actual_at).length;
-  const statusLabel = attendance.status === 'complete'
-    ? 'Complete'
-    : attendance.status === 'issues'
-      ? 'Needs review'
-      : attendance.status === 'excused'
-        ? 'Excused'
-        : 'In progress';
-  const statusClass = attendance.status === 'complete'
-    ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
-    : attendance.status === 'issues'
-      ? 'border-amber-100 bg-amber-50 text-amber-800'
-      : attendance.status === 'excused'
-        ? 'border-blue-100 bg-blue-50 text-blue-700'
+  const nonWorkingLabel = ({
+    approved_leave: 'On leave',
+    public_holiday: 'Public holiday',
+    weekend: 'Weekend',
+  } as Record<string, string>)[attendance.day_type ?? ''];
+  const statusLabel = nonWorkingLabel
+    ?? (attendance.status === 'complete'
+      ? 'Complete'
+      : attendance.status === 'issues'
+        ? 'Needs review'
+        : 'In progress');
+  const statusClass = nonWorkingLabel
+    ? 'border-blue-100 bg-blue-50 text-blue-700'
+    : attendance.status === 'complete'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+      : attendance.status === 'issues'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
         : 'border-neutral-200 bg-neutral-50 text-neutral-600';
 
   return (
@@ -380,14 +385,18 @@ function AttendanceTodayCard({ attendance }: { attendance: Props['attendanceActi
             <p className="flex items-center gap-2">
               <Clock3 size={13} className="text-neutral-400" />
               <span>{attendance.schedule.work_start}–{attendance.schedule.work_end}</span>
-              <span className="text-neutral-300">·</span>
-              <span>{completedSlots} of {attendance.slots.length} punches</span>
+              {!nonWorkingLabel && (
+                <>
+                  <span className="text-neutral-300">·</span>
+                  <span>{completedSlots} of {attendance.slots.length} punches</span>
+                </>
+              )}
             </p>
           )}
         </div>
       </div>
 
-      {attendance.slots.length > 0 && attendance.status !== 'excused' && (
+      {attendance.slots.length > 0 && !nonWorkingLabel && (
         <div className="grid grid-cols-2 gap-px bg-neutral-100">
           {attendance.slots.map((slot) => {
             const hasIssue = ['early', 'late', 'missing'].includes(slot.status);

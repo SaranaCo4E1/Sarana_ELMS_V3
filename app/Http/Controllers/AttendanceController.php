@@ -612,12 +612,13 @@ class AttendanceController extends Controller
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'site_id' => ['nullable', 'exists:attendance_sites,id'],
-            'status' => ['nullable', Rule::in(['pending', 'complete', 'issues', 'excused'])],
+            'status' => ['nullable', Rule::in(['pending', 'complete', 'issues'])],
         ]);
         $actor = $request->user();
         $rows = AttendanceDay::query()
             ->with(['user.department', 'primarySite', 'slots.event', 'events'])
             ->whereBetween('work_date', [$data['start_date'], $data['end_date']])
+            ->whereNull('excuse_type')
             ->when($data['site_id'] ?? null, fn ($query, $siteId) => $query->where('primary_site_id', $siteId))
             ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when(! $actor->hasPermission('attendance.records.manage'), fn ($query) => $query->whereHas('user', fn ($users) => $users->where('manager_id', $actor->id)))

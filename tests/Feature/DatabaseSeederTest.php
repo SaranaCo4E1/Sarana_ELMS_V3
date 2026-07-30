@@ -204,7 +204,7 @@ class DatabaseSeederTest extends TestCase
             ->whereDate('work_date', '2026-07-28')
             ->each(function (AttendanceDay $day): void {
                 $this->assertNotNull($day->finalized_at);
-                $this->assertContains($day->status, ['complete', 'issues', 'excused']);
+                $this->assertContains($day->status, ['complete', 'issues', 'on_leave', 'holiday', 'weekend']);
             });
     }
 

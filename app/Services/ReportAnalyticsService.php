@@ -76,6 +76,8 @@ class ReportAnalyticsService
             ])
             ->whereIn('user_id', $userIds)
             ->whereBetween('work_date', [$filters->startDate, $filters->endDate])
+            ->whereNull('excuse_type')
+            ->whereIn('status', ['complete', 'issues'])
             ->when($filters->attendanceStatuses, fn ($query) => $query->whereIn('status', $filters->attendanceStatuses))
             ->when($filters->siteIds, fn ($query) => $query->whereIn('primary_site_id', $filters->siteIds))
             ->orderBy('work_date')
@@ -256,7 +258,7 @@ class ReportAnalyticsService
 
     private function attendanceAnalytics(Collection $days, ReportFilters $filters): array
     {
-        $buckets = $this->emptyBuckets($filters, ['complete', 'issues', 'excused', 'pending']);
+        $buckets = $this->emptyBuckets($filters, ['complete', 'issues']);
         $issues = ['late' => 0, 'early' => 0, 'missing' => 0, 'flagged' => 0];
         $unresolvedFlags = 0;
         $heatmap = [];
@@ -264,12 +266,13 @@ class ReportAnalyticsService
 
         foreach ($days as $day) {
             $bucket = $this->bucketKey(Carbon::parse($day->work_date), $filters);
-            $buckets[$bucket]['values'][$day->status]++;
+            if (array_key_exists($day->status, $buckets[$bucket]['values'])) {
+                $buckets[$bucket]['values'][$day->status]++;
+            }
             $date = Carbon::parse($day->work_date)->toDateString();
-            $heatmap[$date] ??= ['date' => $date, 'records' => 0, 'issues' => 0, 'excused' => 0];
+            $heatmap[$date] ??= ['date' => $date, 'records' => 0, 'issues' => 0];
             $heatmap[$date]['records']++;
             $heatmap[$date]['issues'] += $day->status === 'issues' ? 1 : 0;
-            $heatmap[$date]['excused'] += $day->status === 'excused' ? 1 : 0;
 
             foreach ($day->slots as $slot) {
                 if (array_key_exists($slot->status, $issues)) {
@@ -342,8 +345,6 @@ class ReportAnalyticsService
                 'compliance' => $denominator > 0 ? round(($complete / $denominator) * 100, 1) : 0,
                 'complete' => $complete,
                 'issues' => $issueDays,
-                'excused' => $days->where('status', 'excused')->count(),
-                'pending' => $days->where('status', 'pending')->count(),
                 'late' => $issues['late'],
                 'early' => $issues['early'],
                 'missing' => $issues['missing'],

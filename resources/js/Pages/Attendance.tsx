@@ -100,9 +100,17 @@ const slotOrder = ['morning_in', 'lunch_out', 'lunch_in', 'final_out'];
 const statusClass = (status: string) => {
   if (['complete', 'on_time', 'clean'].includes(status)) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
   if (['issues', 'late', 'early', 'missing', 'flagged'].includes(status)) return 'bg-amber-50 text-amber-800 border-amber-100';
-  if (status === 'excused') return 'bg-blue-50 text-blue-700 border-blue-100';
+  if (['on_leave', 'holiday', 'weekend'].includes(status)) return 'bg-blue-50 text-blue-700 border-blue-100';
   return 'bg-neutral-50 text-neutral-600 border-neutral-200';
 };
+
+const nonWorkingDayLabel = (day: Day): string | null => ({
+  approved_leave: 'On leave',
+  public_holiday: 'Public holiday',
+  weekend: 'Weekend',
+} as Record<string, string>)[day.excuse_type ?? ''] ?? null;
+
+const isNonWorkingDay = (day: Day): boolean => Boolean(day.excuse_type);
 
 export default function Attendance({ today, nextDirection, punchCooldownUntil, punchPreview, attendanceUnavailableReason, personalRecord, selectedPersonalDate, recentRecords, historyRecords, selectedHistoryMonth, historyUsers, selectedHistoryUser, teamToday, records, selectedDate, recordUsers, sites, schedules, manageableUsers, currentIp, capabilities }: Props) {
   const canManageRecords = capabilities.all_records || capabilities.team_records;
@@ -260,7 +268,7 @@ function Overview({ today, selectedRecord, selectedDate, recentDays, teamToday, 
       only: ['personalRecord', 'selectedPersonalDate'],
     });
   };
-  const currentStatus = dayPresence(today);
+  const currentStatus = nonWorkingDayLabel(today) ?? dayPresence(today);
 
   return (
     <div className="space-y-6">
@@ -292,7 +300,7 @@ function Overview({ today, selectedRecord, selectedDate, recentDays, teamToday, 
                 />
               </span>
             </label>
-            {selectedRecord && <Badge status={selectedRecord.status} />}
+            {selectedRecord && <DayBadge day={selectedRecord} />}
           </div>
         </div>
         {selectedRecord
@@ -486,6 +494,7 @@ function PersonalHistoryCalendar({ records, selectedMonth }: { records: Day[]; s
             const isFuture = date > today;
             const slots = day ? orderedSlots(day.slots) : [];
             const worked = day ? workedDuration(day) : null;
+            const dayLabel = day ? nonWorkingDayLabel(day) ?? day.status.replaceAll('_', ' ') : null;
 
             return (
               <div
@@ -504,16 +513,18 @@ function PersonalHistoryCalendar({ records, selectedMonth }: { records: Day[]; s
                   </span>
                   {day && (
                     <span
-                      title={day.status.replaceAll('_', ' ')}
+                      title={dayLabel ?? undefined}
                       className={`inline-flex h-5 min-w-0 items-center truncate rounded-full border px-1.5 text-[10px] font-semibold capitalize leading-none ${statusClass(day.status)}`}
                     >
-                      {day.status.replaceAll('_', ' ')}
+                      {dayLabel}
                     </span>
                   )}
                 </div>
 
                 {day ? (
-                  <>
+                  isNonWorkingDay(day) ? (
+                    <p className="mt-4 text-xs font-medium text-blue-700">{dayLabel}</p>
+                  ) : <>
                     {/* <p className="mt-1.5 truncate text-[10px] font-medium text-neutral-500" title={day.primary_site?.name ?? 'No branch'}>
                       {day.primary_site?.name ?? 'No branch'}
                     </p> */}
@@ -597,15 +608,17 @@ function PersonalDaysTableBody({ records, emptyBody }: { records: Day[]; emptyBo
                 <div className="mt-0.5 text-xs text-neutral-400">{weekday(day.work_date)}</div>
               </td>
               <td className="px-5 py-4 text-neutral-600">{day.primary_site?.name ?? 'No branch'}</td>
-              {orderedSlots(day.slots).map((slot) => (
-                <td key={slot.id} className="whitespace-nowrap px-4 py-4">
-                  <SlotValue slot={slot} timezone={day.timezone} hideOnTime />
-                </td>
-              ))}
+              {isNonWorkingDay(day)
+                ? slotOrder.map((type) => <td key={type} className="whitespace-nowrap px-4 py-4 text-neutral-300">—</td>)
+                : orderedSlots(day.slots).map((slot) => (
+                  <td key={slot.id} className="whitespace-nowrap px-4 py-4">
+                    <SlotValue slot={slot} timezone={day.timezone} hideOnTime />
+                  </td>
+                ))}
               <td className="whitespace-nowrap px-4 py-4 font-semibold tabular-nums text-neutral-800" title="Lunch break excluded">
-                {workedDuration(day) ?? '—'}
+                {isNonWorkingDay(day) ? '—' : workedDuration(day) ?? '—'}
               </td>
-              <td className="px-5 py-4"><Badge status={day.status} /></td>
+              <td className="px-5 py-4"><DayBadge day={day} /></td>
             </tr>
           ))}
         </tbody>
@@ -616,6 +629,15 @@ function PersonalDaysTableBody({ records, emptyBody }: { records: Day[]; emptyBo
 }
 
 function DayDetails({ day }: { day: Day }) {
+  if (isNonWorkingDay(day)) {
+    return (
+      <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-5">
+        <p className="text-sm font-semibold text-blue-800">{nonWorkingDayLabel(day)}</p>
+        <p className="mt-1 text-sm text-blue-700">No attendance punches are required for this day.</p>
+      </div>
+    );
+  }
+
   const worked = workedDuration(day);
 
   return (
@@ -687,7 +709,9 @@ function TeamToday({ entries }: { entries: TeamTodayEntry[] }) {
                       {[user.employee_code, user.department?.name].filter(Boolean).join(' · ') || 'No employee details'}
                     </div>
                   </td>
-                  {day ? orderedSlots(day.slots).map((slot) => (
+                  {day && isNonWorkingDay(day) ? slotOrder.map((type) => (
+                    <td key={type} className="whitespace-nowrap px-4 py-4 text-neutral-300">—</td>
+                  )) : day ? orderedSlots(day.slots).map((slot) => (
                     <td key={slot.id} className="whitespace-nowrap px-4 py-4">
                       <SlotValue slot={slot} timezone={day.timezone} />
                     </td>
@@ -695,13 +719,13 @@ function TeamToday({ entries }: { entries: TeamTodayEntry[] }) {
                     <td key={type} className="whitespace-nowrap px-4 py-4 text-neutral-300">—</td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-4 font-semibold tabular-nums text-neutral-800">
-                    {day ? workedDurationToNow(day) : '—'}
+                    {day && !isNonWorkingDay(day) ? workedDurationToNow(day) : '—'}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
                     <PresenceBadge day={day} />
                   </td>
                   <td className="px-5 py-4">
-                    {day ? <Badge status={day.status} /> : <span className="text-xs text-neutral-400">No active schedule</span>}
+                    {day ? <DayBadge day={day} /> : <span className="text-xs text-neutral-400">No active schedule</span>}
                   </td>
                 </tr>
               ))}
@@ -714,14 +738,14 @@ function TeamToday({ entries }: { entries: TeamTodayEntry[] }) {
 }
 
 function PresenceBadge({ day }: { day?: Day | null }) {
-  const presence = day ? dayPresence(day) : 'Unavailable';
-  const tone = {
+  const presence = day ? nonWorkingDayLabel(day) ?? dayPresence(day) : 'Unavailable';
+  const tone = ({
     'Checked in': 'border-emerald-100 bg-emerald-50 text-emerald-700',
     'On lunch': 'border-amber-100 bg-amber-50 text-amber-800',
     'Checked out': 'border-neutral-200 bg-neutral-50 text-neutral-600',
     'Not checked in': 'border-rose-100 bg-rose-50 text-rose-700',
     Unavailable: 'border-neutral-200 bg-neutral-50 text-neutral-400',
-  }[presence];
+  } as Record<string, string>)[presence] ?? 'border-blue-100 bg-blue-50 text-blue-700';
 
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${tone}`}>{presence}</span>;
 }
@@ -818,7 +842,6 @@ function Records({ records, canManage, employees, selectedDate }: { records: Day
               <option value="all">All statuses</option>
               <option value="issues">Issues</option>
               <option value="complete">Complete</option>
-              <option value="excused">Excused</option>
               <option value="pending">Pending</option>
             </select>
           </div>
@@ -847,15 +870,17 @@ function Records({ records, canManage, employees, selectedDate }: { records: Day
                     </td>
                     <td className="px-4 py-4 text-neutral-600">{day.user.department?.name ?? '—'}</td>
                     {showBranch && <td className="px-4 py-4 text-neutral-600">{day.primary_site?.name ?? 'No branch'}</td>}
-                    {orderedSlots(day.slots).map((slot) => (
-                      <td key={slot.id} className="whitespace-nowrap px-4 py-4">
-                        <SlotValue slot={slot} timezone={day.timezone} hideOnTime />
-                      </td>
-                    ))}
+                    {isNonWorkingDay(day)
+                      ? slotOrder.map((type) => <td key={type} className="whitespace-nowrap px-4 py-4 text-neutral-300">—</td>)
+                      : orderedSlots(day.slots).map((slot) => (
+                        <td key={slot.id} className="whitespace-nowrap px-4 py-4">
+                          <SlotValue slot={slot} timezone={day.timezone} hideOnTime />
+                        </td>
+                      ))}
                     <td className="whitespace-nowrap px-4 py-4 font-semibold tabular-nums text-neutral-800" title="Lunch break excluded">
-                      {workedDuration(day) ?? '—'}
+                      {isNonWorkingDay(day) ? '—' : workedDuration(day) ?? '—'}
                     </td>
-                    <td className="px-4 py-4"><Badge status={day.status} /></td>
+                    <td className="px-4 py-4"><DayBadge day={day} /></td>
                     <td className="px-5 py-4 text-right">
                       {flaggedEvents.length === 0 ? (
                         <span className="text-xs text-neutral-400">No issues</span>
@@ -1412,6 +1437,12 @@ function useLiveWorkedMinutes(day?: Day | null): number {
 
 function Badge({ status }: { status: string }) {
   return <span className={`inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-semibold leading-none capitalize ${statusClass(status)}`}>{status.replaceAll('_', ' ')}</span>;
+}
+
+function DayBadge({ day }: { day: Day }) {
+  const label = nonWorkingDayLabel(day) ?? day.status.replaceAll('_', ' ');
+
+  return <span className={`inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-semibold leading-none capitalize ${statusClass(day.status)}`}>{label}</span>;
 }
 
 function Empty({ title, body }: { title: string; body: string }) {

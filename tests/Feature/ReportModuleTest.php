@@ -155,6 +155,65 @@ class ReportModuleTest extends TestCase
                 ->where('leave.balance_year', 2026));
     }
 
+    public function test_attendance_reports_only_include_finalized_working_days(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'is_active' => true]);
+        $this->attendanceDay($staff, '2026-07-01', 'complete', ['on_time', 'on_time', 'on_time', 'on_time']);
+        $nonWorkingDay = $this->attendanceDay(
+            $staff,
+            '2026-07-02',
+            'on_leave',
+            ['not_applicable', 'not_applicable', 'not_applicable', 'not_applicable'],
+        );
+        $nonWorkingDay->update(['excuse_type' => 'approved_leave']);
+        $this->attendanceDay(
+            $staff,
+            '2026-07-03',
+            'pending',
+            ['pending', 'pending', 'pending', 'pending'],
+        );
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'section' => 'attendance',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-03',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('attendance.heatmap', 1)
+                ->where('attendance.heatmap.0.date', '2026-07-01')
+                ->where('attendance.trend.0.values.complete', 1)
+                ->missing('attendance.trend.0.values.on_leave'));
+
+        $export = $this->actingAs($staff)->get(route('reports.export.attendance', [
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-07-03',
+        ]));
+        $export->assertOk();
+        $this->assertStringContainsString('2026-07-01', $export->streamedContent());
+        $this->assertStringNotContainsString('2026-07-02', $export->streamedContent());
+        $this->assertStringNotContainsString('2026-07-03', $export->streamedContent());
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'section' => 'attendance',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-03',
+                'attendance_statuses' => ['on_leave'],
+            ]))
+            ->assertSessionHasErrors('attendance_statuses.0');
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'section' => 'attendance',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-03',
+                'attendance_statuses' => ['pending'],
+            ]))
+            ->assertSessionHasErrors('attendance_statuses.0');
+    }
+
     public function test_scoped_csv_exports_exclude_other_employees_and_are_audited(): void
     {
         $staff = User::factory()->create([

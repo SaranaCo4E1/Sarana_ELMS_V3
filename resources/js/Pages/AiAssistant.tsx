@@ -239,10 +239,6 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                 </div>
                 <div>
                   <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">ELMS AI Assistant</h2>
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-500 mt-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
-                    <span>Powered by Gemini 3.5 flash</span>
-                  </div>
                 </div>
               </div>
               <button

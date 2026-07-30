@@ -88,7 +88,7 @@ class ReportRequest extends FormRequest
             'leave_statuses' => ['array'],
             'leave_statuses.*' => ['string', 'distinct', Rule::in(['pending', 'approved', 'rejected', 'cancelled'])],
             'attendance_statuses' => ['array'],
-            'attendance_statuses.*' => ['string', 'distinct', Rule::in(['pending', 'complete', 'issues', 'excused'])],
+            'attendance_statuses.*' => ['string', 'distinct', Rule::in(['complete', 'issues'])],
             'site_ids' => ['array'],
             'site_ids.*' => ['integer', 'distinct'],
             'page' => ['integer', 'min:1'],

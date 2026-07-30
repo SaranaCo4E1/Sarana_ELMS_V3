@@ -357,7 +357,7 @@ class AttendanceModuleTest extends TestCase
         ]);
     }
 
-    public function test_self_service_attendance_is_unavailable_on_an_excused_day(): void
+    public function test_self_service_attendance_is_unavailable_on_a_weekend(): void
     {
         [$user, $site] = $this->attendanceSetup();
         Carbon::setTestNow(Carbon::parse('2026-08-01 08:00:00', $site->timezone)->utc());
@@ -372,7 +372,7 @@ class AttendanceModuleTest extends TestCase
             ])
             ->assertRedirect(route('attendance.index'))
             ->assertSessionHasErrors([
-                'attendance' => 'Attendance actions are unavailable on an excused day.',
+                'attendance' => 'Attendance actions are unavailable on weekends.',
             ]);
 
         $this->assertDatabaseCount('attendance_events', 0);
@@ -383,6 +383,12 @@ class AttendanceModuleTest extends TestCase
                 ->where('nextDirection', null)
                 ->where('attendanceUnavailableReason', 'Attendance is unavailable on weekends')
             );
+        $this->assertDatabaseHas('attendance_days', [
+            'user_id' => $user->id,
+            'status' => 'weekend',
+            'excuse_type' => 'weekend',
+        ]);
+        $this->assertDatabaseHas('attendance_slots', ['status' => 'not_applicable']);
     }
 
     public function test_self_service_action_stops_after_the_final_checkout(): void

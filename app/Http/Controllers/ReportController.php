@@ -127,6 +127,8 @@ class ReportController extends Controller
             ->with(['user.department', 'primarySite', 'slots.event', 'events'])
             ->whereIn('user_id', $resolved['users']->pluck('id'))
             ->whereBetween('work_date', [$filters->startDate, $filters->endDate])
+            ->whereNull('excuse_type')
+            ->whereIn('status', ['complete', 'issues'])
             ->when($filters->attendanceStatuses, fn ($query) => $query->whereIn('status', $filters->attendanceStatuses))
             ->when($filters->siteIds, fn ($query) => $query->whereIn('primary_site_id', $filters->siteIds))
             ->orderByDesc('work_date')
