@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { AlertCircle, CalendarClock, CalendarPlus, CheckCircle2, Clock3, FileText, Search, Users, X, CalendarDays, Eye, Download, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, Clock3, FileText, Search, Users, X, CalendarDays, Eye, Download, Loader2, MapPin } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -26,6 +26,17 @@ type Props = {
     cooldown_until?: string | null;
     preview?: AttendancePunchPreview | null;
     unavailable_reason?: string | null;
+    status?: 'pending' | 'complete' | 'issues' | 'excused' | null;
+    schedule?: {
+      work_start: string;
+      work_end: string;
+    } | null;
+    slots: Array<{
+      type: 'morning_in' | 'lunch_out' | 'lunch_in' | 'final_out';
+      status: 'pending' | 'on_time' | 'early' | 'late' | 'missing' | 'excused';
+      expected_at?: string | null;
+      actual_at?: string | null;
+    }>;
   };
 };
 
@@ -72,35 +83,41 @@ export default function Dashboard({
         {/* Left main section */}
         <section className="space-y-6">
           {/* Metrics section */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-            <Metric
-              icon={<Clock3 size={15} />}
-              label="Pending"
-              value={requestStats.pending}
-              variant="amber"
-              href="/apply-leave"
-            />
-            <Metric
-              icon={<CheckCircle2 size={15} />}
-              label="Approved"
-              value={requestStats.approved}
-              variant="green"
-              href="/apply-leave"
-            />
-            <Metric
-              icon={<AlertCircle size={15} />}
-              label="Rejected"
-              value={requestStats.rejected}
-              variant="rose"
-              href="/apply-leave"
-            />
-            <Metric
-              icon={<CalendarClock size={15} />}
-              label="Scheduled"
-              value={formatDays(requestStats.scheduled_days)}
-              variant="indigo"
-              href="/apply-leave"
-            />
+          <div>
+            <div className="mb-5">
+              <h2 className="text-base font-medium text-neutral-800">Leave Overview</h2>
+              <p className="mt-1.5 text-sm font-normal text-neutral-500">A summary of your leave requests and upcoming approved days</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+              <Metric
+                icon={<Clock3 size={15} />}
+                label="Pending"
+                value={requestStats.pending}
+                variant="amber"
+                href="/apply-leave"
+              />
+              <Metric
+                icon={<CheckCircle2 size={15} />}
+                label="Approved"
+                value={requestStats.approved}
+                variant="green"
+                href="/apply-leave"
+              />
+              <Metric
+                icon={<AlertCircle size={15} />}
+                label="Rejected"
+                value={requestStats.rejected}
+                variant="rose"
+                href="/apply-leave"
+              />
+              <Metric
+                icon={<CalendarClock size={15} />}
+                label="Scheduled"
+                value={formatDays(requestStats.scheduled_days)}
+                variant="indigo"
+                href="/apply-leave"
+              />
+            </div>
           </div>
 
           {/* Leave Balances Cards Grid */}
@@ -255,22 +272,11 @@ export default function Dashboard({
         </section>
 
         {/* Right sidebar */}
-        <aside className="space-y-6 min-w-0">
-          {attendanceAction.direction && (
-            <AttendancePunchButton
-              direction={attendanceAction.direction}
-              branchName={attendanceAction.branch_name}
-              cooldownUntil={attendanceAction.cooldown_until}
-              preview={attendanceAction.preview}
-            />
-          )}
-          <Link
-            className="flex items-center justify-center gap-2.5 rounded-lg bg-orange-600 px-5 py-4 text-sm font-medium text-white hover:bg-orange-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-md shadow-orange-600/10 transition-all duration-200"
-            href="/apply-leave"
-          >
-            <CalendarPlus size={15} /> Apply for leave
-          </Link>
-          
+        <aside className="contents lg:block lg:min-w-0 lg:space-y-6">
+          <div className="order-first">
+            <AttendanceTodayCard attendance={attendanceAction} />
+          </div>
+
           {pendingApprovals.length > 0 && (
             <Link
               href="/approvals"
@@ -321,6 +327,114 @@ export default function Dashboard({
         </aside>
       </div>
     </AppLayout>
+  );
+}
+
+const attendanceSlotLabels: Record<Props['attendanceAction']['slots'][number]['type'], string> = {
+  morning_in: 'Morning in',
+  lunch_out: 'Lunch out',
+  lunch_in: 'Lunch in',
+  final_out: 'Final out',
+};
+
+function AttendanceTodayCard({ attendance }: { attendance: Props['attendanceAction'] }) {
+  const completedSlots = attendance.slots.filter((slot) => slot.actual_at).length;
+  const statusLabel = attendance.status === 'complete'
+    ? 'Complete'
+    : attendance.status === 'issues'
+      ? 'Needs review'
+      : attendance.status === 'excused'
+        ? 'Excused'
+        : 'In progress';
+  const statusClass = attendance.status === 'complete'
+    ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+    : attendance.status === 'issues'
+      ? 'border-amber-100 bg-amber-50 text-amber-800'
+      : attendance.status === 'excused'
+        ? 'border-blue-100 bg-blue-50 text-blue-700'
+        : 'border-neutral-200 bg-neutral-50 text-neutral-600';
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-neutral-200/60 bg-white shadow-premium-sm">
+      <div className="border-b border-neutral-100 bg-gradient-to-br from-orange-50/70 to-white p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-600">Today</p>
+            <h2 className="mt-1 text-base font-medium text-neutral-800">Attendance</h2>
+          </div>
+          {attendance.status && (
+            <span className={`rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}>
+              {statusLabel}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-3 space-y-1.5 text-xs text-neutral-500">
+          {attendance.branch_name && (
+            <p className="flex items-center gap-2">
+              <MapPin size={13} className="text-neutral-400" />
+              <span className="truncate">{attendance.branch_name}</span>
+            </p>
+          )}
+          {attendance.schedule && (
+            <p className="flex items-center gap-2">
+              <Clock3 size={13} className="text-neutral-400" />
+              <span>{attendance.schedule.work_start}–{attendance.schedule.work_end}</span>
+              <span className="text-neutral-300">·</span>
+              <span>{completedSlots} of {attendance.slots.length} punches</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {attendance.slots.length > 0 && attendance.status !== 'excused' && (
+        <div className="grid grid-cols-2 gap-px bg-neutral-100">
+          {attendance.slots.map((slot) => {
+            const hasIssue = ['early', 'late', 'missing'].includes(slot.status);
+            const isComplete = Boolean(slot.actual_at);
+
+            return (
+              <div key={slot.type} className="bg-white px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${
+                    hasIssue ? 'bg-amber-500' : isComplete ? 'bg-emerald-500' : 'bg-neutral-200'
+                  }`} />
+                  <span className="text-[11px] font-medium text-neutral-500">{attendanceSlotLabels[slot.type]}</span>
+                </div>
+                <p className="mt-1.5 text-sm font-semibold text-neutral-800">
+                  {slot.actual_at ?? slot.expected_at ?? '—'}
+                </p>
+                <p className={`mt-0.5 text-[10px] font-medium ${hasIssue ? 'text-amber-700' : 'text-neutral-400'}`}>
+                  {slot.actual_at ? slot.status.replace('_', ' ') : slot.status === 'missing' ? 'Missing' : `Due ${slot.expected_at ?? '—'}`}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="space-y-3 p-4">
+        {attendance.direction ? (
+          <AttendancePunchButton
+            direction={attendance.direction}
+            branchName={attendance.branch_name}
+            cooldownUntil={attendance.cooldown_until}
+            preview={attendance.preview}
+            unavailableReason={attendance.unavailable_reason}
+          />
+        ) : (
+          <p className="rounded-lg bg-neutral-50 px-3 py-2.5 text-center text-xs text-neutral-500">
+            {attendance.unavailable_reason ?? 'Attendance is unavailable right now'}
+          </p>
+        )}
+        <Link
+          href="/attendance"
+          className="flex items-center justify-center gap-1.5 text-xs font-semibold text-neutral-500 transition-colors hover:text-orange-600"
+        >
+          View attendance details <ArrowRight size={13} />
+        </Link>
+      </div>
+    </section>
   );
 }
 

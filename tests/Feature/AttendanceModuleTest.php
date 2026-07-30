@@ -295,6 +295,12 @@ class AttendanceModuleTest extends TestCase
                 ->where('attendanceAction.direction', 'out')
                 ->where('attendanceAction.branch_name', $site->name)
                 ->where('attendanceAction.unavailable_reason', null)
+                ->where('attendanceAction.status', 'pending')
+                ->where('attendanceAction.schedule.work_start', '08:00')
+                ->has('attendanceAction.slots', 4)
+                ->where('attendanceAction.slots.0.type', 'morning_in')
+                ->where('attendanceAction.slots.0.status', 'on_time')
+                ->where('attendanceAction.slots.0.actual_at', '08:00')
             );
     }
 
@@ -416,7 +422,12 @@ class AttendanceModuleTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('attendanceAction.direction', null));
+            ->assertInertia(fn ($page) => $page
+                ->where('attendanceAction.direction', null)
+                ->where('attendanceAction.status', 'complete')
+                ->where('attendanceAction.unavailable_reason', 'No attendance actions remaining today')
+                ->has('attendanceAction.slots', 4)
+            );
     }
 
     public function test_daily_qr_requires_authentication_and_the_current_token(): void

@@ -120,11 +120,28 @@ class DashboardController extends Controller
                 'branch_name' => $attendanceSchedule?->primarySite?->name,
                 'cooldown_until' => $attendanceDay ? $attendance->punchCooldownUntil($attendanceDay)?->toIso8601String() : null,
                 'preview' => $attendanceDay && $nextAttendanceDirection ? $attendance->previewNextPunch($attendanceDay) : null,
+                'status' => $attendanceDay?->status,
+                'schedule' => $attendanceDay ? [
+                    'work_start' => $attendanceDay->schedule_snapshot['work_start'],
+                    'work_end' => $attendanceDay->schedule_snapshot['work_end'],
+                ] : null,
+                'slots' => $attendanceDay?->slots->map(fn ($slot) => [
+                    'type' => $slot->type,
+                    'status' => $slot->status,
+                    'expected_at' => $slot->expected_at
+                        ? $slot->expected_at->setTimezone($attendanceDay->timezone)->format('H:i')
+                        : null,
+                    'actual_at' => $slot->event?->effective_at
+                        ? $slot->event->effective_at->setTimezone($attendanceDay->timezone)->format('H:i')
+                        : null,
+                ])->values() ?? [],
                 'unavailable_reason' => match ($attendanceDay?->excuse_type) {
                     'weekend' => 'Attendance is unavailable on weekends',
                     'public_holiday' => 'Attendance is unavailable on public holidays',
                     'approved_leave' => 'Attendance is unavailable during approved leave',
-                    default => $attendanceSchedule ? null : 'No active attendance schedule',
+                    default => ! $attendanceSchedule
+                        ? 'No active attendance schedule'
+                        : ($nextAttendanceDirection ? null : 'No attendance actions remaining today'),
                 },
             ],
         ]);
