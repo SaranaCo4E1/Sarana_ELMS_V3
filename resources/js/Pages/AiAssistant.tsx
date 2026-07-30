@@ -1,15 +1,13 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Bot, CalendarPlus, Clock3, CornerDownLeft, HelpCircle, Loader2, MessageSquarePlus, Send, Sparkles, Square, UserRound } from 'lucide-react';
+import { ArrowRight, Bot, CalendarPlus, Clock3, CornerDownLeft, Loader2, MessageSquarePlus, Send, Sparkles, Square, UserRound } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import AppLayout from '../Layouts/AppLayout';
 
-type Faq = { id: number; question: string; answer: string };
 type RecentChatMessage = { prompt: string; response: string; created_at: string };
 type RecentChat = { id: string; prompt: string; response: string; created_at: string; messages: RecentChatMessage[] };
 type Props = {
-  faqs: Faq[];
   recentChats: RecentChat[];
 };
 type ChatMessage = {
@@ -29,7 +27,7 @@ type LeaveDraft = {
 const DEFAULT_MAX_CHAT_TURNS = 15;
 const MAX_CHAT_TURNS = parseChatTurnLimit(import.meta.env.VITE_AI_CHAT_THREAD_LIMIT);
 
-export default function AiAssistant({ faqs, recentChats }: Props) {
+export default function AiAssistant({ recentChats }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatHistory, setChatHistory] = useState(recentChats);
   const [conversationId, setConversationId] = useState<string>(() => makeConversationId());
@@ -38,7 +36,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
   const [streamError, setStreamError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
-  const [activeTab, setActiveTab] = useState<'chat' | 'history' | 'faq'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
   const [leaveDraft, setLeaveDraft] = useState<LeaveDraft | null>(null);
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
     'Draft annual leave for May 25 to May 28 for family travel.',
@@ -207,7 +205,7 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
       <div className="flex flex-col h-full px-4 py-4 sm:px-6">
         {/* Mobile Tab Bar (iOS style Segmented Control) */}
         <div className="flex bg-neutral-100/80 p-1 lg:hidden mb-4 rounded-xl border border-neutral-200/40 shadow-premium-sm">
-          {(['chat', 'history', 'faq'] as const).map((tab) => (
+          {(['chat', 'history'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -398,34 +396,6 @@ export default function AiAssistant({ faqs, recentChats }: Props) {
                   <div className="flex h-32 flex-col items-center justify-center text-center">
                     <p className="text-sm text-neutral-400 font-medium">No saved chats yet.</p>
                   </div>
-                )}
-              </div>
-            </section>
-
-            {/* Policy FAQ Panel */}
-            <section className={`border border-neutral-200/50 bg-white p-5 rounded-xl shadow-premium-sm ${
-              activeTab === 'faq' ? 'flex flex-col h-full overflow-y-auto' : 'hidden lg:block'
-            }`}>
-              <div className="mb-4 flex items-center gap-2 border-b border-neutral-200 pb-3">
-                <HelpCircle size={15} className="text-neutral-400" />
-                <h2 className="text-sm font-medium uppercase tracking-wider text-neutral-500">Quick Policy FAQ</h2>
-              </div>
-              <div className="max-h-64 lg:max-h-none lg:overflow-y-auto space-y-3 pr-1">
-                {faqs.slice(0, 5).map((faq) => (
-                  <details key={faq.id} className="group border border-neutral-200/60 p-4 text-sm bg-neutral-50/30 hover:bg-neutral-50/80 transition-all rounded-lg shadow-premium-sm cursor-pointer">
-                    <summary className="flex cursor-pointer items-center justify-between font-medium text-neutral-800 outline-none select-none">
-                      <span className="pr-2">{faq.question}</span>
-                      <span className="ml-2 text-neutral-400 group-open:rotate-180 transition-transform duration-200">
-                        ▼
-                      </span>
-                    </summary>
-                    <p className="mt-3 leading-relaxed text-neutral-500 font-medium group-open:animate-fade-in">
-                      {faq.answer}
-                    </p>
-                  </details>
-                ))}
-                {faqs.length === 0 && (
-                  <p className="text-sm text-neutral-400 font-medium text-center py-4">No active FAQ entries.</p>
                 )}
               </div>
             </section>

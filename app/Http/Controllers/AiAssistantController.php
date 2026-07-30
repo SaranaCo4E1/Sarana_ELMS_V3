@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\AiChatLog;
-use App\Models\AiFaq;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,7 +18,6 @@ class AiAssistantController extends Controller
             ->get(['id', 'conversation_id', 'prompt', 'response', 'created_at']);
 
         return Inertia::render('AiAssistant', [
-            'faqs' => AiFaq::query()->where('is_active', true)->latest()->limit(20)->get(),
             'recentChats' => $chatLogs
                 ->groupBy(fn (AiChatLog $chatLog) => $chatLog->conversation_id ?: 'legacy-'.$chatLog->id)
                 ->map(function ($conversationLogs, string $conversationId) {

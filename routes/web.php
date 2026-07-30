@@ -63,8 +63,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/leave-requests', [LeaveRequestController::class, 'store'])->name('leave-requests.store');
     Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
-    Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
-    Route::post('/ai-help/stream', [AiHelpController::class, 'stream'])->name('ai-help.stream');
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/ai-help', [AiHelpController::class, 'ask'])->name('ai-help.ask');
+        Route::post('/ai-help/stream', [AiHelpController::class, 'stream'])->name('ai-help.stream');
+    });
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/attendance/scan/{qrCode}', [AttendanceController::class, 'showScan'])->name('attendance.scan');
     Route::post('/attendance/scan/{qrCode}', [AttendanceController::class, 'storeScan'])

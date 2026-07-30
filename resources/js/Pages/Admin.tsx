@@ -284,7 +284,7 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
   const [isConfirmClosing, setIsConfirmClosing] = useState(false);
 
   const currentMonthStr = useMemo(() => new Date().toISOString().slice(0, 7), []);
-  const [exportType, setExportType] = useState<'leave' | 'audit'>('leave');
+  const [exportType, setExportType] = useState<'leave' | 'attendance' | 'audit'>('leave');
   const [startMonth, setStartMonth] = useState(currentMonthStr);
   const [endMonth, setEndMonth] = useState(currentMonthStr);
 
@@ -1232,11 +1232,11 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                   {/* Segmented Selector for Export Type */}
                   <div className="space-y-2">
                     <span className="block text-xs font-bold uppercase tracking-wider text-neutral-500">Select Export Type</span>
-                    <div className="flex gap-2 p-1 bg-neutral-100/80 rounded-lg max-w-md border border-neutral-200/40">
+                    <div className="grid max-w-2xl grid-cols-1 gap-2 rounded-lg border border-neutral-200/40 bg-neutral-100/80 p-1 sm:grid-cols-3">
                       <button
                         type="button"
                         onClick={() => setExportType('leave')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold uppercase tracking-wider rounded-md transition-all cursor-pointer ${
+                        className={`flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
                           exportType === 'leave'
                             ? 'bg-white text-orange-700 shadow-premium-sm'
                             : 'text-neutral-500 hover:text-neutral-800'
@@ -1247,8 +1247,20 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                       </button>
                       <button
                         type="button"
+                        onClick={() => setExportType('attendance')}
+                        className={`flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                          exportType === 'attendance'
+                            ? 'bg-white text-orange-700 shadow-premium-sm'
+                            : 'text-neutral-500 hover:text-neutral-800'
+                        }`}
+                      >
+                        <Clock size={14} />
+                        Attendance
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setExportType('audit')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold uppercase tracking-wider rounded-md transition-all cursor-pointer ${
+                        className={`flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
                           exportType === 'audit'
                             ? 'bg-white text-orange-700 shadow-premium-sm'
                             : 'text-neutral-500 hover:text-neutral-800'
@@ -1305,7 +1317,9 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                           href={
                             exportType === 'leave'
                               ? `/reports/monthly?start_month=${startMonth}&end_month=${endMonth}`
-                              : `/reports/audit-logs?start_month=${startMonth}&end_month=${endMonth}`
+                              : exportType === 'attendance'
+                                ? `/reports/export/attendance?start_month=${startMonth}&end_month=${endMonth}`
+                                : `/reports/audit-logs?start_month=${startMonth}&end_month=${endMonth}`
                           }
                           className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-white shadow-md shadow-orange-600/10 hover:bg-orange-700 active:scale-98 transition-all cursor-pointer w-full sm:w-auto text-center"
                         >
@@ -1319,7 +1333,7 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                 {/* Quick Exports Section */}
                 <div className="border-t border-neutral-100 mt-8 pt-6">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-4">Quick Single-Month Exports</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                     <div>
                       <h5 className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-2.5 flex items-center gap-1.5">
                         <ClipboardList size={13} className="text-neutral-400" /> Recent Leave Reports
@@ -1334,6 +1348,27 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                               key={`leave-${month}`}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-600 hover:border-orange-200 hover:text-orange-700 transition-all cursor-pointer"
                               href={`/reports/monthly?month=${month}`}
+                            >
+                              <Download size={12} /> {month}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-2.5 flex items-center gap-1.5">
+                        <Clock size={13} className="text-neutral-400" /> Recent Attendance Reports
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
+                        {[0, 1, 2].map((offset) => {
+                          const date = new Date();
+                          date.setMonth(date.getMonth() - offset);
+                          const month = date.toISOString().slice(0, 7);
+                          return (
+                            <a
+                              key={`attendance-${month}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-600 hover:border-orange-200 hover:text-orange-700 transition-all cursor-pointer"
+                              href={`/reports/export/attendance?month=${month}`}
                             >
                               <Download size={12} /> {month}
                             </a>
@@ -1391,6 +1426,7 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                 <div className="relative pl-10 space-y-5 before:absolute before:inset-y-0 before:left-3 before:w-0.5 before:bg-neutral-100">
                   {paginatedAuditLogs.map((log) => {
                     const { description, iconType } = formatAuditLog(log);
+                    const isRecordedEntry = log.action === 'leave.request.submitted';
                     const initials = log.actor?.name
                       ? log.actor.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
                       : 'SYS';
@@ -1436,22 +1472,24 @@ export default function Admin({ roles, managerEligibleRoleSlugs, departments, le
                               </div>
                               <details className="group mt-2">
                                 <summary className="cursor-pointer select-none text-xs font-semibold text-orange-700 hover:text-orange-800">
-                                  View before and after values
+                                  {isRecordedEntry ? 'View recorded values' : 'View before and after values'}
                                 </summary>
                                 <div className="mt-2 overflow-x-auto rounded-md border border-neutral-200 bg-white">
                                   <table className="min-w-full text-left text-xs">
                                     <thead className="bg-neutral-50 text-[10px] uppercase tracking-wide text-neutral-500">
                                       <tr>
                                         <th className="px-3 py-2 font-bold">Field</th>
-                                        <th className="px-3 py-2 font-bold">Before</th>
-                                        <th className="px-3 py-2 font-bold">After</th>
+                                        {!isRecordedEntry && <th className="px-3 py-2 font-bold">Before</th>}
+                                        <th className="px-3 py-2 font-bold">{isRecordedEntry ? 'Recorded value' : 'After'}</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-neutral-100">
                                       {log.metadata!.changes!.map((change) => (
                                         <tr key={`detail-${change.field}`} className="align-top">
                                           <td className="px-3 py-2 font-semibold text-neutral-700">{change.label || change.field}</td>
-                                          <td className="max-w-xs whitespace-pre-wrap break-words px-3 py-2 text-neutral-500">{formatAuditValue(change.from, change.field, log.metadata)}</td>
+                                          {!isRecordedEntry && (
+                                            <td className="max-w-xs whitespace-pre-wrap break-words px-3 py-2 text-neutral-500">{formatAuditValue(change.from, change.field, log.metadata)}</td>
+                                          )}
                                           <td className="max-w-xs whitespace-pre-wrap break-words px-3 py-2 font-medium text-neutral-800">{formatAuditValue(change.to, change.field, log.metadata)}</td>
                                         </tr>
                                       ))}

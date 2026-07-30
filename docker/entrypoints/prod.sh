@@ -8,6 +8,7 @@ php artisan storage:link --force >/dev/null 2>&1 || true
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
+    php artisan ai:faq-sync
 fi
 
 php artisan config:cache

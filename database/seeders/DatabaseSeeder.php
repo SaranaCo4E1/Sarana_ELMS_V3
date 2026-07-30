@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\AiFaq;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceSite;
 use App\Models\AuditLog;
@@ -469,14 +468,9 @@ class DatabaseSeeder extends Seeder
                 ]);
             });
 
-        AiFaq::query()->firstOrCreate(
-            ['question' => 'When do I need a medical certificate?'],
-            ['answer' => 'A medical certificate is required for sick leave requests configured by HR as attachment-required.']
-        );
-        AiFaq::query()->firstOrCreate(
-            ['question' => 'How are leave days calculated?'],
-            ['answer' => 'The system counts working days between the selected dates, excluding weekends and configured public holidays.']
-        );
+        $this->call([
+            AiFaqSeeder::class,
+        ]);
 
         $defaultAttendanceSite = AttendanceSite::query()->firstOrCreate(
             ['code' => 'PNH'],
@@ -692,10 +686,21 @@ class DatabaseSeeder extends Seeder
         string $ipAddress = '10.10.0.24'
     ): void {
         $request = $this->seededAuditRequest($action);
+        $subjectType = $subject ? $subject::class : 'system';
+        $timestampKey = implode(':', [
+            $action,
+            $actor?->getKey() ?? 'system',
+            $subjectType,
+            $subject?->getKey() ?? 'none',
+            $occurredAt->format('Y-m-d H:i'),
+        ]);
+        $occurredAt = $occurredAt->copy()->setSecond(
+            $this->seededNumber("audit-second:{$timestampKey}", 1, 59)
+        );
         $log = AuditLog::query()->create([
             'actor_id' => $actor?->id,
             'action' => $action,
-            'subject_type' => $subject ? $subject::class : null,
+            'subject_type' => $subject ? $subjectType : null,
             'subject_id' => $subject?->getKey(),
             'metadata' => [
                 ...$metadata,

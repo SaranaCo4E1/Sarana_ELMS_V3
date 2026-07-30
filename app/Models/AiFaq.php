@@ -6,10 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 
 class AiFaq extends Model
 {
-    protected $fillable = ['question', 'answer', 'is_active'];
+    protected $fillable = [
+        'key',
+        'category',
+        'question',
+        'answer',
+        'aliases_en',
+        'aliases_km',
+        'content_hash',
+        'is_active',
+    ];
+
+    protected $hidden = ['embedding'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'aliases_en' => 'array',
+            'aliases_km' => 'array',
+            'embedding' => 'array',
+            'is_active' => 'boolean',
+            'embedded_at' => 'datetime',
+        ];
     }
 }

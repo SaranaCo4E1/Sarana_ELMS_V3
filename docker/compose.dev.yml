@@ -46,8 +46,36 @@ services:
       - ..:/var/www/html
       - npm-modules:/var/www/html/node_modules
 
+  queue:
+    build:
+      context: ..
+      dockerfile: docker/dev/Dockerfile
+    container_name: elms-dev-queue
+    working_dir: /var/www/html
+    entrypoint: ["sh", "-c"]
+    command: "until [ -f vendor/autoload.php ]; do sleep 2; done; exec php artisan queue:work --tries=5 --timeout=60"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: elms_leave
+      DB_USERNAME: postgres
+      DB_PASSWORD: ""
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+    volumes:
+      - ..:/var/www/html
+      - composer-vendor:/var/www/html/vendor
+    depends_on:
+      app:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:0.8.5-pg16
     container_name: elms-dev-postgres
     environment:
       POSTGRES_DB: elms_leave

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiFaq;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceSchedule;
@@ -35,6 +36,15 @@ class DatabaseSeederTest extends TestCase
     public function test_database_seeder_assigns_global_id_based_employee_codes(): void
     {
         $this->seed();
+
+        $this->assertSame(513, AiFaq::query()->whereNotNull('key')->count());
+        $this->assertSame(513, AiFaq::query()->whereNotNull('embedding')->count());
+        $this->assertSame(
+            513,
+            AiFaq::query()
+                ->whereColumn('embedding_content_hash', 'content_hash')
+                ->count(),
+        );
 
         $ceo = User::query()->where('email', 'ceo@niy.ai')->firstOrFail();
 
@@ -83,6 +93,14 @@ class DatabaseSeederTest extends TestCase
                 ->where('metadata->request->route', 'leave-requests.store')
                 ->exists()
         );
+
+        $seededAuditSeconds = AuditLog::query()
+            ->where('metadata->seeded', true)
+            ->pluck('created_at')
+            ->map(fn (Carbon $createdAt): int => $createdAt->second);
+
+        $this->assertNotContains(0, $seededAuditSeconds);
+        $this->assertGreaterThan(1, $seededAuditSeconds->unique()->count());
 
         $this->seed();
 
