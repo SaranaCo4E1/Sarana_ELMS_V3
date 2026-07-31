@@ -32,13 +32,12 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
     .filter((event) => event.status === 'approved' && parseDateKey(toDateKey(event.ends_at)) >= startOfToday())
     .slice(0, 12);
   const upcomingHolidays = holidays
-    .filter((holiday) => {
-      const holidayDate = parseDateKey(toDateKey(holiday.holiday_date));
-      const today = startOfToday();
-      const soonThreshold = addDays(today, 30);
-      return holidayDate >= today && holidayDate <= soonThreshold;
-    })
-    .slice(0, 12);
+    .filter((holiday) => parseDateKey(toDateKey(holiday.holiday_date)) >= startOfToday())
+    .sort((first, second) => (
+      parseDateKey(toDateKey(first.holiday_date)).getTime()
+      - parseDateKey(toDateKey(second.holiday_date)).getTime()
+    ))
+    .slice(0, 3);
   
   const filteredEventsForTimeline = useMemo(() => {
     const nextMonth = addMonths(visibleMonth, 1);
@@ -318,7 +317,7 @@ export default function Calendar({ leaveEvents, holidays, scopeLabel }: Props) {
               ))}
             </Panel>
 
-            <Panel icon={<CalendarClock size={15} />} title="Holidays in the Next 30 Days" empty="No holidays in the next 30 days.">
+            <Panel icon={<CalendarClock size={15} />} title="Upcoming Holidays" empty="No upcoming holidays.">
               {upcomingHolidays.map((holiday) => (
                 <CompactHolidayRow key={holiday.id} holiday={holiday} />
               ))}
