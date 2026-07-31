@@ -13,6 +13,16 @@ import '@fontsource/figtree/600-italic.css';
 import '@fontsource/figtree/700-italic.css';
 import '@fontsource/figtree/800-italic.css';
 import '@fontsource/figtree/900-italic.css';
+import '@fontsource/kantumruy-pro/khmer-300.css';
+import '@fontsource/kantumruy-pro/khmer-400.css';
+import '@fontsource/kantumruy-pro/khmer-500.css';
+import '@fontsource/kantumruy-pro/khmer-600.css';
+import '@fontsource/kantumruy-pro/khmer-700.css';
+import '@fontsource/kantumruy-pro/khmer-300-italic.css';
+import '@fontsource/kantumruy-pro/khmer-400-italic.css';
+import '@fontsource/kantumruy-pro/khmer-500-italic.css';
+import '@fontsource/kantumruy-pro/khmer-600-italic.css';
+import '@fontsource/kantumruy-pro/khmer-700-italic.css';
 
 import { createInertiaApp } from '@inertiajs/react';
 import type { ComponentType } from 'react';

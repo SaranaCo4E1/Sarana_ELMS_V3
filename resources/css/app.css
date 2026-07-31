@@ -3,7 +3,7 @@
 
 
 @theme {
-  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Figtree', 'Kantumruy Pro', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Figtree', var(--font-sans);
 
   --color-orange-50: #fff7ed;
