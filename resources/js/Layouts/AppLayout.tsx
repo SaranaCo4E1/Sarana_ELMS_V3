@@ -245,7 +245,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
         </header>
 
         {/* Content Body */}
-        <main className={fullHeight ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-7xl min-w-0 flex-1 px-3 py-5 xs:px-4 sm:px-8'}>
+        <main className={fullHeight ? 'flex min-h-[calc(100vh-4.0625rem)] flex-1 flex-col' : 'mx-auto w-full max-w-7xl min-w-0 flex-1 px-3 py-5 xs:px-4 sm:px-8'}>
           {children}
         </main>
       </div>

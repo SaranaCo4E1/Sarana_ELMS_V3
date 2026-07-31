@@ -202,7 +202,7 @@ export default function AiAssistant({ recentChats }: Props) {
 
   return (
     <AppLayout fullHeight>
-      <div className="flex flex-col h-full px-4 py-4 sm:px-6">
+      <div className="flex min-h-0 flex-1 flex-col px-4 py-4 sm:px-6">
         {/* Mobile Tab Bar (iOS style Segmented Control) */}
         <div className="flex bg-neutral-100/80 p-1 lg:hidden mb-4 rounded-xl border border-neutral-200/40 shadow-premium-sm">
           {(['chat', 'history'] as const).map((tab) => (
