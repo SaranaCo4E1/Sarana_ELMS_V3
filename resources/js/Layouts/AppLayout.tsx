@@ -72,7 +72,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   return (
     <>
       <Head title={pageTitle} />
-      <div className="relative flex flex-col min-h-screen overflow-hidden bg-[#fafbfa]">
+      <div className="relative min-h-screen bg-[#fafbfa]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -right-40 top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-orange-400/8 to-amber-500/8 blur-3xl" />
         <div className="absolute bottom-0 left-40 h-[24rem] w-[24rem] rounded-full bg-gradient-to-tr from-orange-400/5 to-amber-300/5 blur-3xl" />
@@ -102,23 +102,25 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
       </aside>
 
       {/* Desktop Permanent Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-neutral-200/70 bg-white/90 backdrop-blur-md transition-all duration-300 ease-in-out lg:block ${
+      <aside className={`absolute inset-y-0 left-0 z-30 hidden border-r border-neutral-200/70 bg-white/90 backdrop-blur-md transition-all duration-300 ease-in-out lg:block ${
         collapsed ? 'w-20' : 'w-64'
       }`}>
-        <NavContent isCollapsed={collapsed} />
-        
-        {/* Sidebar Toggle Button */}
-        <button
-          onClick={toggleSidebar}
-          className="absolute -right-3 top-10 z-40 flex h-6.5 w-6.5 items-center justify-center rounded-full border border-neutral-200/85 bg-white text-neutral-500 shadow-premium-sm transition-all hover:bg-neutral-50 hover:text-neutral-800 cursor-pointer hover:scale-105 active:scale-95"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
-        </button>
+        <div className="sticky top-0 h-screen">
+          <NavContent isCollapsed={collapsed} />
+
+          {/* Sidebar Toggle Button */}
+          <button
+            onClick={toggleSidebar}
+            className="absolute -right-3 top-10 z-40 flex h-6.5 w-6.5 items-center justify-center rounded-full border border-neutral-200/85 bg-white text-neutral-500 shadow-premium-sm transition-all hover:bg-neutral-50 hover:text-neutral-800 cursor-pointer hover:scale-105 active:scale-95"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+          </button>
+        </div>
       </aside>
 
       {/* Main Container */}
-      <div className={`relative z-10 flex flex-col h-screen min-w-0 transition-all duration-300 ease-in-out ${
+      <div className={`relative z-10 flex min-h-screen min-w-0 flex-col transition-all duration-300 ease-in-out ${
         collapsed ? 'lg:pl-20' : 'lg:pl-64'
       }`}>
         {/* Top Navbar */}
@@ -243,7 +245,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
         </header>
 
         {/* Content Body */}
-        <main className={fullHeight ? 'flex flex-col flex-1 min-h-0 overflow-hidden' : 'min-w-0 px-3 py-5 xs:px-4 sm:px-8 max-w-7xl mx-auto w-full overflow-y-auto'}>
+        <main className={fullHeight ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-7xl min-w-0 flex-1 px-3 py-5 xs:px-4 sm:px-8'}>
           {children}
         </main>
       </div>
