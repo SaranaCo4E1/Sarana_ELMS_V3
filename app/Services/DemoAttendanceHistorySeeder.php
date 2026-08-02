@@ -29,7 +29,8 @@ class DemoAttendanceHistorySeeder
     public function seed(AttendanceSite $site, array $demoUserIds): void
     {
         $baseline = $this->baseline($site->timezone);
-        $yesterday = now($site->timezone)->startOfDay()->subDay();
+        $seededAt = now($site->timezone);
+        $today = $seededAt->copy()->startOfDay();
 
         User::query()
             ->whereKey($demoUserIds)
@@ -41,7 +42,7 @@ class DemoAttendanceHistorySeeder
             })
             ->update(['hire_date' => $baseline->toDateString()]);
 
-        if ($baseline->gt($yesterday)) {
+        if ($baseline->gt($today)) {
             return;
         }
 
@@ -62,26 +63,26 @@ class DemoAttendanceHistorySeeder
 
         $holidays = PublicHoliday::query()
             ->where('is_active', true)
-            ->whereBetween('holiday_date', [$baseline->toDateString(), $yesterday->toDateString()])
+            ->whereBetween('holiday_date', [$baseline->toDateString(), $today->toDateString()])
             ->get()
             ->keyBy(fn (PublicHoliday $holiday): string => $holiday->holiday_date->toDateString());
         $approvedLeaves = LeaveRequest::query()
             ->whereIn('user_id', $users->modelKeys())
             ->where('status', 'approved')
-            ->whereDate('starts_at', '<=', $yesterday->toDateString())
+            ->whereDate('starts_at', '<=', $today->toDateString())
             ->whereDate('ends_at', '>=', $baseline->toDateString())
             ->orderBy('starts_at')
             ->get()
             ->groupBy('user_id');
 
-        DB::transaction(function () use ($users, $site, $baseline, $yesterday, $holidays, $approvedLeaves): void {
+        DB::transaction(function () use ($users, $site, $baseline, $seededAt, $today, $holidays, $approvedLeaves): void {
             for (
                 $batchStart = $baseline->copy();
-                $batchStart->lte($yesterday);
+                $batchStart->lte($today);
                 $batchStart->addDays(self::BATCH_DAYS)
             ) {
-                $batchEnd = $batchStart->copy()->addDays(self::BATCH_DAYS - 1)->min($yesterday);
-                $this->seedBatch($users, $site, $batchStart, $batchEnd, $holidays, $approvedLeaves);
+                $batchEnd = $batchStart->copy()->addDays(self::BATCH_DAYS - 1)->min($today);
+                $this->seedBatch($users, $site, $batchStart, $batchEnd, $seededAt, $holidays, $approvedLeaves);
             }
         });
     }
@@ -123,6 +124,7 @@ class DemoAttendanceHistorySeeder
         AttendanceSite $site,
         Carbon $batchStart,
         Carbon $batchEnd,
+        Carbon $seededAt,
         Collection $holidays,
         Collection $approvedLeaves
     ): void {
@@ -153,6 +155,7 @@ class DemoAttendanceHistorySeeder
                     $schedule,
                     $site,
                     $date,
+                    $seededAt,
                     $holidays,
                     $approvedLeaves->get($user->id, collect()),
                 ));
@@ -233,6 +236,7 @@ class DemoAttendanceHistorySeeder
         AttendanceSchedule $schedule,
         AttendanceSite $site,
         Carbon $date,
+        Carbon $seededAt,
         Collection $holidays,
         Collection $approvedLeaves
     ): array {
@@ -255,14 +259,14 @@ class DemoAttendanceHistorySeeder
                 ->all(),
         ];
         $excuse = $this->excuse($date, $holidays, $approvedLeaves);
-        $events = $excuse ? [] : $this->events($user, $schedule, $site, $date, $timestamp);
+        $events = $excuse ? [] : $this->events($user, $schedule, $site, $date, $seededAt, $timestamp);
         $eventsByType = collect($events)->keyBy('classification');
         $slots = collect([
             'morning_in' => $snapshot['work_start'],
             'lunch_out' => $snapshot['lunch_start'],
             'lunch_in' => $snapshot['lunch_end'],
             'final_out' => $snapshot['work_end'],
-        ])->map(function (string $time, string $type) use ($dateString, $site, $schedule, $excuse, $eventsByType, $timestamp): array {
+        ])->map(function (string $time, string $type) use ($dateString, $site, $schedule, $date, $seededAt, $excuse, $eventsByType, $timestamp): array {
             $expectedAt = Carbon::parse("{$dateString} {$time}", $site->timezone)->utc();
             $event = $eventsByType->get($type);
 
@@ -271,15 +275,19 @@ class DemoAttendanceHistorySeeder
                 'expected_at' => $expectedAt->toDateTimeString(),
                 'status' => $excuse
                     ? 'not_applicable'
-                    : $this->slotStatus($type, $event['effective_at'] ?? null, $expectedAt, $schedule->grace_minutes),
+                    : ($date->isSameDay($seededAt) && $expectedAt->gt($seededAt)
+                        ? 'pending'
+                        : $this->slotStatus($type, $event['effective_at'] ?? null, $expectedAt, $schedule->grace_minutes)),
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ];
         })->values()->all();
         $status = $excuse['status'] ?? (collect($slots)->contains(
             fn (array $slot): bool => in_array($slot['status'], ['late', 'early', 'missing'], true)
-        ) ? 'issues' : 'complete');
-        $finalizedAt = Carbon::parse("{$dateString} {$snapshot['work_end']}", $site->timezone)->utc();
+        ) ? 'issues' : ($date->isSameDay($seededAt) ? 'pending' : 'complete'));
+        $finalizedAt = $date->isSameDay($seededAt)
+            ? null
+            : Carbon::parse("{$dateString} {$snapshot['work_end']}", $site->timezone)->utc();
 
         return [
             'key' => $user->id.':'.$dateString,
@@ -293,7 +301,7 @@ class DemoAttendanceHistorySeeder
                 'status' => $status,
                 'excuse_type' => $excuse['type'] ?? null,
                 'excuse_reference_id' => $excuse['reference_id'] ?? null,
-                'finalized_at' => $finalizedAt->toDateTimeString(),
+                'finalized_at' => $finalizedAt?->toDateTimeString(),
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ],
@@ -335,6 +343,7 @@ class DemoAttendanceHistorySeeder
         AttendanceSchedule $schedule,
         AttendanceSite $site,
         Carbon $date,
+        Carbon $seededAt,
         string $timestamp
     ): array {
         $fixtureKey = $user->id.':'.$date->toDateString();
@@ -380,9 +389,13 @@ class DemoAttendanceHistorySeeder
                 $site->timezone,
             )
                 ->addMinutes($fixture['minutes'])
-                ->addSeconds($this->seededNumber("{$fixtureKey}:{$classification}:seconds", 0, 50))
-                ->utc()
-                ->toDateTimeString();
+                ->addSeconds($this->seededNumber("{$fixtureKey}:{$classification}:seconds", 0, 50));
+
+            if ($effectiveAt->gt($seededAt)) {
+                continue;
+            }
+
+            $effectiveAt = $effectiveAt->utc()->toDateTimeString();
             $events[] = [
                 'user_id' => $user->id,
                 'attendance_site_id' => $site->id,

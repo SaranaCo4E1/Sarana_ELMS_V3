@@ -206,7 +206,7 @@ class DatabaseSeederTest extends TestCase
         });
     }
 
-    public function test_database_seeder_creates_natural_attendance_from_the_configured_baseline_through_yesterday(): void
+    public function test_database_seeder_creates_natural_attendance_through_the_current_seed_time(): void
     {
         config(['attendance.seed_baseline_date' => '28/07/2026']);
 
@@ -228,9 +228,31 @@ class DatabaseSeederTest extends TestCase
         $this->assertTrue(
             $attendanceDays->every(fn (AttendanceDay $day): bool => $day->slots->where('status', 'missing')->count() <= 1)
         );
-        $this->assertFalse(
-            AttendanceDay::query()->whereDate('work_date', '2026-07-29')->exists(),
-            'The seeder must stop at yesterday.'
+        $todayAttendanceDays = AttendanceDay::query()
+            ->whereDate('work_date', '2026-07-29')
+            ->get();
+        $this->assertCount($historicalUsers, $todayAttendanceDays);
+        $this->assertTrue($todayAttendanceDays->every(
+            fn (AttendanceDay $day): bool => $day->finalized_at === null
+        ));
+        $futureTodaySlots = AttendanceSlot::query()
+            ->whereIn('attendance_day_id', $todayAttendanceDays->pluck('id'))
+            ->where('expected_at', '>', now())
+            ->get();
+        $this->assertNotEmpty($futureTodaySlots);
+        $this->assertTrue($futureTodaySlots->every(
+            fn (AttendanceSlot $slot): bool => $slot->status === 'pending'
+        ));
+
+        $todayEvents = AttendanceEvent::query()
+            ->whereIn('attendance_day_id', $todayAttendanceDays->pluck('id'))
+            ->get();
+        $this->assertTrue(
+            $todayEvents->every(
+                fn (AttendanceEvent $event): bool => $event->occurred_at->lessThanOrEqualTo(now())
+                    && $event->effective_at->lessThanOrEqualTo(now())
+            ),
+            'The seeder must not create attendance events after the seed time.'
         );
 
         AttendanceDay::query()
