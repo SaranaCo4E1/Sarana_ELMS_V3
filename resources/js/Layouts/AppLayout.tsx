@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Clock3, IdCard, LogOut, Menu, MessageSquareText, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
+import { Bell, Bot, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, ClipboardCheck, ClipboardList, Clock3, IdCard, LogOut, Menu, MessageSquareText, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { PageProps } from '../types';
@@ -27,6 +27,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [flashVisible, setFlashVisible] = useState(true);
+  const [flashExiting, setFlashExiting] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -61,6 +62,7 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
   useEffect(() => {
     if (flash.success || flash.error) {
       setFlashVisible(true);
+      setFlashExiting(false);
     }
   }, [flash]);
 
@@ -225,24 +227,53 @@ export default function AppLayout({ children, fullHeight }: { children: React.Re
             </div>
           </div>
 
-          {/* Flash Messages */}
-          {flashVisible && flash.success && (
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50/70 backdrop-blur-xs px-5 py-3.5 text-sm text-orange-800 font-medium shadow-premium-sm animate-fade-in">
-              <span className="font-medium">{flash.success}</span>
-              <button onClick={() => setFlashVisible(false)} className="text-orange-500 hover:text-orange-700">
-                <X size={14} />
-              </button>
-            </div>
-          )}
-          {flashVisible && flash.error && (
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-rose-100 bg-rose-50/70 backdrop-blur-xs px-5 py-3.5 text-sm text-rose-800 font-medium shadow-premium-sm animate-fade-in">
-              <span className="font-medium">{flash.error}</span>
-              <button onClick={() => setFlashVisible(false)} className="text-rose-500 hover:text-rose-700">
-                <X size={14} />
-              </button>
-            </div>
-          )}
         </header>
+
+        {/* Prominent status toast */}
+        {flashVisible && (flash.success || flash.error) && (
+          <div
+            className={`fixed left-3 right-3 top-20 z-[60] flex items-start gap-4 rounded-xl border bg-white px-4 py-4 shadow-premium-lg sm:left-auto sm:right-8 sm:w-[26rem] sm:px-5 ${
+              flashExiting ? 'animate-toast-out' : 'animate-toast-in'
+            } ${
+              flash.success ? 'border-emerald-200' : 'border-rose-200'
+            }`}
+            role={flash.error ? 'alert' : 'status'}
+            aria-live={flash.error ? 'assertive' : 'polite'}
+            onAnimationEnd={() => {
+              if (flashExiting) setFlashVisible(false);
+            }}
+          >
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                flash.success ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+              }`}
+            >
+              {flash.success ? <CheckCircle2 size={23} strokeWidth={2.25} /> : <CircleAlert size={23} strokeWidth={2.25} />}
+            </div>
+
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className={`text-sm font-semibold ${flash.success ? 'text-emerald-950' : 'text-rose-950'}`}>
+                {flash.success ? 'Success' : 'Something went wrong'}
+              </p>
+              <p className={`mt-1 text-sm font-medium leading-5 ${flash.success ? 'text-emerald-800' : 'text-rose-800'}`}>
+                {flash.success ?? flash.error}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFlashExiting(true)}
+              className={`-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                flash.success
+                  ? 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-800'
+                  : 'text-rose-600 hover:bg-rose-50 hover:text-rose-800'
+              }`}
+              aria-label="Dismiss notification"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
 
         {/* Content Body */}
         <main className={fullHeight ? 'flex min-h-[calc(100vh-4.0625rem)] flex-1 flex-col' : 'mx-auto w-full max-w-7xl min-w-0 flex-1 px-3 py-5 xs:px-4 sm:px-8'}>

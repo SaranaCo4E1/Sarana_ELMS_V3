@@ -334,6 +334,31 @@ input:focus, select:focus, textarea:focus {
   animation: fadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(14px); }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-out {
+  animation: toastSlideOut 0.16s ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in,
+  .animate-toast-out {
+    animation-duration: 0.01ms;
+  }
+}
+
 .shadow-premium-sm {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.01), 0 1px 2px -1px rgba(0, 0, 0, 0.01);
 }
