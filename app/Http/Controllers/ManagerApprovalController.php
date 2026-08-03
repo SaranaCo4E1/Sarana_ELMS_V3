@@ -66,9 +66,6 @@ class ManagerApprovalController extends Controller
         abort_unless($actor->isHr() || $leaveRequest->user->manager_id === $actor->id, 403);
         abort_unless($leaveRequest->status === 'pending', 422, 'Only pending requests can be decided.');
         $leaveRequest->loadMissing(['leaveType', 'attachments']);
-        if ($data['decision'] === 'approved' && $leaveRequest->leaveType->requires_attachment && $leaveRequest->attachments->isEmpty()) {
-            return back()->with('error', 'This request cannot be approved until the required attachment is provided.');
-        }
         if ($data['decision'] === 'approved' && $this->overlapsApprovedRequest($leaveRequest)) {
             abort(422, 'This employee already has approved leave on one of these dates.');
         }

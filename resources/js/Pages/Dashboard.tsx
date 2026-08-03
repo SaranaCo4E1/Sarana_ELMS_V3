@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, Clock3, FileText, Search, Users, X, CalendarDays, Eye, Download, Loader2, MapPin } from 'lucide-react';
+import { AlertCircle, ArrowRight, CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, FileText, Search, Users, X, CalendarDays, Eye, Download, Loader2, MapPin } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -120,6 +120,8 @@ export default function Dashboard({
               />
             </div>
           </div>
+
+          {pendingApprovals.length > 0 && <QuickReview requests={pendingApprovals} />}
 
           {/* Leave Balances Cards Grid */}
           <div>
@@ -278,18 +280,6 @@ export default function Dashboard({
             <AttendanceTodayCard attendance={attendanceAction} />
           </div>
 
-          {pendingApprovals.length > 0 && (
-            <Link
-              href="/approvals"
-              className="flex items-center justify-between rounded-lg border border-amber-100 bg-amber-50/50 px-5 py-4 text-sm font-medium text-amber-900 hover:bg-amber-50 hover:border-amber-200/60 shadow-premium-sm transition-all duration-200"
-            >
-              <span>{pendingApprovals.length} {pendingApprovals.length === 1 ? 'request needs' : 'requests need'} review</span>
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-amber-600 px-1.5 text-xs font-semibold text-white shadow-sm">
-                {pendingApprovals.length}
-              </span>
-            </Link>
-          )}
-
           {/* Upcoming Holidays widget */}
           <div className="rounded-xl border border-neutral-200/50 bg-white p-4 sm:p-5 shadow-premium-sm min-w-0">
             <div className="mb-4 flex items-center gap-2.5 text-xs font-medium uppercase tracking-wider text-neutral-500">
@@ -328,6 +318,282 @@ export default function Dashboard({
         </aside>
       </div>
     </AppLayout>
+  );
+}
+
+function QuickReview({ requests }: { requests: LeaveRequest[] }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [comments, setComments] = useState<Record<number, string>>({});
+  const [commentError, setCommentError] = useState<Record<number, string>>({});
+  const [deciding, setDeciding] = useState<Record<number, 'approved' | 'rejected' | null>>({});
+  const [details, setDetails] = useState<LeaveRequest | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<NonNullable<LeaveRequest['attachments']>[number] | null>(null);
+  const index = Math.min(activeIndex, requests.length - 1);
+  const request = requests[index];
+
+  const isPreviewable = (attachment: NonNullable<LeaveRequest['attachments']>[number]) => {
+    const mime = attachment.mime_type?.toLowerCase() ?? '';
+    const extension = attachment.original_name.split('.').pop()?.toLowerCase() ?? '';
+    return mime.startsWith('image/') || mime === 'application/pdf' || ['png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf'].includes(extension);
+  };
+  const isPdf = (attachment: NonNullable<LeaveRequest['attachments']>[number]) =>
+    attachment.mime_type?.toLowerCase() === 'application/pdf' || attachment.original_name.split('.').pop()?.toLowerCase() === 'pdf';
+
+  const decide = (decision: 'approved' | 'rejected') => {
+    const managerComment = comments[request.id] ?? '';
+    if (decision === 'rejected' && !managerComment.trim()) {
+      setCommentError((previous) => ({ ...previous, [request.id]: 'Add a reason before rejecting this request.' }));
+      return;
+    }
+
+    setCommentError((previous) => ({ ...previous, [request.id]: '' }));
+    router.patch(`/approvals/${request.id}`, { decision, manager_comment: managerComment }, {
+      preserveScroll: true,
+      onStart: () => setDeciding((previous) => ({ ...previous, [request.id]: decision })),
+      onSuccess: () => setDetails(null),
+      onFinish: () => setDeciding((previous) => ({ ...previous, [request.id]: null })),
+    });
+  };
+
+  const balance = request.user?.leave_balances?.find((item) => item.leave_type_id === request.leave_type.id);
+  const conflicts = requests.filter((candidate) =>
+    candidate.id !== request.id
+    && request.user?.department?.id !== undefined
+    && candidate.user?.department?.id === request.user.department.id
+    && candidate.starts_at <= request.ends_at
+    && candidate.ends_at >= request.starts_at
+  ).length;
+  const busy = deciding[request.id] != null;
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-neutral-200/50 bg-white shadow-premium-sm">
+      <div className="flex items-center justify-between border-b border-neutral-100/60 bg-neutral-50/20 px-4 py-3.5 sm:px-5">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-600">Quick Review</p>
+          <h2 className="mt-0.5 text-sm font-medium text-neutral-800">
+            {requests.length} {requests.length === 1 ? 'request needs' : 'requests need'} review
+          </h2>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="Previous request"
+            disabled={index === 0}
+            onClick={() => setActiveIndex((current) => Math.max(0, current - 1))}
+            className="rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-500 transition hover:border-orange-200 hover:bg-orange-50/40 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span className="min-w-10 text-center text-[11px] font-semibold text-neutral-500">{index + 1}/{requests.length}</span>
+          <button
+            type="button"
+            aria-label="Next request"
+            disabled={index === requests.length - 1}
+            onClick={() => setActiveIndex((current) => Math.min(requests.length - 1, current + 1))}
+            className="rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-500 transition hover:border-orange-200 hover:bg-orange-50/40 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-5 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-neutral-800">{request.user?.name}</p>
+              <p className="mt-0.5 truncate text-xs text-neutral-400">{request.user?.department?.name ?? 'General'}</p>
+            </div>
+            <LeaveBadge code={request.leave_type.code} name={request.leave_type.name} useShortCode />
+          </div>
+          <p className="mt-3 text-xs font-medium text-neutral-600">
+            {formatShortDate(request.starts_at)} – {formatShortDate(request.ends_at)}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-orange-700">{formatDays(request.requested_days)} working day(s)</p>
+          </div>
+
+          <p className="line-clamp-3 rounded-lg border border-neutral-100 bg-neutral-50/60 p-3 text-sm leading-relaxed text-neutral-600">
+            {request.reason || 'No notes provided.'}
+          </p>
+
+          <div className="flex flex-wrap gap-1.5 text-xs font-semibold">
+            {balance && <span className="rounded border border-neutral-200 bg-white px-2 py-1 text-neutral-600">{formatDays(balance.available_days)} days available</span>}
+            <span className={`rounded border px-2 py-1 ${conflicts ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+              {conflicts ? `${conflicts} team overlap${conflicts === 1 ? '' : 's'}` : 'No team conflicts'}
+            </span>
+            <span className="rounded border border-neutral-200 bg-white px-2 py-1 text-neutral-600">
+              {(request.attachments ?? []).length} attachment{(request.attachments ?? []).length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setDetails(request)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:border-orange-200 hover:text-orange-700"
+          >
+            <Eye size={13} /> View full details
+          </button>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-xl border border-neutral-200/70 bg-neutral-50/30 p-4">
+          <div>
+            <label htmlFor={`quick-review-comment-${request.id}`} className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+              Decision comment <span className="normal-case tracking-normal text-neutral-400">(required to reject)</span>
+            </label>
+            <textarea
+              id={`quick-review-comment-${request.id}`}
+              rows={3}
+              maxLength={1000}
+              value={comments[request.id] ?? ''}
+              onChange={(event) => {
+                setComments((previous) => ({ ...previous, [request.id]: event.target.value }));
+                setCommentError((previous) => ({ ...previous, [request.id]: '' }));
+              }}
+              placeholder="Add a note..."
+              className="mt-1.5 w-full resize-none rounded-lg border border-neutral-200 bg-white p-2.5 text-xs text-neutral-700 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5"
+            />
+            {commentError[request.id] && <p className="mt-1 text-[11px] font-medium text-rose-600">{commentError[request.id]}</p>}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => decide('approved')}
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-orange-600 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400"
+          >
+            {deciding[request.id] === 'approved' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Approve
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => decide('rejected')}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 py-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {deciding[request.id] === 'rejected' ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Reject
+          </button>
+          </div>
+          <Link href="/approvals" className="mt-3 flex items-center justify-center gap-1 text-[11px] font-semibold text-neutral-400 transition hover:text-orange-600">
+            Open approval page <ArrowRight size={12} />
+          </Link>
+        </div>
+      </div>
+
+      {details && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/60 p-4 backdrop-blur-sm" onClick={() => setDetails(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="quick-review-details-title" onClick={(event) => event.stopPropagation()} className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-premium-lg">
+            <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4 sm:px-6">
+              <div>
+                <h3 id="quick-review-details-title" className="text-base font-semibold text-neutral-800">Leave Request Details</h3>
+                <p className="mt-1 text-xs text-neutral-500">Everything needed to make this decision.</p>
+              </div>
+              <button type="button" aria-label="Close details" onClick={() => setDetails(null)} className="rounded-lg border border-neutral-200 p-1.5 text-neutral-400 hover:bg-neutral-50"><X size={18} /></button>
+            </div>
+            <div className="flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Detail label="Employee">
+                  <p>{details.user?.name}</p>
+                  {details.user?.email && <p className="mt-0.5 text-xs font-normal text-neutral-500">{details.user.email}</p>}
+                  <p className="mt-0.5 text-xs font-normal text-neutral-500">{details.user?.department?.name ?? 'General'}</p>
+                </Detail>
+                <Detail label="Submitted">
+                  <p>{details.submitted_at ? new Date(details.submitted_at).toLocaleString() : 'Not recorded'}</p>
+                </Detail>
+                <Detail label="Leave type"><LeaveBadge code={details.leave_type.code} name={details.leave_type.name} /></Detail>
+                <Detail label="Duration">
+                  <p>{formatShortDate(details.starts_at)} – {formatShortDate(details.ends_at)}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-orange-700">{formatDays(details.requested_days)} working day(s)</p>
+                </Detail>
+              </div>
+              <Detail label="Reason / handover notes">
+                <p className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-3 text-sm font-normal leading-relaxed text-neutral-600">{details.reason || 'No notes provided.'}</p>
+              </Detail>
+              <Detail label="Decision context">
+                <div className="flex flex-wrap gap-2 text-xs font-normal text-neutral-600">
+                  {balance && <span className="rounded-md border border-neutral-200 px-2.5 py-1.5">Balance: {formatDays(balance.available_days)} days available</span>}
+                  <span className={`rounded-md border px-2.5 py-1.5 ${conflicts ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{conflicts ? `${conflicts} overlapping team request${conflicts === 1 ? '' : 's'}` : 'No pending team conflicts'}</span>
+                </div>
+              </Detail>
+              <Detail label="Attachments">
+                <div className="flex flex-wrap gap-2">
+                  {(details.attachments ?? []).map((attachment) => isPreviewable(attachment) ? (
+                    <button type="button" key={attachment.id} onClick={() => setPreviewAttachment(attachment)} className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-orange-200 hover:text-orange-700"><FileText size={13} /> <span className="max-w-56 truncate">{attachment.original_name}</span> <Eye size={12} /></button>
+                  ) : (
+                    <a key={attachment.id} href={`/approvals/attachments/${attachment.id}/download`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600"><FileText size={13} /> <span className="max-w-56 truncate">{attachment.original_name}</span> <Download size={12} /></a>
+                  ))}
+                  {(details.attachments ?? []).length === 0 && <p className="text-sm font-normal text-neutral-400">No attachments provided.</p>}
+                </div>
+              </Detail>
+              <Detail label="Decision comment">
+                <textarea
+                  id={`quick-review-modal-comment-${request.id}`}
+                  rows={3}
+                  maxLength={1000}
+                  value={comments[request.id] ?? ''}
+                  onChange={(event) => {
+                    setComments((previous) => ({ ...previous, [request.id]: event.target.value }));
+                    setCommentError((previous) => ({ ...previous, [request.id]: '' }));
+                  }}
+                  placeholder="Optional for approval; required for rejection"
+                  className="w-full resize-none rounded-lg border border-neutral-200 p-3 text-sm font-normal text-neutral-700 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5"
+                />
+                {commentError[request.id] && <p className="mt-1.5 text-xs font-medium text-rose-600">{commentError[request.id]}</p>}
+              </Detail>
+            </div>
+            <div className="flex flex-col-reverse gap-2 border-t border-neutral-100 bg-neutral-50/30 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <button type="button" onClick={() => setDetails(null)} className="rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50">Close</button>
+              <div className="grid grid-cols-2 gap-2 sm:flex">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => decide('rejected')}
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-5 py-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deciding[request.id] === 'rejected' ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Reject
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => decide('approved')}
+                  className="flex items-center justify-center gap-1.5 rounded-lg bg-orange-600 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400"
+                >
+                  {deciding[request.id] === 'approved' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Approve
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {previewAttachment && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-900/70 p-4 backdrop-blur-sm" onClick={() => setPreviewAttachment(null)}>
+          <div onClick={(event) => event.stopPropagation()} className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-premium-lg">
+            <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3.5">
+              <p className="truncate text-sm font-semibold text-neutral-800">{previewAttachment.original_name}</p>
+              <div className="flex items-center gap-2">
+                <a href={`/approvals/attachments/${previewAttachment.id}/download`} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-600">Download</a>
+                <button type="button" aria-label="Close attachment preview" onClick={() => setPreviewAttachment(null)} className="p-1.5 text-neutral-400"><X size={18} /></button>
+              </div>
+            </div>
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-neutral-50 p-4">
+              {isPdf(previewAttachment) ? <iframe src={`/approvals/attachments/${previewAttachment.id}/preview`} title={previewAttachment.original_name} className="h-[75vh] w-full rounded-lg border bg-white" /> : <img src={`/approvals/attachments/${previewAttachment.id}/preview`} alt={previewAttachment.original_name} className="max-h-[75vh] max-w-full object-contain" />}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </section>
+  );
+}
+
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">{label}</p>
+      <div className="text-sm font-medium text-neutral-800">{children}</div>
+    </div>
   );
 }
 

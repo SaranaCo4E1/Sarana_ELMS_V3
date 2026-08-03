@@ -39,7 +39,12 @@ class DashboardController extends Controller
 
         $pendingApprovals = $user->isManager()
             ? LeaveRequest::query()
-                ->with(['user.department', 'leaveType', 'attachments'])
+                ->with([
+                    'user.department',
+                    'user.leaveBalances' => fn ($query) => $query->where('year', now()->year),
+                    'leaveType',
+                    'attachments',
+                ])
                 ->where('status', 'pending')
                 ->where('user_id', '!=', $user->id)
                 ->whereHas('user', fn ($query) => $user->isHr() ? $query : $query->where('manager_id', $user->id))

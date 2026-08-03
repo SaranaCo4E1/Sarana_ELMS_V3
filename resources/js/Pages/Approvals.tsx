@@ -273,8 +273,7 @@ export default function Approvals({ requests, recentDecisions, approvalStats }: 
                   </div>
                   <div className="mt-4.5 grid grid-cols-2 gap-3">
                     <button
-                      disabled={(decidingIds[request.id] !== undefined && decidingIds[request.id] !== null) || hasMissingRequiredAttachment(request)}
-                      title={hasMissingRequiredAttachment(request) ? 'A required attachment is missing' : undefined}
+                      disabled={decidingIds[request.id] !== undefined && decidingIds[request.id] !== null}
                       className="flex items-center justify-center gap-2 rounded-lg bg-orange-600 disabled:bg-neutral-200 disabled:text-neutral-400 py-2.5 text-sm font-semibold text-white transition-all hover:bg-orange-700 active:scale-98 cursor-pointer shadow-premium-sm"
                       onClick={() => decide(request.id, 'approved')}
                     >
@@ -803,7 +802,6 @@ function DecisionContext({ request, requests }: { request: LeaveRequest; request
     && candidate.starts_at <= request.ends_at
     && candidate.ends_at >= request.starts_at
   );
-  const missingRequiredAttachment = hasMissingRequiredAttachment(request);
   const insufficientBalance = request.leave_type.deducts_balance
     && balance !== undefined
     && Number(balance.available_days) < 0;
@@ -820,11 +818,6 @@ function DecisionContext({ request, requests }: { request: LeaveRequest; request
           ? `${sameDepartmentConflicts.length} overlapping department request${sameDepartmentConflicts.length === 1 ? '' : 's'}`
           : 'No pending department conflicts'}
       </span>
-      {/* {missingRequiredAttachment && (
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-rose-700">
-          <AlertTriangle size={12} /> Required attachment missing
-        </span>
-      )} */}
       {insufficientBalance && (
         <span className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-rose-700">
           <AlertTriangle size={12} /> Balance is overcommitted
@@ -832,8 +825,4 @@ function DecisionContext({ request, requests }: { request: LeaveRequest; request
       )}
     </div>
   );
-}
-
-function hasMissingRequiredAttachment(request: LeaveRequest) {
-  return request.leave_type.requires_attachment && (request.attachments ?? []).length === 0;
 }

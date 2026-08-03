@@ -7,6 +7,7 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -92,6 +93,46 @@ class LeaveRequestOrderingTest extends TestCase
         $this->assertDatabaseHas(LeaveRequest::class, [
             'id' => $leaveRequest->id,
             'status' => 'pending',
+        ]);
+    }
+
+    public function test_request_can_be_approved_without_a_required_attachment(): void
+    {
+        Notification::fake();
+
+        $manager = User::factory()->create(['role' => 'manager']);
+        $employee = User::factory()->create([
+            'role' => 'staff',
+            'manager_id' => $manager->id,
+        ]);
+        $leaveType = LeaveType::query()->create([
+            'name' => 'Sick Leave',
+            'code' => 'SL',
+            'requires_attachment' => true,
+        ]);
+        $leaveRequest = $this->createLeaveRequest($employee, $leaveType, [
+            'status' => 'pending',
+            'created_at' => now(),
+        ]);
+        LeaveBalance::query()->create([
+            'user_id' => $employee->id,
+            'leave_type_id' => $leaveType->id,
+            'year' => now()->year,
+            'allowance_days' => 10,
+            'pending_days' => 1,
+        ]);
+
+        $this->actingAs($manager)
+            ->patch(route('approvals.update', $leaveRequest), [
+                'decision' => 'approved',
+                'manager_comment' => '',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas(LeaveRequest::class, [
+            'id' => $leaveRequest->id,
+            'status' => 'approved',
+            'approver_id' => $manager->id,
         ]);
     }
 
