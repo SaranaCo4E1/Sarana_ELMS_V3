@@ -62,7 +62,12 @@ class RolePermissionSeeder extends Seeder
         foreach ($roles as $data) {
             $role = Role::query()->updateOrCreate(
                 ['slug' => $data['slug']],
-                ['name' => $data['name'], 'description' => $data['description'], 'is_system' => true]
+                [
+                    'name' => $data['name'],
+                    'description' => $data['description'],
+                    'is_system' => true,
+                    'permission' => $data['permissions'],
+                ]
             );
 
             $role->permissions()->sync(

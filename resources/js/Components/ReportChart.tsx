@@ -13,6 +13,7 @@ import {
 } from 'echarts/components';
 import { init, use, type EChartsCoreOption } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
+import type { ECElementEvent } from 'echarts';
 import { Download } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
@@ -44,9 +45,10 @@ type Props = {
   filename: string;
   option: EChartsCoreOption;
   height?: number;
+  onDataClick?: (data: { name?: string; value?: number; user_id?: number }) => void;
 };
 
-export default function ReportChart({ title, description, filename, option, height = 340 }: Props) {
+export default function ReportChart({ title, description, filename, option, height = 340, onDataClick }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const chart = useRef<ReturnType<typeof init> | null>(null);
 
@@ -82,6 +84,20 @@ export default function ReportChart({ title, description, filename, option, heig
       ...option,
     }, true);
   }, [description, option]);
+
+  useEffect(() => {
+    const instance = chart.current;
+    if (!instance || !onDataClick) return;
+
+    const handleClick = (params: ECElementEvent) => {
+      const raw = params.data;
+      const data = raw && typeof raw === 'object' ? raw as { value?: number; user_id?: number } : { value: Number(raw) };
+      onDataClick({ name: params.name, ...data });
+    };
+    instance.on('click', handleClick);
+
+    return () => instance.off('click', handleClick);
+  }, [onDataClick]);
 
   const download = async () => {
     if (!chart.current) return;

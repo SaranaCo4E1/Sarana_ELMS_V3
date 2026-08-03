@@ -64,6 +64,10 @@ class ReportRequest extends FormRequest
             'per_page' => $this->integer('per_page', 10),
             'sort' => $this->input('sort', 'name'),
             'direction' => $this->input('direction', 'asc'),
+            'leave_sort' => $this->input('leave_sort', 'starts_at'),
+            'leave_direction' => $this->input('leave_direction', 'desc'),
+            'attendance_sort' => $this->input('attendance_sort', 'date'),
+            'attendance_direction' => $this->input('attendance_direction', 'desc'),
         ]);
     }
 
@@ -95,6 +99,10 @@ class ReportRequest extends FormRequest
             'per_page' => ['integer', Rule::in([10, 25, 50])],
             'sort' => ['string', Rule::in(['name', 'leave_days', 'available_balance', 'attendance_compliance', 'late', 'missing'])],
             'direction' => ['string', Rule::in(['asc', 'desc'])],
+            'leave_sort' => ['string', Rule::in(['name', 'leave_type', 'starts_at', 'ends_at', 'days_in_period', 'status', 'approver'])],
+            'leave_direction' => ['string', Rule::in(['asc', 'desc'])],
+            'attendance_sort' => ['string', Rule::in(['name', 'date', 'site', 'issue_count', 'unresolved_flags'])],
+            'attendance_direction' => ['string', Rule::in(['asc', 'desc'])],
             'month' => ['nullable', 'date_format:Y-m'],
             'start_month' => ['nullable', 'date_format:Y-m'],
             'end_month' => ['nullable', 'date_format:Y-m'],
@@ -123,6 +131,10 @@ class ReportRequest extends FormRequest
             perPage: (int) $data['per_page'],
             sort: $data['sort'],
             direction: $data['direction'],
+            leaveSort: $data['leave_sort'],
+            leaveDirection: $data['leave_direction'],
+            attendanceSort: $data['attendance_sort'],
+            attendanceDirection: $data['attendance_direction'],
         );
     }
 

@@ -1,19 +1,23 @@
 import { router, usePage } from '@inertiajs/react';
 import {
   Activity,
+  ArrowRight,
   BarChart3,
   Building2,
   CalendarRange,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   Download,
   Filter,
+  Lightbulb,
+  MapPin,
   RefreshCw,
   TriangleAlert,
   UserRound,
   Users,
 } from 'lucide-react';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';
 import AppLayout from '../Layouts/AppLayout';
@@ -38,6 +42,42 @@ type TrendRow = {
   label: string;
   values: Record<string, number>;
   compliance?: number;
+};
+type Paged<T> = {
+  data: T[];
+  page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+};
+type LeaveRequestRow = {
+  id: number;
+  user_id: number;
+  name: string;
+  employee_code?: string | null;
+  department: string;
+  leave_type: string;
+  starts_at: string;
+  ends_at: string;
+  requested_days: number;
+  days_in_period: number;
+  status: string;
+  reason?: string | null;
+  approver?: string | null;
+  manager_comment?: string | null;
+};
+type AttendanceIssueDay = {
+  id: number;
+  user_id: number;
+  name: string;
+  department: string;
+  date: string;
+  site: string;
+  issues: string[];
+  issue_count: number;
+  flagged_events: number;
+  unresolved_flags: number;
+  slots: { type: string; expected_at?: string | null; actual_at?: string | null; status: string }[];
 };
 type DetailRow = {
   id: number;
@@ -71,6 +111,10 @@ type Filters = {
   per_page: number;
   sort: string;
   direction: 'asc' | 'desc';
+  leave_sort: string;
+  leave_direction: 'asc' | 'desc';
+  attendance_sort: string;
+  attendance_direction: 'asc' | 'desc';
 };
 type Props = {
   capabilities: {
@@ -107,8 +151,14 @@ type Props = {
     types: { name: string; count: number; days: number }[];
     balances: { name: string; entitlement: number; used: number; pending: number; available: number; utilization: number }[];
     employee_balances: { user_id: number; name: string; department: string; used: number; available: number; utilization: number }[];
-    rankings: { user_id: number; name: string; department: string; days: number }[];
+    rankings: { user_id: number; name: string; department: string; days: number; requests: number; primary_type?: string | null }[];
     concurrency_distribution: { name: string; days: number }[];
+    requests: Paged<LeaveRequestRow>;
+    insights: {
+      top_employee?: { user_id: number; name: string; department: string; days: number; requests: number; primary_type?: string | null } | null;
+      top_type?: { name: string; days: number } | null;
+      peak_absence?: { date: string; employees: number } | null;
+    };
   };
   attendance: {
     trend: TrendRow[];
@@ -116,6 +166,12 @@ type Props = {
     issue_mix: { name: string; value: number }[];
     employees: { user_id: number; name: string; department: string; compliance: number; complete: number; issues: number; late: number; early: number; missing: number; records: number }[];
     departments: { name: string; compliance: number; late: number; early: number; missing: number }[];
+    issue_days: Paged<AttendanceIssueDay>;
+    insights: {
+      top_issue_employee?: { user_id: number; name: string; department: string; compliance: number; issues: number; late: number; early: number; missing: number } | null;
+      peak_issue_date?: { date: string; records: number; issues: number } | null;
+      lowest_department?: { name: string; compliance: number; late: number; early: number; missing: number } | null;
+    };
   };
   details: {
     data: DetailRow[];
@@ -139,7 +195,7 @@ const PERIOD_PRESETS: [PeriodPreset, string][] = [
 ];
 
 export default function Reports(props: Props) {
-  const { capabilities, filterOptions, filters, summary, leave, attendance, details } = props;
+  const { capabilities, filterOptions, filters, summary, leave, attendance } = props;
   const { auth } = usePage<PageProps>().props;
   const canSeeAttendanceCalendar = capabilities.team || capabilities.organization;
   const [draft, setDraft] = useState<Filters>(filters);
@@ -295,6 +351,10 @@ export default function Reports(props: Props) {
       page: 1,
       sort: 'name',
       direction: 'asc',
+      leave_sort: 'starts_at',
+      leave_direction: 'desc',
+      attendance_sort: 'date',
+      attendance_direction: 'desc',
     };
     setDraft(clean);
     setSelectedPeriodPreset('30');
@@ -319,6 +379,10 @@ export default function Reports(props: Props) {
   const exportUrl = (type: 'leave' | 'attendance') => {
     const params = queryString(filters);
     return `/reports/export/${type}?${params}`;
+  };
+
+  const focusEmployee = (userId: number) => {
+    apply({ employee_ids: [userId], page: 1 });
   };
 
   return (
@@ -516,6 +580,13 @@ export default function Reports(props: Props) {
 
         <KpiGrid summary={summary} section={filters.section} />
 
+        <Findings
+          section={filters.section}
+          leave={leave}
+          attendance={attendance}
+          onFocus={focusEmployee}
+        />
+
         <Suspense fallback={<ChartSkeleton />}>
           {filters.section === 'overview' && (
             <div className="grid gap-5 xl:grid-cols-2">
@@ -592,9 +663,10 @@ export default function Reports(props: Props) {
                 {filters.view === 'multi' && (
                   <ReportChart
                     title="Approved leave ranking"
-                    description="Named employee comparison, limited to the current authorized scope."
+                    description="Named employee comparison, limited to the current authorized scope. Select a bar to focus the report on that employee."
                     filename={`leave-ranking-${periodFilename}`}
-                    option={rankingOption(leave.rankings.slice(0, 15).map((row) => ({ name: row.name, value: row.days })), 'Working days')}
+                    option={rankingOption(leave.rankings.slice(0, 15).map((row) => ({ name: row.name, value: row.days, user_id: row.user_id })), 'Working days')}
+                    onDataClick={(data) => data.user_id && focusEmployee(data.user_id)}
                   />
                 )}
                 {filters.view === 'multi' && (
@@ -606,7 +678,7 @@ export default function Reports(props: Props) {
                   />
                 )}
               </div>
-              <DetailTable filters={filters} details={details} onNavigate={apply} />
+              <LeaveRequestTable filters={filters} requests={leave.requests} onNavigate={apply} onFocus={focusEmployee} />
             </div>
           )}
 
@@ -646,9 +718,10 @@ export default function Reports(props: Props) {
                 {filters.view === 'multi' && (
                   <ReportChart
                     title="Employee attendance compliance"
-                    description="Named compliance comparison, limited to the current authorized scope."
+                    description="Named compliance comparison, limited to the current authorized scope. Select a bar to focus the report on that employee."
                     filename={`employee-attendance-${periodFilename}`}
-                    option={rankingOption(attendance.employees.slice(0, 15).map((row) => ({ name: row.name, value: row.compliance })), 'Compliance %')}
+                    option={rankingOption(attendance.employees.slice(0, 15).map((row) => ({ name: row.name, value: row.compliance, user_id: row.user_id })), 'Compliance %')}
+                    onDataClick={(data) => data.user_id && focusEmployee(data.user_id)}
                   />
                 )}
                 {filters.view === 'multi' && attendance.departments.length > 1 && (
@@ -660,7 +733,7 @@ export default function Reports(props: Props) {
                   />
                 )}
               </div>
-              <DetailTable filters={filters} details={details} onNavigate={apply} />
+              <AttendanceIssueTable filters={filters} issueDays={attendance.issue_days} onNavigate={apply} onFocus={focusEmployee} />
             </div>
           )}
         </Suspense>
@@ -698,11 +771,11 @@ function KpiGrid({ summary, section }: { summary: Props['summary']; section: Fil
     ['Employees', summary.employees, <Users size={17} />, 'neutral'],
     ['Approved leave', `${summary.approved_leave_days} days`, <CalendarRange size={17} />, 'orange'],
     ['Pending leave', `${summary.pending_leave_days} days`, <Clock3 size={17} />, 'amber'],
-    ['Total Available leave balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
-    ['Attendnace Compliance', `${summary.attendance_compliance}%`, <Activity size={17} />, 'blue'],
+    ['Available balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
+    ['Compliance', `${summary.attendance_compliance}%`, <Activity size={17} />, 'blue'],
     ['Late-in days / early-out days', `${summary.late} / ${summary.early}`, <Clock3 size={17} />, 'purple'],
     ['Missing-punch days', summary.missing, <TriangleAlert size={17} />, 'red'],
-    ['Issues', summary.unresolved_flags, <TriangleAlert size={17} />, 'red'],
+    // ['Unresolved flags', summary.unresolved_flags, <TriangleAlert size={17} />, 'red'],
   ];
   const visibleLabels = section === 'leave'
     ? ['Employees', 'Approved leave', 'Pending leave', 'Available balance']
@@ -724,6 +797,82 @@ function KpiGrid({ summary, section }: { summary: Props['summary']; section: Fil
   );
 }
 
+function Findings({ section, leave, attendance, onFocus }: {
+  section: Filters['section'];
+  leave: Props['leave'];
+  attendance: Props['attendance'];
+  onFocus: (userId: number) => void;
+}) {
+  const findings: { key: string; label: string; value: string; detail: string; userId?: number }[] = [];
+  const topEmployee = leave.insights.top_employee;
+  const topType = leave.insights.top_type;
+  const peakAbsence = leave.insights.peak_absence;
+  const topIssueEmployee = attendance.insights.top_issue_employee;
+  const peakIssueDate = attendance.insights.peak_issue_date;
+  const lowestDepartment = attendance.insights.lowest_department;
+
+  if (section !== 'attendance' && topEmployee) {
+    findings.push({
+      key: 'top-leave',
+      label: 'Most approved leave',
+      value: `${topEmployee.name} · ${topEmployee.days} working days`,
+      detail: `${topEmployee.requests} request${topEmployee.requests === 1 ? '' : 's'}${topEmployee.primary_type ? `, mainly ${topEmployee.primary_type}` : ''}.`,
+      userId: topEmployee.user_id,
+    });
+  }
+  if (section === 'leave' && topType) {
+    findings.push({ key: 'top-type', label: 'Most-used leave type', value: topType.name, detail: `${topType.days} approved working days in the selected period.` });
+  }
+  if (section !== 'attendance' && peakAbsence) {
+    findings.push({ key: 'peak-absence', label: 'Highest simultaneous absence', value: `${peakAbsence.employees} employees`, detail: `Peak approved absence occurred on ${formatDate(peakAbsence.date)}.` });
+  }
+  if (section !== 'leave' && topIssueEmployee && topIssueEmployee.issues > 0) {
+    findings.push({
+      key: 'top-issues',
+      label: 'Most attendance issue-days',
+      value: `${topIssueEmployee.name} · ${topIssueEmployee.issues} days`,
+      detail: `${topIssueEmployee.late} late, ${topIssueEmployee.early} early, and ${topIssueEmployee.missing} missing-punch day(s).`,
+      userId: topIssueEmployee.user_id,
+    });
+  }
+  if (section === 'attendance' && peakIssueDate) {
+    findings.push({ key: 'peak-issues', label: 'Highest issue date', value: `${formatDate(peakIssueDate.date)} · ${peakIssueDate.issues} records`, detail: `${peakIssueDate.issues} of ${peakIssueDate.records} finalized attendance record(s) had issues.` });
+  }
+  if (section !== 'leave' && lowestDepartment) {
+    findings.push({ key: 'lowest-department', label: 'Lowest department compliance', value: `${lowestDepartment.name} · ${lowestDepartment.compliance}%`, detail: `${lowestDepartment.late} late, ${lowestDepartment.early} early, and ${lowestDepartment.missing} missing-punch day(s).` });
+  }
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm">
+      <div className="flex items-start gap-3 border-b border-amber-100 px-5 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Lightbulb size={18} /></div>
+        <div>
+          <h2 className="font-semibold text-neutral-900">Important findings</h2>
+          <p className="mt-0.5 text-xs leading-5 text-neutral-500">Direct answers from the selected period and employee scope.</p>
+        </div>
+      </div>
+      {findings.length ? (
+        <div className="grid gap-px bg-amber-100 md:grid-cols-2 xl:grid-cols-3">
+          {findings.map((finding) => (
+            <article key={finding.key} className="flex min-h-36 flex-col bg-white p-5">
+              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">{finding.label}</div>
+              <div className="mt-2 text-lg font-semibold text-neutral-900">{finding.value}</div>
+              <p className="mt-1 text-sm leading-6 text-neutral-500">{finding.detail}</p>
+              {finding.userId && (
+                <button type="button" onClick={() => onFocus(finding.userId!)} className="mt-auto inline-flex items-center gap-1.5 pt-3 text-xs font-semibold text-orange-700 hover:text-orange-800">
+                  Focus on employee <ArrowRight size={13} />
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="px-5 py-7 text-sm text-neutral-500">There is not enough activity in this selection to identify a notable finding.</p>
+      )}
+    </section>
+  );
+}
+
 function ChartWithToggle({ modes, value, onChange, children }: { modes: string[]; value: string; onChange: (value: string) => void; children: React.ReactNode }) {
   return (
     <div className="relative min-w-0">
@@ -739,72 +888,137 @@ function ChartWithToggle({ modes, value, onChange, children }: { modes: string[]
   );
 }
 
-function DetailTable({ filters, details, onNavigate }: { filters: Filters; details: Props['details']; onNavigate: (patch: Partial<Filters>) => void }) {
+function LeaveRequestTable({ filters, requests, onNavigate, onFocus }: {
+  filters: Filters;
+  requests: Paged<LeaveRequestRow>;
+  onNavigate: (patch: Partial<Filters>) => void;
+  onFocus: (userId: number) => void;
+}) {
+  const [expanded, setExpanded] = useState<number | null>(null);
   const sort = (key: string) => onNavigate({
-    sort: key,
-    direction: filters.sort === key && filters.direction === 'asc' ? 'desc' : 'asc',
+    leave_sort: key,
+    leave_direction: filters.leave_sort === key && filters.leave_direction === 'asc' ? 'desc' : 'asc',
     page: 1,
   });
+
   return (
     <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
-        <div>
-          <h3 className="font-semibold text-neutral-900">Employee detail</h3>
-          <p className="mt-1 text-xs text-neutral-500">{details.total} scoped employee records</p>
-        </div>
-        <select value={filters.per_page} onChange={(event) => onNavigate({ per_page: Number(event.target.value), page: 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 text-xs">
-          <option value={10}>10 rows</option>
-          <option value={25}>25 rows</option>
-          <option value={50}>50 rows</option>
-        </select>
-      </div>
+      <RecordTableHeader title="Leave request details" description={`${requests.total} request${requests.total === 1 ? '' : 's'} in the selected scope`} filters={filters} onNavigate={onNavigate} />
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[940px] text-left text-sm">
+        <table className="w-full min-w-[1040px] text-left text-sm">
           <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
-            <tr>
-              {[
-                ['name', 'Employee'],
-                ['leave_days', 'Leave days'],
-                ['available_balance', 'Available'],
-                ['attendance_compliance', 'Compliance'],
-                ['late', 'Late-in days'],
-                ['early', 'Early-out days'],
-                ['missing', 'Missing-punch days'],
-              ].map(([key, label]) => (
-                <th key={key} className="px-4 py-3">
-                  <button type="button" onClick={() => sort(key)} className="font-semibold hover:text-orange-700">{label}{filters.sort === key ? (filters.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button>
-                </th>
-              ))}
-            </tr>
+            <tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Leave type" sortKey="leave_type" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Period" sortKey="starts_at" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="In-range days" sortKey="days_in_period" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Status" sortKey="status" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><th className="px-4 py-3">Reason</th><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {details.data.map((row) => (
-              <tr key={row.id} className="hover:bg-neutral-50/70">
-                <td className="px-4 py-3.5">
-                  <div className="font-semibold text-neutral-800">{row.name}</div>
-                  <div className="mt-0.5 text-xs text-neutral-400">{row.employee_code ?? 'No code'} · {row.department}</div>
-                </td>
-                <td className="px-4 py-3.5">{row.leave_days}</td>
-                <td className="px-4 py-3.5">{row.available_balance}</td>
-                <td className="px-4 py-3.5">{row.attendance_compliance}%</td>
-                <td className="px-4 py-3.5">{row.late}</td>
-                <td className="px-4 py-3.5">{row.early}</td>
-                <td className="px-4 py-3.5">{row.missing}</td>
-              </tr>
+            {requests.data.map((row) => (
+              <Fragment key={row.id}>
+                <tr className="align-top hover:bg-neutral-50/70">
+                  <td className="px-4 py-3.5"><div className="font-semibold text-neutral-800">{row.name}</div><div className="mt-0.5 text-xs text-neutral-400">{row.employee_code ?? 'No code'} · {row.department}</div></td>
+                  <td className="px-4 py-3.5 font-medium text-neutral-700">{row.leave_type}</td>
+                  <td className="px-4 py-3.5"><div>{formatDate(row.starts_at)}</div><div className="mt-0.5 text-xs text-neutral-400">to {formatDate(row.ends_at)}</div></td>
+                  <td className="px-4 py-3.5 font-semibold">{row.days_in_period}</td>
+                  <td className="px-4 py-3.5"><StatusPill status={row.status} /></td>
+                  <td className="max-w-xs px-4 py-3.5 text-neutral-600"><span className="line-clamp-2">{row.reason || 'No reason provided'}</span></td>
+                  <td className="px-4 py-3.5 text-right"><button type="button" aria-expanded={expanded === row.id} onClick={() => setExpanded(expanded === row.id ? null : row.id)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:border-orange-200 hover:text-orange-700">Details <ChevronDown size={13} className={expanded === row.id ? 'rotate-180' : ''} /></button></td>
+                </tr>
+                {expanded === row.id && (
+                  <tr className="bg-orange-50/40"><td colSpan={7} className="px-5 py-4"><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><DetailItem label="Submitted reason" value={row.reason || 'No reason provided'} /><DetailItem label="Manager comment" value={row.manager_comment || 'No comment'} /><DetailItem label="Approval" value={row.approver ? `${titleCase(row.status)} by ${row.approver}` : titleCase(row.status)} /><DetailItem label="Request accounting" value={`${row.requested_days} requested days · ${row.days_in_period} within this report`} /></div><button type="button" onClick={() => onFocus(row.user_id)} className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700">Focus report on {row.name} <ArrowRight size={13} /></button></td></tr>
+                )}
+              </Fragment>
             ))}
-            {!details.data.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-neutral-400">No records match the selected filters.</td></tr>}
+            {!requests.data.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-neutral-400">No leave requests match the selected filters.</td></tr>}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t border-neutral-100 px-5 py-4 text-xs text-neutral-500">
-        <span>Page {details.page} of {details.last_page}</span>
-        <div className="flex gap-2">
-          <button type="button" disabled={details.page <= 1} onClick={() => onNavigate({ page: details.page - 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 font-semibold disabled:opacity-40">Previous</button>
-          <button type="button" disabled={details.page >= details.last_page} onClick={() => onNavigate({ page: details.page + 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 font-semibold disabled:opacity-40">Next</button>
-        </div>
-      </div>
+      <Pagination rows={requests} onNavigate={onNavigate} />
     </section>
   );
+}
+
+function AttendanceIssueTable({ filters, issueDays, onNavigate, onFocus }: {
+  filters: Filters;
+  issueDays: Paged<AttendanceIssueDay>;
+  onNavigate: (patch: Partial<Filters>) => void;
+  onFocus: (userId: number) => void;
+}) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const sort = (key: string) => onNavigate({
+    attendance_sort: key,
+    attendance_direction: filters.attendance_sort === key && filters.attendance_direction === 'asc' ? 'desc' : 'asc',
+    page: 1,
+  });
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <RecordTableHeader title="Attendance issue details" description={`${issueDays.total} finalized issue or flagged day${issueDays.total === 1 ? '' : 's'} in the selected scope`} filters={filters} onNavigate={onNavigate} />
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[980px] text-left text-sm">
+          <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500"><tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Date" sortKey="date" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Branch" sortKey="site" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Issues" sortKey="issue_count" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Review" sortKey="unresolved_flags" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr></thead>
+          <tbody className="divide-y divide-neutral-100">
+            {issueDays.data.map((row) => (
+              <Fragment key={row.id}>
+                <tr className="hover:bg-neutral-50/70">
+                  <td className="px-4 py-3.5"><div className="font-semibold text-neutral-800">{row.name}</div><div className="mt-0.5 text-xs text-neutral-400">{row.department}</div></td>
+                  <td className="px-4 py-3.5 font-medium">{formatDate(row.date)}</td>
+                  <td className="px-4 py-3.5"><span className="inline-flex items-center gap-1.5"><MapPin size={13} className="text-neutral-400" />{row.site}</span></td>
+                  <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1.5">{row.issues.map((issue) => <StatusPill key={issue} status={issue} />)}{row.flagged_events > 0 && <StatusPill status={`${row.flagged_events} flagged`} />}</div></td>
+                  <td className="px-4 py-3.5 text-neutral-600">{row.unresolved_flags > 0 ? `${row.unresolved_flags} unresolved flag(s)` : row.flagged_events > 0 ? 'Reviewed' : 'No verification flags'}</td>
+                  <td className="px-4 py-3.5 text-right"><button type="button" aria-expanded={expanded === row.id} onClick={() => setExpanded(expanded === row.id ? null : row.id)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:border-orange-200 hover:text-orange-700">Punches <ChevronDown size={13} className={expanded === row.id ? 'rotate-180' : ''} /></button></td>
+                </tr>
+                {expanded === row.id && (
+                  <tr className="bg-orange-50/40"><td colSpan={6} className="px-5 py-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{row.slots.map((slot) => <div key={slot.type} className="rounded-xl border border-neutral-200 bg-white p-3"><div className="text-xs font-bold uppercase tracking-wide text-neutral-500">{titleCase(slot.type)}</div><div className="mt-2 flex items-center justify-between gap-2"><div><div className="text-[10px] uppercase text-neutral-400">Expected</div><div className="font-semibold text-neutral-700">{formatTime(slot.expected_at)}</div></div><ArrowRight size={14} className="text-neutral-300" /><div className="text-right"><div className="text-[10px] uppercase text-neutral-400">Actual</div><div className="font-semibold text-neutral-700">{formatTime(slot.actual_at)}</div></div></div><div className="mt-2"><StatusPill status={slot.status} /></div></div>)}</div><button type="button" onClick={() => onFocus(row.user_id)} className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700">Focus report on {row.name} <ArrowRight size={13} /></button></td></tr>
+                )}
+              </Fragment>
+            ))}
+            {!issueDays.data.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-neutral-400">No finalized attendance issue or flagged days match the selected filters.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <Pagination rows={issueDays} onNavigate={onNavigate} />
+    </section>
+  );
+}
+
+function SortableHeader({ label, sortKey, activeSort, direction, onSort }: {
+  label: string;
+  sortKey: string;
+  activeSort: string;
+  direction: 'asc' | 'desc';
+  onSort: (key: string) => void;
+}) {
+  const active = activeSort === sortKey;
+
+  return (
+    <th className="px-4 py-3" aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" onClick={() => onSort(sortKey)} className={`group inline-flex items-center gap-1.5 font-semibold transition hover:text-orange-700 ${active ? 'text-orange-700' : ''}`}>
+        {label}
+        <span aria-hidden="true" className={`text-xs ${active ? 'text-orange-600' : 'text-neutral-300 group-hover:text-orange-400'}`}>{active ? (direction === 'asc' ? '↑' : '↓') : '↕'}</span>
+      </button>
+    </th>
+  );
+}
+
+function RecordTableHeader({ title, description, filters, onNavigate }: { title: string; description: string; filters: Filters; onNavigate: (patch: Partial<Filters>) => void }) {
+  return <div className="flex items-center justify-between gap-4 border-b border-neutral-100 px-5 py-4"><div><h3 className="font-semibold text-neutral-900">{title}</h3><p className="mt-1 text-xs text-neutral-500">{description}</p></div><select aria-label="Rows per page" value={filters.per_page} onChange={(event) => onNavigate({ per_page: Number(event.target.value), page: 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 text-xs"><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></div>;
+}
+
+function Pagination({ rows, onNavigate }: { rows: Pick<Paged<unknown>, 'page' | 'last_page'>; onNavigate: (patch: Partial<Filters>) => void }) {
+  return <div className="flex items-center justify-between border-t border-neutral-100 px-5 py-4 text-xs text-neutral-500"><span>Page {rows.page} of {rows.last_page}</span><div className="flex gap-2"><button type="button" disabled={rows.page <= 1} onClick={() => onNavigate({ page: rows.page - 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 font-semibold disabled:opacity-40">Previous</button><button type="button" disabled={rows.page >= rows.last_page} onClick={() => onNavigate({ page: rows.page + 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 font-semibold disabled:opacity-40">Next</button></div></div>;
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return <div><div className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">{label}</div><div className="mt-1 text-sm leading-6 text-neutral-700">{value}</div></div>;
+}
+
+function StatusPill({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
+  const tone = normalized.includes('approved') || normalized === 'on_time' || normalized === 'complete'
+    ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+    : normalized.includes('pending') ? 'bg-amber-50 text-amber-700 ring-amber-200'
+      : normalized.includes('late') || normalized.includes('early') ? 'bg-orange-50 text-orange-700 ring-orange-200'
+        : normalized.includes('missing') || normalized.includes('rejected') || normalized.includes('flagged') ? 'bg-red-50 text-red-700 ring-red-200'
+          : 'bg-neutral-100 text-neutral-600 ring-neutral-200';
+  return <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${tone}`}>{titleCase(status)}</span>;
 }
 
 function ChartSkeleton() {
@@ -901,14 +1115,14 @@ function concurrencyDistributionOption(rows: Props['leave']['concurrency_distrib
   };
 }
 
-function rankingOption(rows: { name: string; value: number }[], valueName: string) {
+function rankingOption(rows: { name: string; value: number; user_id?: number }[], valueName: string) {
   const sorted = [...rows].sort((a, b) => a.value - b.value);
   return {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 120, right: 35, top: 25, bottom: 35 },
     xAxis: { type: 'value', name: valueName },
     yAxis: { type: 'category', data: sorted.map((row) => row.name), axisLabel: { width: 105, overflow: 'truncate' } },
-    series: [{ type: 'bar', data: sorted.map((row) => row.value), label: { show: true, position: 'right' } }],
+    series: [{ type: 'bar', data: sorted.map((row) => ({ value: row.value, user_id: row.user_id })), label: { show: true, position: 'right' } }],
   };
 }
 
@@ -1000,6 +1214,12 @@ function parseDateOnly(value: string) {
 function formatDate(value: string) {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatTime(value?: string | null) {
+  if (!value) return 'Missing';
+
+  return new Date(value).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
 function titleCase(value: string) {

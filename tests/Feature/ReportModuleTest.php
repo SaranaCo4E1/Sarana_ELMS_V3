@@ -341,6 +341,92 @@ class ReportModuleTest extends TestCase
                 ]));
     }
 
+    public function test_report_exposes_question_oriented_findings_and_scoped_drill_down_records(): void
+    {
+        $manager = User::factory()->create(['role' => 'manager', 'name' => 'Team Manager', 'is_active' => true]);
+        $topEmployee = User::factory()->create(['role' => 'staff', 'name' => 'Top Employee', 'manager_id' => $manager->id, 'is_active' => true]);
+        $otherEmployee = User::factory()->create(['role' => 'staff', 'name' => 'Other Employee', 'manager_id' => $manager->id, 'is_active' => true]);
+        $type = LeaveType::query()->create([
+            'name' => 'Annual Leave',
+            'code' => 'AL',
+            'default_allowance_days' => 18,
+            'paid' => true,
+            'requires_attachment' => false,
+            'deducts_balance' => true,
+            'is_active' => true,
+        ]);
+
+        LeaveRequest::query()->create([
+            'user_id' => $topEmployee->id,
+            'leave_type_id' => $type->id,
+            'approver_id' => $manager->id,
+            'starts_at' => '2026-07-01',
+            'ends_at' => '2026-07-03',
+            'requested_days' => 3,
+            'status' => 'approved',
+            'reason' => 'Family commitment',
+            'manager_comment' => 'Approved with coverage arranged',
+        ]);
+        LeaveRequest::query()->create([
+            'user_id' => $otherEmployee->id,
+            'leave_type_id' => $type->id,
+            'approver_id' => $manager->id,
+            'starts_at' => '2026-07-02',
+            'ends_at' => '2026-07-02',
+            'requested_days' => 1,
+            'status' => 'approved',
+            'reason' => 'Personal appointment',
+        ]);
+        $this->attendanceDay($topEmployee, '2026-07-06', 'issues', ['late', 'on_time', 'on_time', 'missing']);
+        $this->attendanceDay($otherEmployee, '2026-07-07', 'issues', ['on_time', 'early', 'on_time', 'on_time']);
+
+        $this->actingAs($manager)
+            ->get(route('reports.index', [
+                'view' => 'multi',
+                'section' => 'leave',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-31',
+                'leave_sort' => 'name',
+                'leave_direction' => 'desc',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('leave.insights.top_employee.user_id', $topEmployee->id)
+                ->where('leave.insights.top_employee.days', 3)
+                ->where('leave.insights.top_employee.requests', 1)
+                ->where('leave.insights.top_employee.primary_type', 'Annual Leave')
+                ->where('leave.insights.peak_absence.date', '2026-07-02')
+                ->where('leave.insights.peak_absence.employees', 2)
+                ->where('filters.leave_sort', 'name')
+                ->where('filters.leave_direction', 'desc')
+                ->where('leave.requests.total', 2)
+                ->where('leave.requests.data.0.name', 'Top Employee')
+                ->where('leave.requests.data.0.reason', 'Family commitment')
+                ->where('leave.requests.data.0.approver', 'Team Manager')
+                ->where('leave.requests.data.0.manager_comment', 'Approved with coverage arranged'));
+
+        $this->actingAs($manager)
+            ->get(route('reports.index', [
+                'view' => 'multi',
+                'section' => 'attendance',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-31',
+                'attendance_sort' => 'issue_count',
+                'attendance_direction' => 'desc',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.attendance_sort', 'issue_count')
+                ->where('filters.attendance_direction', 'desc')
+                ->where('attendance.insights.top_issue_employee.user_id', $topEmployee->id)
+                ->where('attendance.issue_days.total', 2)
+                ->where('attendance.issue_days.data.0.name', 'Top Employee')
+                ->where('attendance.issue_days.data.0.issue_count', 2)
+                ->where('attendance.issue_days.data.0.issues', ['late', 'missing'])
+                ->where('attendance.issue_days.data.0.slots', fn ($slots) => $slots->pluck('status')->contains('late')
+                    && $slots->pluck('status')->contains('missing')));
+    }
+
     public function test_scoped_csv_exports_exclude_other_employees_and_are_audited(): void
     {
         $staff = User::factory()->create([

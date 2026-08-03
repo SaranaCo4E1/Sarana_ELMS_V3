@@ -47,7 +47,12 @@ class ReportAnalyticsService
             ->flip();
 
         $leaveRequests = LeaveRequest::query()
-            ->with(['user:id,name,department_id', 'user.department:id,name', 'leaveType:id,name,code,paid'])
+            ->with([
+                'user:id,name,employee_code,department_id',
+                'user.department:id,name',
+                'leaveType:id,name,code,paid',
+                'approver:id,name',
+            ])
             ->whereIn('user_id', $userIds)
             ->whereDate('starts_at', '<=', $filters->endDate)
             ->whereDate('ends_at', '>=', $filters->startDate)
@@ -233,14 +238,57 @@ class ReportAnalyticsService
             ];
         })->sortByDesc('used')->values();
 
-        $rankings = $requests->where('status', 'approved')->groupBy('user_id')->map(function (Collection $rows) use ($filters, $holidays): array {
+        $approvedRequests = $requests->where('status', 'approved');
+        $rankings = $approvedRequests->groupBy('user_id')->map(function (Collection $rows) use ($filters, $holidays): array {
+            $typeTotals = $rows->groupBy(fn (LeaveRequest $request) => $request->leaveType?->name ?? 'Unknown')
+                ->map(fn (Collection $typeRows): float => (float) $typeRows->sum(
+                    fn (LeaveRequest $request) => $this->workingDaysWithin($request, $filters, $holidays)
+                ));
+
             return [
                 'user_id' => $rows->first()->user_id,
                 'name' => $rows->first()->user?->name ?? 'Unknown',
                 'department' => $rows->first()->user?->department?->name ?? 'Unassigned',
                 'days' => round($rows->sum(fn (LeaveRequest $request) => $this->workingDaysWithin($request, $filters, $holidays)), 2),
+                'requests' => $rows->count(),
+                'primary_type' => $typeTotals->sortDesc()->keys()->first(),
             ];
-        })->sortByDesc('days')->values();
+        })->filter(fn (array $row): bool => $row['days'] > 0)->sortByDesc('days')->values();
+
+        $approvedTypes = $approvedRequests
+            ->groupBy(fn (LeaveRequest $request) => $request->leaveType?->name ?? 'Unknown')
+            ->map(fn (Collection $rows, string $name): array => [
+                'name' => $name,
+                'days' => round((float) $rows->sum(
+                    fn (LeaveRequest $request) => $this->workingDaysWithin($request, $filters, $holidays)
+                ), 2),
+            ])
+            ->filter(fn (array $row): bool => $row['days'] > 0)
+            ->sortByDesc('days')
+            ->values();
+
+        $requestRows = $requests->map(fn (LeaveRequest $request): array => [
+            'id' => $request->id,
+            'user_id' => $request->user_id,
+            'name' => $request->user?->name ?? 'Unknown',
+            'employee_code' => $request->user?->employee_code,
+            'department' => $request->user?->department?->name ?? 'Unassigned',
+            'leave_type' => $request->leaveType?->name ?? 'Unknown',
+            'starts_at' => $request->starts_at?->toDateString(),
+            'ends_at' => $request->ends_at?->toDateString(),
+            'requested_days' => (float) $request->requested_days,
+            'days_in_period' => round($this->workingDaysWithin($request, $filters, $holidays), 2),
+            'status' => $request->status,
+            'reason' => $request->reason,
+            'approver' => $request->approver?->name,
+            'manager_comment' => $request->manager_comment,
+        ])->values();
+        $requestRows = $this->sortRows($requestRows, $filters->leaveSort, $filters->leaveDirection);
+
+        $peakAbsence = collect($concurrentByDate)
+            ->map(fn (array $users, string $date): array => ['date' => $date, 'employees' => count($users)])
+            ->sortByDesc('employees')
+            ->first();
 
         return [
             'balance_year' => (int) $filters->endDate->year,
@@ -257,6 +305,12 @@ class ReportAnalyticsService
             'balances' => $balanceByType,
             'employee_balances' => $employeeBalances,
             'rankings' => $rankings,
+            'requests' => $this->paginateRows($requestRows, $filters),
+            'insights' => [
+                'top_employee' => $rankings->first(),
+                'top_type' => $approvedTypes->first(),
+                'peak_absence' => ($peakAbsence['employees'] ?? 0) > 0 ? $peakAbsence : null,
+            ],
             'concurrency_distribution' => collect([
                 '0 absent' => fn (int $employees): bool => $employees === 0,
                 '1 absent' => fn (int $employees): bool => $employees === 1,
@@ -348,6 +402,41 @@ class ReportAnalyticsService
                 ];
             })->values();
 
+        $issueDayRows = $days
+            ->filter(fn (AttendanceDay $day): bool => $day->status === 'issues'
+                || $day->events->contains('verification_status', 'flagged'))
+            ->map(function (AttendanceDay $day): array {
+                $slots = $day->slots->map(fn ($slot): array => [
+                    'type' => $slot->type,
+                    'expected_at' => $slot->expected_at?->toIso8601String(),
+                    'actual_at' => $slot->event?->effective_at?->toIso8601String(),
+                    'status' => $slot->status,
+                ])->values();
+                $flagged = $day->events->where('verification_status', 'flagged');
+                $issueLabels = collect(['late', 'early', 'missing'])
+                    ->filter(fn (string $status): bool => $day->slots->contains('status', $status))
+                    ->values();
+
+                return [
+                    'id' => $day->id,
+                    'user_id' => $day->user_id,
+                    'name' => $day->user?->name ?? 'Unknown',
+                    'department' => $day->user?->department?->name ?? 'Unassigned',
+                    'date' => Carbon::parse($day->work_date)->toDateString(),
+                    'site' => $day->primarySite?->name ?? 'Unassigned',
+                    'issues' => $issueLabels,
+                    'issue_count' => $issueLabels->count() + $flagged->count(),
+                    'flagged_events' => $flagged->count(),
+                    'unresolved_flags' => $flagged->whereNull('reviewed_at')->count(),
+                    'slots' => $slots,
+                ];
+            })->values();
+        $issueDayRows = $this->sortRows($issueDayRows, $filters->attendanceSort, $filters->attendanceDirection);
+
+        $peakIssueDate = collect($heatmap)->sortByDesc('issues')->first();
+        $topIssueEmployee = $employeeStats->sortByDesc('issues')->first();
+        $lowestDepartment = $departments->count() > 1 ? $departments->sortBy('compliance')->first() : null;
+
         return [
             'summary' => [
                 'compliance' => $denominator > 0 ? round(($complete / $denominator) * 100, 1) : 0,
@@ -371,7 +460,35 @@ class ReportAnalyticsService
             ])->values(),
             'employees' => $employeeStats,
             'departments' => $departments,
+            'issue_days' => $this->paginateRows($issueDayRows, $filters),
+            'insights' => [
+                'top_issue_employee' => $topIssueEmployee,
+                'peak_issue_date' => ($peakIssueDate['issues'] ?? 0) > 0 ? $peakIssueDate : null,
+                'lowest_department' => $lowestDepartment,
+            ],
         ];
+    }
+
+    private function paginateRows(Collection $rows, ReportFilters $filters): array
+    {
+        $total = $rows->count();
+        $lastPage = max(1, (int) ceil($total / $filters->perPage));
+        $page = min($filters->page, $lastPage);
+
+        return [
+            'data' => $rows->slice(($page - 1) * $filters->perPage, $filters->perPage)->values(),
+            'page' => $page,
+            'per_page' => $filters->perPage,
+            'total' => $total,
+            'last_page' => $lastPage,
+        ];
+    }
+
+    private function sortRows(Collection $rows, string $key, string $direction): Collection
+    {
+        $flags = SORT_NATURAL | SORT_FLAG_CASE;
+
+        return ($direction === 'desc' ? $rows->sortByDesc($key, $flags) : $rows->sortBy($key, $flags))->values();
     }
 
     private function detailRows(

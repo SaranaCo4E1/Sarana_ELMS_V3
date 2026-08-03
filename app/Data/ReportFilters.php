@@ -24,6 +24,10 @@ final readonly class ReportFilters
         public int $perPage,
         public string $sort,
         public string $direction,
+        public string $leaveSort,
+        public string $leaveDirection,
+        public string $attendanceSort,
+        public string $attendanceDirection,
     ) {}
 
     public function toArray(): array
@@ -46,6 +50,10 @@ final readonly class ReportFilters
             'per_page' => $this->perPage,
             'sort' => $this->sort,
             'direction' => $this->direction,
+            'leave_sort' => $this->leaveSort,
+            'leave_direction' => $this->leaveDirection,
+            'attendance_sort' => $this->attendanceSort,
+            'attendance_direction' => $this->attendanceDirection,
         ];
     }
 }
