@@ -843,19 +843,19 @@ function Findings({ section, leave, attendance, onFocus }: {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm">
-      <div className="flex items-start gap-3 border-b border-amber-100 px-5 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Lightbulb size={18} /></div>
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <div className="flex items-start gap-3 border-b border-neutral-100 px-5 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-100"><Lightbulb size={18} /></div>
         <div>
           <h2 className="font-semibold text-neutral-900">Important findings</h2>
           <p className="mt-0.5 text-xs leading-5 text-neutral-500">Direct answers from the selected period and employee scope.</p>
         </div>
       </div>
       {findings.length ? (
-        <div className="grid gap-px bg-amber-100 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-px bg-neutral-100 md:grid-cols-2 xl:grid-cols-3">
           {findings.map((finding) => (
             <article key={finding.key} className="flex min-h-36 flex-col bg-white p-5">
-              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">{finding.label}</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-orange-700">{finding.label}</div>
               <div className="mt-2 text-lg font-semibold text-neutral-900">{finding.value}</div>
               <p className="mt-1 text-sm leading-6 text-neutral-500">{finding.detail}</p>
               {finding.userId && (
