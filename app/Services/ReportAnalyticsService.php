@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Data\ReportFilters;
 use App\Models\AttendanceDay;
-use App\Models\AttendanceSite;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
@@ -23,21 +22,11 @@ class ReportAnalyticsService
         $baseUsers = $resolved['base'];
         $users = $resolved['users'];
         $userIds = $users->pluck('id');
-        $baseUserIds = $baseUsers->pluck('id');
 
         $leaveTypes = LeaveType::query()
             ->orderBy('name')
             ->get(['id', 'name', 'code', 'paid', 'deducts_balance']);
         $this->assertSubset($filters->leaveTypeIds, $leaveTypes->pluck('id'));
-
-        $sites = AttendanceSite::query()
-            ->whereIn('id', AttendanceDay::query()
-                ->whereIn('user_id', $baseUserIds)
-                ->whereNotNull('primary_site_id')
-                ->select('primary_site_id'))
-            ->orderBy('name')
-            ->get(['id', 'name']);
-        $this->assertSubset($filters->siteIds, $sites->pluck('id'));
 
         $holidays = PublicHoliday::query()
             ->where('is_active', true)
@@ -73,7 +62,6 @@ class ReportAnalyticsService
             ->with([
                 'user:id,name,department_id',
                 'user.department:id,name',
-                'primarySite:id,name',
                 'slots.event:id,effective_at',
                 'events' => fn ($query) => $query
                     ->whereNull('voided_at')
@@ -84,7 +72,10 @@ class ReportAnalyticsService
             ->whereNull('excuse_type')
             ->whereIn('status', ['complete', 'issues'])
             ->when($filters->attendanceStatuses, fn ($query) => $query->whereIn('status', $filters->attendanceStatuses))
-            ->when($filters->siteIds, fn ($query) => $query->whereIn('primary_site_id', $filters->siteIds))
+            ->when($filters->attendanceIssues, fn ($query) => $query->whereHas(
+                'slots',
+                fn ($slotQuery) => $slotQuery->whereIn('status', $filters->attendanceIssues)
+            ))
             ->orderBy('work_date')
             ->get();
 
@@ -96,7 +87,7 @@ class ReportAnalyticsService
             'capabilities' => $resolved['capabilities'],
             'scope' => $resolved['scope'],
             'filters' => $filters->toArray(),
-            'filterOptions' => $this->filterOptions($baseUsers, $leaveTypes, $sites),
+            'filterOptions' => $this->filterOptions($baseUsers, $leaveTypes),
             'summary' => [
                 'employees' => $users->count(),
                 'approved_leave_days' => $leave['summary']['approved_days'],
@@ -134,7 +125,7 @@ class ReportAnalyticsService
         return $days;
     }
 
-    private function filterOptions(Collection $users, Collection $leaveTypes, Collection $sites): array
+    private function filterOptions(Collection $users, Collection $leaveTypes): array
     {
         $employees = $users->map(fn (User $user) => [
             'id' => $user->id,
@@ -161,7 +152,6 @@ class ReportAnalyticsService
                 'code' => $type->code,
                 'paid' => $type->paid,
             ])->values(),
-            'sites' => $sites->values(),
         ];
     }
 
@@ -403,8 +393,6 @@ class ReportAnalyticsService
             })->values();
 
         $issueDayRows = $days
-            ->filter(fn (AttendanceDay $day): bool => $day->status === 'issues'
-                || $day->events->contains('verification_status', 'flagged'))
             ->map(function (AttendanceDay $day): array {
                 $slots = $day->slots->map(fn ($slot): array => [
                     'type' => $slot->type,
@@ -423,7 +411,6 @@ class ReportAnalyticsService
                     'name' => $day->user?->name ?? 'Unknown',
                     'department' => $day->user?->department?->name ?? 'Unassigned',
                     'date' => Carbon::parse($day->work_date)->toDateString(),
-                    'site' => $day->primarySite?->name ?? 'Unassigned',
                     'issues' => $issueLabels,
                     'issue_count' => $issueLabels->count() + $flagged->count(),
                     'flagged_events' => $flagged->count(),

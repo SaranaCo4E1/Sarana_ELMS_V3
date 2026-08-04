@@ -285,6 +285,27 @@ class ReportModuleTest extends TestCase
                 ->where('details.data.0.late', 1)
                 ->where('details.data.0.early', 1)
                 ->where('details.data.0.missing', 2));
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'section' => 'attendance',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-02',
+                'attendance_issues' => ['late'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.attendance_issues', ['late'])
+                ->where('attendance.issue_days.total', 1)
+                ->where('attendance.issue_days.data.0.date', '2026-07-01')
+                ->where('summary.late', 1));
+
+        $this->actingAs($staff)
+            ->get(route('reports.index', [
+                'section' => 'attendance',
+                'attendance_issues' => ['not-an-issue'],
+            ]))
+            ->assertSessionHasErrors('attendance_issues.0');
     }
 
     public function test_absence_concurrency_distribution_groups_working_days_and_counts_distinct_employees(): void
@@ -424,7 +445,10 @@ class ReportModuleTest extends TestCase
                 ->where('attendance.issue_days.data.0.issue_count', 2)
                 ->where('attendance.issue_days.data.0.issues', ['late', 'missing'])
                 ->where('attendance.issue_days.data.0.slots', fn ($slots) => $slots->pluck('status')->contains('late')
-                    && $slots->pluck('status')->contains('missing')));
+                    && $slots->pluck('status')->contains('missing'))
+                ->missing('attendance.issue_days.data.0.site')
+                ->missing('filterOptions.sites')
+                ->missing('filters.site_ids'));
     }
 
     public function test_scoped_csv_exports_exclude_other_employees_and_are_audited(): void
@@ -473,8 +497,14 @@ class ReportModuleTest extends TestCase
             'end_date' => '2026-07-31',
         ]));
         $attendance->assertOk();
-        $this->assertStringContainsString('Scoped Employee', $attendance->streamedContent());
-        $this->assertStringNotContainsString('Hidden Employee', $attendance->streamedContent());
+        $attendanceContent = $attendance->streamedContent();
+        $this->assertStringContainsString('Scoped Employee', $attendanceContent);
+        $this->assertStringNotContainsString('Hidden Employee', $attendanceContent);
+        $this->assertStringNotContainsString('Branch', $attendanceContent);
+        $this->assertStringContainsString('Morning In', $attendanceContent);
+        $this->assertStringContainsString('Lunch Out', $attendanceContent);
+        $this->assertStringContainsString('Lunch In', $attendanceContent);
+        $this->assertStringContainsString('Final Out', $attendanceContent);
 
         $this->assertDatabaseHas(AuditLog::class, ['actor_id' => $staff->id, 'action' => 'report.leave.exported']);
         $this->assertDatabaseHas(AuditLog::class, ['actor_id' => $staff->id, 'action' => 'report.attendance.exported']);

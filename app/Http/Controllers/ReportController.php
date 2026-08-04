@@ -124,13 +124,16 @@ class ReportController extends Controller
         $resolved = $scope->resolve($request->user(), $filters);
 
         $rows = AttendanceDay::query()
-            ->with(['user.department', 'primarySite', 'slots.event', 'events'])
+            ->with(['user.department', 'slots.event', 'events'])
             ->whereIn('user_id', $resolved['users']->pluck('id'))
             ->whereBetween('work_date', [$filters->startDate, $filters->endDate])
             ->whereNull('excuse_type')
             ->whereIn('status', ['complete', 'issues'])
             ->when($filters->attendanceStatuses, fn ($query) => $query->whereIn('status', $filters->attendanceStatuses))
-            ->when($filters->siteIds, fn ($query) => $query->whereIn('primary_site_id', $filters->siteIds))
+            ->when($filters->attendanceIssues, fn ($query) => $query->whereHas(
+                'slots',
+                fn ($slotQuery) => $slotQuery->whereIn('status', $filters->attendanceIssues)
+            ))
             ->orderByDesc('work_date')
             ->orderBy('user_id')
             ->get();
@@ -155,7 +158,6 @@ class ReportController extends Controller
                 'Employee Code',
                 'Department',
                 'Work Date',
-                'Branch',
                 'Status',
                 'Morning In',
                 'Morning In Status',
@@ -179,7 +181,6 @@ class ReportController extends Controller
                     $day->user?->employee_code,
                     $day->user?->department?->name,
                     $day->work_date?->toDateString(),
-                    $day->primarySite?->name,
                     ucfirst($day->status),
                     $value('morning_in'),
                     self::attendanceSlotStatus($slots['morning_in']?->status),

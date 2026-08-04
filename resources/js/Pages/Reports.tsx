@@ -1,29 +1,22 @@
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import {
   Activity,
   ArrowRight,
-  BarChart3,
   Building2,
   CalendarRange,
-  CheckCircle2,
   ChevronDown,
   Clock3,
   Download,
+  FileText,
   Filter,
-  Lightbulb,
-  MapPin,
   RefreshCw,
-  TriangleAlert,
   UserRound,
   Users,
 } from 'lucide-react';
-import { Fragment, lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';
 import AppLayout from '../Layouts/AppLayout';
-import type { PageProps } from '../types';
-
-const ReportChart = lazy(() => import('../Components/ReportChart'));
 
 type IdOption = { id: number; name: string };
 type EmployeeOption = {
@@ -37,6 +30,7 @@ type EmployeeOption = {
 };
 type SelectOption = { value: string; label: string };
 type PeriodPreset = 'month' | '30' | 'quarter' | 'year';
+type DrillDown = { filters: Partial<Filters>; target: string };
 type TrendRow = {
   key: string;
   label: string;
@@ -72,7 +66,6 @@ type AttendanceIssueDay = {
   name: string;
   department: string;
   date: string;
-  site: string;
   issues: string[];
   issue_count: number;
   flagged_events: number;
@@ -106,7 +99,7 @@ type Filters = {
   leave_type_ids: number[];
   leave_statuses: string[];
   attendance_statuses: string[];
-  site_ids: number[];
+  attendance_issues: string[];
   page: number;
   per_page: number;
   sort: string;
@@ -131,7 +124,6 @@ type Props = {
     managers: IdOption[];
     roles: string[];
     leave_types: (IdOption & { code: string; paid: boolean })[];
-    sites: IdOption[];
   };
   summary: {
     employees: number;
@@ -186,7 +178,11 @@ const LEAVE_STATUSES: SelectOption[] = ['approved', 'pending', 'rejected', 'canc
   .map((value) => ({ value, label: titleCase(value) }));
 const ATTENDANCE_STATUSES: SelectOption[] = ['complete', 'issues']
   .map((value) => ({ value, label: titleCase(value) }));
-const CHART_COLORS = ['#ea580c', '#f59e0b', '#0f766e', '#2563eb', '#7c3aed', '#dc2626'];
+const ATTENDANCE_ISSUES: SelectOption[] = [
+  { value: 'late', label: 'Late in' },
+  { value: 'early', label: 'Early out' },
+  { value: 'missing', label: 'Missing punch' },
+];
 const PERIOD_PRESETS: [PeriodPreset, string][] = [
   ['month', 'This month'],
   ['30', 'Last 30 days'],
@@ -195,18 +191,13 @@ const PERIOD_PRESETS: [PeriodPreset, string][] = [
 ];
 
 export default function Reports(props: Props) {
-  const { capabilities, filterOptions, filters, summary, leave, attendance } = props;
-  const { auth } = usePage<PageProps>().props;
-  const canSeeAttendanceCalendar = capabilities.team || capabilities.organization;
+  const { capabilities, filterOptions, filters, summary, leave, attendance, details } = props;
   const [draft, setDraft] = useState<Filters>(filters);
   const [selectedPeriodPreset, setSelectedPeriodPreset] = useState<PeriodPreset | null>(
     () => matchingPeriodPreset(filters),
   );
   const [loading, setLoading] = useState(false);
-  const [leaveTrendMode, setLeaveTrendMode] = useState<'line' | 'bar'>('line');
-  const [compositionMode, setCompositionMode] = useState<'donut' | 'treemap'>('donut');
-  const [attendanceMode, setAttendanceMode] = useState<'line' | 'bar'>('line');
-  const [issueMode, setIssueMode] = useState<'donut' | 'bar'>('donut');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => setDraft(filters), [filters]);
   useEffect(() => {
@@ -220,12 +211,7 @@ export default function Reports(props: Props) {
     };
   }, []);
 
-  const availableEmployees = useMemo(
-    () => filterOptions.employees.filter((employee) => (
-      draft.view === 'individual' || capabilities.organization || employee.id !== auth.user.id
-    )),
-    [auth.user.id, capabilities.organization, draft.view, filterOptions.employees],
-  );
+  const availableEmployees = filterOptions.employees;
 
   const filteredEmployees = useMemo(() => {
     return availableEmployees.filter((employee) => {
@@ -254,25 +240,6 @@ export default function Reports(props: Props) {
     return filterOptions.managers.filter((manager) => ids.has(manager.id));
   }, [availableEmployees, draft.department_ids, draft.employment_status, filterOptions.managers]);
 
-  const periodFilename = `${filters.start_date}-to-${filters.end_date}`;
-  const leaveTrendOption = useMemo(() => trendOption(
-    leave.trend,
-    ['approved', 'pending', 'rejected'],
-    leaveTrendMode,
-    'Working days',
-  ), [leave.trend, leaveTrendMode]);
-  const attendanceTrendOption = useMemo(() => attendanceTrend(
-    attendance.trend,
-    attendanceMode,
-  ), [attendance.trend, attendanceMode]);
-  const leaveCompositionOption = useMemo(
-    () => compositionOption(leave.types.map((row) => ({ name: row.name, value: row.days })), compositionMode),
-    [compositionMode, leave.types],
-  );
-  const issueOption = useMemo(
-    () => compositionOption(attendance.issue_mix, issueMode),
-    [attendance.issue_mix, issueMode],
-  );
   const activePeriodPreset = selectedPeriodPreset && periodMatches(draft, selectedPeriodPreset)
     ? selectedPeriodPreset
     : matchingPeriodPreset(draft);
@@ -309,18 +276,6 @@ export default function Reports(props: Props) {
     });
   };
 
-  const selectView = (view: Filters['view']) => {
-    if (view === draft.view) return;
-
-    const next = { ...draft, view, employee_ids: [], page: 1 };
-    setDraft(next);
-    router.get('/reports', queryPayload(next), {
-      preserveScroll: true,
-      preserveState: true,
-      replace: true,
-    });
-  };
-
   const applyPeriod = (preset: PeriodPreset) => {
     const next = { ...draft, ...periodFor(preset), page: 1 };
     setDraft(next);
@@ -346,8 +301,8 @@ export default function Reports(props: Props) {
       employment_status: 'active',
       leave_type_ids: [],
       leave_statuses: [],
-      attendance_statuses: [],
-      site_ids: [],
+      attendance_statuses: capabilities.team || capabilities.organization ? ['issues'] : [],
+      attendance_issues: [],
       page: 1,
       sort: 'name',
       direction: 'asc',
@@ -363,10 +318,10 @@ export default function Reports(props: Props) {
 
   const selectSection = (section: Filters['section']) => {
     const metricReset = section === 'leave'
-      ? { attendance_statuses: [], site_ids: [] }
+      ? { attendance_statuses: [], attendance_issues: [] }
       : section === 'attendance'
-        ? { leave_type_ids: [], leave_statuses: [] }
-        : { leave_type_ids: [], leave_statuses: [], attendance_statuses: [], site_ids: [] };
+        ? { leave_type_ids: [], leave_statuses: [], attendance_statuses: draft.view === 'multi' ? ['issues'] : [] }
+        : { leave_type_ids: [], leave_statuses: [], attendance_statuses: [], attendance_issues: [] };
     const next = { ...draft, ...metricReset, section, page: 1 };
     setDraft(next);
     router.get('/reports', queryPayload(next), {
@@ -385,14 +340,30 @@ export default function Reports(props: Props) {
     apply({ employee_ids: [userId], page: 1 });
   };
 
+  const drillDown = ({ filters: patch, target }: DrillDown) => {
+    const next = { ...filters, ...patch, page: 1 };
+    setDraft(next);
+    router.get('/reports', queryPayload(next), {
+      preserveState: true,
+      replace: true,
+      onSuccess: () => window.setTimeout(() => {
+        const destination = document.getElementById(target);
+        destination?.querySelector<HTMLButtonElement>(
+          ':scope > button[aria-expanded="false"], :scope > div:first-child > button[aria-expanded="false"]',
+        )?.click();
+        destination?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50),
+    });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
-              <BarChart3 size={15} />
-              {props.scope === 'organization' ? 'Organization analytics' : props.scope === 'team' ? 'Direct-report analytics' : 'Personal analytics'}
+              <FileText size={15} />
+              {props.scope === 'organization' ? 'Organization reporting' : props.scope === 'team' ? 'Direct-report reporting' : 'Personal reporting'}
             </div>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">Reports</h1>
             <p className="mt-1 max-w-2xl text-sm text-neutral-500">
@@ -422,32 +393,22 @@ export default function Reports(props: Props) {
           ))}
         </nav>
 
-        <section className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
-          {capabilities.can_select_individual && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4">
-              <div className="flex rounded-lg bg-neutral-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => selectView('individual')}
-                  className={viewButton(draft.view === 'individual')}
-                >
-                  <UserRound size={14} /> Individual
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectView('multi')}
-                  className={viewButton(draft.view === 'multi')}
-                >
-                  <Users size={14} /> Group Report
-                </button>
-              </div>
-              <span className="text-xs font-medium text-neutral-400">
-                {loading ? 'Updating report…' : `${summary.employees} employee${summary.employees === 1 ? '' : 's'} in scope`}
+        <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <button type="button" onClick={() => setFiltersOpen((value) => !value)} aria-expanded={filtersOpen} className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-neutral-50/70 ${filtersOpen ? 'border-b border-neutral-100' : ''}`}>
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700"><Filter size={16} /></span>
+              <span>
+                <span className="block text-sm font-semibold text-neutral-900">Filter report</span>
+                <span className="mt-0.5 block text-xs text-neutral-500">{formatDate(filters.start_date)} – {formatDate(filters.end_date)} · {summary.employees} employee{summary.employees === 1 ? '' : 's'}</span>
               </span>
-            </div>
-          )}
+            </span>
+            <span className="flex items-center gap-2 text-xs font-medium text-neutral-400">
+              {loading ? 'Updating…' : filtersOpen ? 'Hide' : 'Edit'}
+              <ChevronDown size={17} className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
 
-          <div className="space-y-5 p-5">
+          {filtersOpen && <div className="space-y-5 p-5">
             <div className="flex flex-wrap gap-2">
               {PERIOD_PRESETS.map(([preset, label]) => (
                 <button
@@ -483,20 +444,7 @@ export default function Reports(props: Props) {
                 />
               </FilterField>
 
-              {draft.view === 'individual' && capabilities.can_select_individual ? (
-                <FilterField label="Employee" icon={<UserRound size={14} />}>
-                  <Select<SelectOption, false>
-                    options={availableEmployees.map(employeeSelectOption)}
-                    value={availableEmployees.filter((employee) => draft.employee_ids[0] === employee.id).map(employeeSelectOption)[0] ?? null}
-                    onChange={(option) => updateDraft({ employee_ids: option ? [Number(option.value)] : [] })}
-                    isClearable
-                    placeholder="Me"
-                    styles={selectStyles}
-                  />
-                </FilterField>
-              ) : null}
-
-              {draft.view === 'multi' && (
+              {capabilities.can_select_individual && (
                 <>
                   <FilterField label="Employment" icon={<Users size={14} />}>
                     <select value={draft.employment_status} onChange={(event) => updateDraft({ employment_status: event.target.value as Filters['employment_status'] })} className={inputClass}>
@@ -560,8 +508,8 @@ export default function Reports(props: Props) {
                   <FilterField label="Attendance statuses" icon={<Clock3 size={14} />}>
                     <MultiSelect options={ATTENDANCE_STATUSES} values={draft.attendance_statuses} onChange={(values) => updateDraft({ attendance_statuses: values })} placeholder="All statuses" />
                   </FilterField>
-                  <FilterField label="Branches" icon={<Building2 size={14} />}>
-                    <MultiSelect options={filterOptions.sites.map(idSelectOption)} values={draft.site_ids.map(String)} onChange={(values) => updateDraft({ site_ids: values.map(Number) })} placeholder="All branches" />
+                  <FilterField label="Attendance issues" icon={<Filter size={14} />}>
+                    <MultiSelect options={ATTENDANCE_ISSUES} values={draft.attendance_issues} onChange={(values) => updateDraft({ attendance_issues: values })} placeholder="All issue types" />
                   </FilterField>
                 </>
               )}
@@ -575,168 +523,23 @@ export default function Reports(props: Props) {
                 <Filter size={15} /> Apply filters
               </button>
             </div>
-          </div>
+          </div>}
         </section>
 
-        <KpiGrid summary={summary} section={filters.section} />
+        {filters.section === 'overview' && (
+          <>
+            <SummaryReport summary={summary} onDrillDown={drillDown} />
+            <EmployeeSummaryTable details={details} filters={filters} onNavigate={apply} onFocus={focusEmployee} />
+          </>
+        )}
 
-        <Findings
-          section={filters.section}
-          leave={leave}
-          attendance={attendance}
-          onFocus={focusEmployee}
-        />
+        {filters.section === 'leave' && (
+          <LeaveRequestTable filters={filters} requests={leave.requests} onNavigate={apply} onFocus={focusEmployee} />
+        )}
 
-        <Suspense fallback={<ChartSkeleton />}>
-          {filters.section === 'overview' && (
-            <div className="grid gap-5 xl:grid-cols-2">
-              <ChartWithToggle
-                modes={['line', 'bar']}
-                value={leaveTrendMode}
-                onChange={(value) => setLeaveTrendMode(value as 'line' | 'bar')}
-              >
-                <ReportChart
-                  title="Leave activity"
-                  description="Working leave days in the selected period, grouped by current request status."
-                  filename={`leave-activity-${periodFilename}`}
-                  option={leaveTrendOption}
-                />
-              </ChartWithToggle>
-              <ChartWithToggle modes={['line', 'bar']} value={attendanceMode} onChange={(value) => setAttendanceMode(value as 'line' | 'bar')}>
-                <ReportChart
-                  title="Attendance compliance"
-                  description="Complete versus issue attendance days and the resulting compliance percentage."
-                  filename={`attendance-compliance-${periodFilename}`}
-                  option={attendanceTrendOption}
-                />
-              </ChartWithToggle>
-              {canSeeAttendanceCalendar && (
-                <ReportChart
-                  title="Attendance calendar"
-                  description="Issue-day intensity across the selected calendar period."
-                  filename={`attendance-calendar-${periodFilename}`}
-                  option={heatmapOption(attendance.heatmap, filters.start_date, filters.end_date)}
-                />
-              )}
-              <ReportChart
-                title="Leave balance utilization"
-                description={`Used, pending, and available leave balances for ${leave.balance_year}.`}
-                filename={`leave-balances-${leave.balance_year}`}
-                option={balanceOption(leave.balances)}
-              />
-            </div>
-          )}
-
-          {filters.section === 'leave' && (
-            <div className="space-y-5">
-              <div className="grid gap-5 xl:grid-cols-2">
-                <ReportChart
-                  title="Leave balance utilization"
-                  description={`Used, pending, and available leave balances for ${leave.balance_year}.`}
-                  filename={`leave-balances-${leave.balance_year}`}
-                  option={balanceOption(leave.balances)}
-                />
-                <ChartWithToggle modes={['donut', 'treemap']} value={compositionMode} onChange={(value) => setCompositionMode(value as 'donut' | 'treemap')}>
-                  <ReportChart
-                    title="Leave by type"
-                    description="Working leave days split by leave type."
-                    filename={`leave-types-${periodFilename}`}
-                    option={leaveCompositionOption}
-                  />
-                </ChartWithToggle>
-                <ChartWithToggle modes={['line', 'bar']} value={leaveTrendMode} onChange={(value) => setLeaveTrendMode(value as 'line' | 'bar')}>
-                  <ReportChart
-                    title="Leave activity trend"
-                    description="Approved, pending, and rejected working days over time."
-                    filename={`leave-trend-${periodFilename}`}
-                    option={leaveTrendOption}
-                  />
-                </ChartWithToggle>
-                {filters.view === 'multi' && (
-                  <ReportChart
-                    title="Absence concurrency distribution"
-                    description="Working days grouped by how many employees were simultaneously on approved leave."
-                    filename={`absence-concurrency-distribution-${periodFilename}`}
-                    option={concurrencyDistributionOption(leave.concurrency_distribution)}
-                  />
-                )}
-                {filters.view === 'multi' && (
-                  <ReportChart
-                    title="Approved leave ranking"
-                    description="Named employee comparison, limited to the current authorized scope. Select a bar to focus the report on that employee."
-                    filename={`leave-ranking-${periodFilename}`}
-                    option={rankingOption(leave.rankings.slice(0, 15).map((row) => ({ name: row.name, value: row.days, user_id: row.user_id })), 'Working days')}
-                    onDataClick={(data) => data.user_id && focusEmployee(data.user_id)}
-                  />
-                )}
-                {filters.view === 'multi' && (
-                  <ReportChart
-                    title="Balance utilization by employee"
-                    description={`Employee balance utilization for ${leave.balance_year}.`}
-                    filename={`employee-balance-utilization-${leave.balance_year}`}
-                    option={rankingOption(leave.employee_balances.slice(0, 15).map((row) => ({ name: row.name, value: row.utilization })), 'Utilization %')}
-                  />
-                )}
-              </div>
-              <LeaveRequestTable filters={filters} requests={leave.requests} onNavigate={apply} onFocus={focusEmployee} />
-            </div>
-          )}
-
-          {filters.section === 'attendance' && (
-            <div className="space-y-5">
-              <div className="grid gap-5 xl:grid-cols-2">
-                <ChartWithToggle modes={['line', 'bar']} value={attendanceMode} onChange={(value) => setAttendanceMode(value as 'line' | 'bar')}>
-                  <ReportChart
-                    title="Attendance compliance trend"
-                    description="Finalized complete and issue attendance records over time. In-progress and non-working days are excluded."
-                    filename={`attendance-trend-${periodFilename}`}
-                    option={attendanceTrendOption}
-                  />
-                </ChartWithToggle>
-                {canSeeAttendanceCalendar && (
-                  <ReportChart
-                    title="Attendance calendar"
-                    description="Issue-day intensity across the selected calendar period."
-                    filename={`attendance-calendar-${periodFilename}`}
-                    option={heatmapOption(attendance.heatmap, filters.start_date, filters.end_date)}
-                  />
-                )}
-                <ChartWithToggle modes={['donut', 'bar']} value={issueMode} onChange={(value) => setIssueMode(value as 'donut' | 'bar')}>
-                  <ReportChart
-                    title="Attendance issue mix"
-                    description="Employee-days affected by late in, early out, or a missing punch, plus flagged events."
-                    filename={`attendance-issues-${periodFilename}`}
-                    option={issueOption}
-                  />
-                </ChartWithToggle>
-                <ReportChart
-                  title="Complete vs issue days"
-                  description="A simple count of finalized attendance days for each employee."
-                  filename={`attendance-outcomes-${periodFilename}`}
-                  option={attendanceOutcomeOption(attendance.employees.slice(0, 15))}
-                />
-                {filters.view === 'multi' && (
-                  <ReportChart
-                    title="Employee attendance compliance"
-                    description="Named compliance comparison, limited to the current authorized scope. Select a bar to focus the report on that employee."
-                    filename={`employee-attendance-${periodFilename}`}
-                    option={rankingOption(attendance.employees.slice(0, 15).map((row) => ({ name: row.name, value: row.compliance, user_id: row.user_id })), 'Compliance %')}
-                    onDataClick={(data) => data.user_id && focusEmployee(data.user_id)}
-                  />
-                )}
-                {filters.view === 'multi' && attendance.departments.length > 1 && (
-                  <ReportChart
-                    title="Department attendance comparison"
-                    description="Compliance and attendance issues across departments in scope."
-                    filename={`department-attendance-${periodFilename}`}
-                    option={departmentOption(attendance.departments, capabilities.organization && attendance.departments.length <= 8)}
-                  />
-                )}
-              </div>
-              <AttendanceIssueTable filters={filters} issueDays={attendance.issue_days} onNavigate={apply} onFocus={focusEmployee} />
-            </div>
-          )}
-        </Suspense>
+        {filters.section === 'attendance' && (
+          <AttendanceIssueTable filters={filters} issueDays={attendance.issue_days} onNavigate={apply} onFocus={focusEmployee} />
+        )}
       </div>
     </AppLayout>
   );
@@ -766,126 +569,185 @@ function FilterField({ label, icon, children }: { label: string; icon: React.Rea
   );
 }
 
-function KpiGrid({ summary, section }: { summary: Props['summary']; section: Filters['section'] }) {
-  const cards = [
-    ['Employees', summary.employees, <Users size={17} />, 'neutral'],
-    ['Approved leave', `${summary.approved_leave_days} days`, <CalendarRange size={17} />, 'orange'],
-    ['Pending leave', `${summary.pending_leave_days} days`, <Clock3 size={17} />, 'amber'],
-    ['Available balance', `${summary.available_balance} days`, <CheckCircle2 size={17} />, 'teal'],
-    ['Compliance', `${summary.attendance_compliance}%`, <Activity size={17} />, 'blue'],
-    ['Late-in days / early-out days', `${summary.late} / ${summary.early}`, <Clock3 size={17} />, 'purple'],
-    ['Missing-punch days', summary.missing, <TriangleAlert size={17} />, 'red'],
-    // ['Unresolved flags', summary.unresolved_flags, <TriangleAlert size={17} />, 'red'],
-  ];
-  const visibleLabels = section === 'leave'
-    ? ['Employees', 'Approved leave', 'Pending leave', 'Available balance']
-    : section === 'attendance'
-      ? ['Employees', 'Compliance', 'Late-in days / early-out days', 'Missing-punch days', 'Unresolved flags']
-      : cards.map(([label]) => String(label));
-  const visibleCards = cards.filter(([label]) => visibleLabels.includes(String(label)));
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {visibleCards.map(([label, value, icon, tone]) => (
-        <div key={String(label)} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${toneClass(String(tone))}`}>{icon}</div>
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">{value}</div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">{label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Findings({ section, leave, attendance, onFocus }: {
-  section: Filters['section'];
-  leave: Props['leave'];
-  attendance: Props['attendance'];
-  onFocus: (userId: number) => void;
+function SummaryReport({ summary, onDrillDown }: {
+  summary: Props['summary'];
+  onDrillDown: (drillDown: DrillDown) => void;
 }) {
-  const findings: { key: string; label: string; value: string; detail: string; userId?: number }[] = [];
-  const topEmployee = leave.insights.top_employee;
-  const topType = leave.insights.top_type;
-  const peakAbsence = leave.insights.peak_absence;
-  const topIssueEmployee = attendance.insights.top_issue_employee;
-  const peakIssueDate = attendance.insights.peak_issue_date;
-  const lowestDepartment = attendance.insights.lowest_department;
-
-  if (section !== 'attendance' && topEmployee) {
-    findings.push({
-      key: 'top-leave',
-      label: 'Most approved leave',
-      value: `${topEmployee.name} · ${topEmployee.days} working days`,
-      detail: `${topEmployee.requests} request${topEmployee.requests === 1 ? '' : 's'}${topEmployee.primary_type ? `, mainly ${topEmployee.primary_type}` : ''}.`,
-      userId: topEmployee.user_id,
-    });
-  }
-  if (section === 'leave' && topType) {
-    findings.push({ key: 'top-type', label: 'Most-used leave type', value: topType.name, detail: `${topType.days} approved working days in the selected period.` });
-  }
-  if (section !== 'attendance' && peakAbsence) {
-    findings.push({ key: 'peak-absence', label: 'Highest simultaneous absence', value: `${peakAbsence.employees} employees`, detail: `Peak approved absence occurred on ${formatDate(peakAbsence.date)}.` });
-  }
-  if (section !== 'leave' && topIssueEmployee && topIssueEmployee.issues > 0) {
-    findings.push({
-      key: 'top-issues',
-      label: 'Most attendance issue-days',
-      value: `${topIssueEmployee.name} · ${topIssueEmployee.issues} days`,
-      detail: `${topIssueEmployee.late} late, ${topIssueEmployee.early} early, and ${topIssueEmployee.missing} missing-punch day(s).`,
-      userId: topIssueEmployee.user_id,
-    });
-  }
-  if (section === 'attendance' && peakIssueDate) {
-    findings.push({ key: 'peak-issues', label: 'Highest issue date', value: `${formatDate(peakIssueDate.date)} · ${peakIssueDate.issues} records`, detail: `${peakIssueDate.issues} of ${peakIssueDate.records} finalized attendance record(s) had issues.` });
-  }
-  if (section !== 'leave' && lowestDepartment) {
-    findings.push({ key: 'lowest-department', label: 'Lowest department compliance', value: `${lowestDepartment.name} · ${lowestDepartment.compliance}%`, detail: `${lowestDepartment.late} late, ${lowestDepartment.early} early, and ${lowestDepartment.missing} missing-punch day(s).` });
-  }
-
+  const [open, setOpen] = useState(true);
+  const rows = [
+    { label: 'Employees included', display: String(summary.employees), drillDown: { filters: { section: 'overview' as const, leave_type_ids: [], leave_statuses: [], attendance_statuses: [], attendance_issues: [] }, target: 'employee-report' } },
+    { label: 'Approved leave', display: `${summary.approved_leave_days} days`, drillDown: { filters: { section: 'leave' as const, leave_statuses: ['approved'], attendance_statuses: [], attendance_issues: [] }, target: 'leave-request-report' } },
+    { label: 'Pending leave', display: `${summary.pending_leave_days} days`, drillDown: { filters: { section: 'leave' as const, leave_statuses: ['pending'], attendance_statuses: [], attendance_issues: [] }, target: 'leave-request-report' } },
+    { label: 'Available leave balance', display: `${summary.available_balance} days`, drillDown: { filters: { section: 'leave' as const, leave_statuses: [], attendance_statuses: [], attendance_issues: [] }, target: 'leave-request-report' } },
+    { label: 'Attendance compliance', display: `${summary.attendance_compliance}%`, drillDown: { filters: { section: 'attendance' as const, leave_type_ids: [], leave_statuses: [], attendance_statuses: [], attendance_issues: [] }, target: 'attendance-issue-report' } },
+    { label: 'Late-in days', display: String(summary.late), drillDown: { filters: { section: 'attendance' as const, leave_type_ids: [], leave_statuses: [], attendance_statuses: ['issues'], attendance_issues: ['late'] }, target: 'attendance-issue-report' } },
+    { label: 'Early-out days', display: String(summary.early), drillDown: { filters: { section: 'attendance' as const, leave_type_ids: [], leave_statuses: [], attendance_statuses: ['issues'], attendance_issues: ['early'] }, target: 'attendance-issue-report' } },
+    { label: 'Missing-attendance days', display: String(summary.missing), drillDown: { filters: { section: 'attendance' as const, leave_type_ids: [], leave_statuses: [], attendance_statuses: ['issues'], attendance_issues: ['missing'] }, target: 'attendance-issue-report' } },
+  ];
   return (
     <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-      <div className="flex items-start gap-3 border-b border-neutral-100 px-5 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-100"><Lightbulb size={18} /></div>
-        <div>
-          <h2 className="font-semibold text-neutral-900">Important findings</h2>
-          <p className="mt-0.5 text-xs leading-5 text-neutral-500">Direct answers from the selected period and employee scope.</p>
-        </div>
-      </div>
-      {findings.length ? (
-        <div className="grid gap-px bg-neutral-100 md:grid-cols-2 xl:grid-cols-3">
-          {findings.map((finding) => (
-            <article key={finding.key} className="flex min-h-36 flex-col bg-white p-5">
-              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-orange-700">{finding.label}</div>
-              <div className="mt-2 text-lg font-semibold text-neutral-900">{finding.value}</div>
-              <p className="mt-1 text-sm leading-6 text-neutral-500">{finding.detail}</p>
-              {finding.userId && (
-                <button type="button" onClick={() => onFocus(finding.userId!)} className="mt-auto inline-flex items-center gap-1.5 pt-3 text-xs font-semibold text-orange-700 hover:text-orange-800">
-                  Focus on employee <ArrowRight size={13} />
-                </button>
-              )}
-            </article>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-neutral-50/70 ${open ? 'border-b border-neutral-100' : ''}`}
+      >
+        <span>
+          <span className="block font-semibold text-neutral-900">Report summary</span>
+          <span className="mt-1 block text-xs leading-5 text-neutral-500">Key totals for the selected period and employee scope.</span>
+        </span>
+        <ChevronDown size={18} className={`shrink-0 text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="grid gap-px bg-neutral-100 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((row) => (
+            <button key={row.label} type="button" onClick={() => onDrillDown(row.drillDown)} className="group bg-white px-5 py-4 text-left transition hover:bg-orange-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500">
+              <span className="block text-xs font-medium text-neutral-500">{row.label}</span>
+              <span className="mt-1.5 flex items-center justify-between gap-3 text-xl font-semibold tracking-tight text-neutral-900"><span>{row.display}</span><ArrowRight size={16} className="text-neutral-300 transition group-hover:translate-x-0.5 group-hover:text-orange-600" /></span>
+            </button>
           ))}
         </div>
-      ) : (
-        <p className="px-5 py-7 text-sm text-neutral-500">There is not enough activity in this selection to identify a notable finding.</p>
       )}
     </section>
   );
 }
 
-function ChartWithToggle({ modes, value, onChange, children }: { modes: string[]; value: string; onChange: (value: string) => void; children: React.ReactNode }) {
+function ReportTable({ id, title, description, children }: { id?: string; title: string; description: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+
   return (
-    <div className="relative min-w-0">
-      <div className="absolute right-24 top-3.5 z-10 flex rounded-md bg-neutral-100 p-0.5">
-        {modes.map((mode) => (
-          <button key={mode} type="button" onClick={() => onChange(mode)} className={`rounded px-2 py-1 text-[10px] font-bold uppercase ${value === mode ? 'bg-white text-orange-700 shadow-sm' : 'text-neutral-400'}`}>
-            {mode}
-          </button>
-        ))}
-      </div>
-      {children}
-    </div>
+    <section id={id} className="min-w-0 scroll-mt-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-neutral-50/70 ${open ? 'border-b border-neutral-100' : ''}`}>
+        <span>
+          <span className="block font-semibold text-neutral-900">{title}</span>
+          <span className="mt-1 block text-xs leading-5 text-neutral-500">{description}</span>
+        </span>
+        <ChevronDown size={18} className={`shrink-0 text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="overflow-x-auto">{children}</div>}
+    </section>
   );
+}
+
+function EmptyRow({ columns, message }: { columns: number; message: string }) {
+  return <tr><td colSpan={columns} className="px-5 py-10 text-center text-sm text-neutral-400">{message}</td></tr>;
+}
+
+function EmployeeSummaryTable({ details, filters, onNavigate, onFocus }: {
+  details: Props['details'];
+  filters: Filters;
+  onNavigate: (patch: Partial<Filters>) => void;
+  onFocus: (userId: number) => void;
+}) {
+  const sort = (key: string) => onNavigate({
+    sort: key,
+    direction: filters.sort !== key ? 'desc' : filters.direction === 'asc' ? 'desc' : 'asc',
+    page: 1,
+  });
+  return (
+    <ReportTable id="employee-report" title="Employee report" description={`${details.total} employee${details.total === 1 ? '' : 's'} in the selected report scope.`}>
+      <table className="w-full min-w-[1100px] text-left text-sm">
+        <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500"><tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Department" sortKey="department" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Leave days" sortKey="leave_days" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Balance used" sortKey="used_balance" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Available" sortKey="available_balance" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Attendance Compliance" sortKey="attendance_compliance" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Late" sortKey="late" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Early" sortKey="early" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><SortableHeader label="Missing" sortKey="missing" activeSort={filters.sort} direction={filters.direction} onSort={sort} /><th className="px-4 py-3"><span className="sr-only">Action</span></th></tr></thead>
+        <tbody className="divide-y divide-neutral-100">
+          {details.data.map((row) => <tr key={row.id} className="hover:bg-neutral-50/70"><td className="px-4 py-3.5"><div className="font-semibold text-neutral-800">{row.name}</div><div className="mt-0.5 text-xs text-neutral-400">{row.employee_code ?? 'No code'} · {titleCase(row.role)}</div></td><td className="px-4 py-3.5">{row.department}</td><td className="px-4 py-3.5 font-semibold">{row.leave_days}</td><td className="px-4 py-3.5">{row.used_balance}</td><td className="px-4 py-3.5">{row.available_balance}</td><td className="px-4 py-3.5 font-semibold">{row.attendance_compliance}%</td><td className="px-4 py-3.5">{row.late}</td><td className="px-4 py-3.5">{row.early}</td><td className="px-4 py-3.5">{row.missing}</td><td className="px-4 py-3.5 text-right"><button type="button" onClick={() => onFocus(row.id)} className="text-xs font-semibold text-orange-700">Focus</button></td></tr>)}
+          {!details.data.length && <EmptyRow columns={10} message="No employees match the selected filters." />}
+        </tbody>
+      </table>
+      <Pagination rows={details} onNavigate={onNavigate} />
+    </ReportTable>
+  );
+}
+
+function LeaveBalanceTable({ rows, year }: { rows: Props['leave']['balances']; year: number }) {
+  return <ReportTable id="leave-balance-report" title="Leave balance report" description={`Entitlement and utilization by leave type for ${year}.`}><ReportDataTable rows={rows} rowKey={(row) => row.name} minWidth="620px" empty="No leave balances are available." columns={[
+    { key: 'name', label: 'Leave type', value: (row) => row.name, render: (row) => <span className="font-medium text-neutral-800">{row.name}</span> },
+    { key: 'entitlement', label: 'Entitlement', value: (row) => row.entitlement, align: 'right' },
+    { key: 'used', label: 'Used', value: (row) => row.used, align: 'right' },
+    { key: 'pending', label: 'Pending', value: (row) => row.pending, align: 'right' },
+    { key: 'available', label: 'Available', value: (row) => row.available, align: 'right' },
+    { key: 'utilization', label: 'Utilization', value: (row) => row.utilization, render: (row) => <span className="font-semibold">{row.utilization}%</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function LeaveTypeTable({ rows }: { rows: Props['leave']['types'] }) {
+  return <ReportTable title="Leave usage by type" description="Request count and working leave days by leave type."><ReportDataTable rows={rows} rowKey={(row) => row.name} empty="No leave usage matches this report." columns={[
+    { key: 'name', label: 'Leave type', value: (row) => row.name, render: (row) => <span className="font-medium text-neutral-800">{row.name}</span> },
+    { key: 'count', label: 'Requests', value: (row) => row.count, align: 'right' },
+    { key: 'days', label: 'Working days', value: (row) => row.days, render: (row) => <span className="font-semibold">{row.days}</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function LeaveActivityTable({ rows }: { rows: Props['leave']['trend'] }) {
+  return <ReportTable title="Leave activity report" description="Working leave days by reporting period and request status."><ReportDataTable rows={rows} rowKey={(row) => row.key} empty="No leave activity matches this report." columns={[
+    { key: 'period', label: 'Period', value: (row) => row.key, render: (row) => <span className="font-medium text-neutral-800">{row.label}</span> },
+    { key: 'approved', label: 'Approved', value: (row) => row.values.approved ?? 0, align: 'right' },
+    { key: 'pending', label: 'Pending', value: (row) => row.values.pending ?? 0, align: 'right' },
+    { key: 'rejected', label: 'Rejected', value: (row) => row.values.rejected ?? 0, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function EmployeeLeaveTable({ rows, onFocus }: { rows: Props['leave']['rankings']; onFocus: (userId: number) => void }) {
+  return <ReportTable title="Employee leave report" description="Approved leave totals by employee. Select a row to focus the report."><ReportDataTable rows={rows} rowKey={(row) => row.user_id} empty="No approved employee leave is recorded." onRowClick={(row) => onFocus(row.user_id)} columns={[
+    { key: 'name', label: 'Employee', value: (row) => row.name, render: (row) => <span className="font-medium text-orange-700">{row.name}</span> },
+    { key: 'department', label: 'Department', value: (row) => row.department },
+    { key: 'requests', label: 'Requests', value: (row) => row.requests, align: 'right' },
+    { key: 'days', label: 'Days', value: (row) => row.days, render: (row) => <span className="font-semibold">{row.days}</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function EmployeeBalanceTable({ rows, year }: { rows: Props['leave']['employee_balances']; year: number }) {
+  return <ReportTable id="employee-balance-report" title="Employee balance report" description={`Used and available leave balance by employee for ${year}.`}><ReportDataTable rows={rows} rowKey={(row) => row.user_id} empty="No employee leave balances are available." columns={[
+    { key: 'name', label: 'Employee', value: (row) => row.name, render: (row) => <span className="font-medium text-neutral-800">{row.name}</span> },
+    { key: 'department', label: 'Department', value: (row) => row.department },
+    { key: 'used', label: 'Used', value: (row) => row.used, align: 'right' },
+    { key: 'available', label: 'Available', value: (row) => row.available, align: 'right' },
+    { key: 'utilization', label: 'Utilization', value: (row) => row.utilization, render: (row) => <span className="font-semibold">{row.utilization}%</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function AbsenceConcurrencyTable({ rows }: { rows: Props['leave']['concurrency_distribution'] }) {
+  return <ReportTable title="Concurrent absence report" description="Working days grouped by the number of employees simultaneously absent."><ReportDataTable rows={rows} rowKey={(row) => row.name} empty="No concurrent absence data is available." columns={[
+    { key: 'name', label: 'Employees absent', value: (row) => row.name, render: (row) => <span className="font-medium text-neutral-800">{row.name}</span> },
+    { key: 'days', label: 'Working days', value: (row) => row.days, render: (row) => <span className="font-semibold">{row.days}</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function AttendanceActivityTable({ rows }: { rows: Props['attendance']['trend'] }) {
+  return <ReportTable id="attendance-activity-report" title="Attendance activity report" description="Finalized attendance outcomes and compliance by reporting period."><ReportDataTable rows={rows} rowKey={(row) => row.key} empty="No finalized attendance activity matches this report." columns={[
+    { key: 'period', label: 'Period', value: (row) => row.key, render: (row) => <span className="font-medium text-neutral-800">{row.label}</span> },
+    { key: 'complete', label: 'Complete', value: (row) => row.values.complete ?? 0, align: 'right' },
+    { key: 'issues', label: 'Issues', value: (row) => row.values.issues ?? 0, align: 'right' },
+    { key: 'compliance', label: 'Compliance', value: (row) => row.compliance ?? 0, render: (row) => <span className="font-semibold">{row.compliance ?? 0}%</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function AttendanceIssueSummaryTable({ rows }: { rows: Props['attendance']['issue_mix'] }) {
+  return <ReportTable title="Attendance issue summary" description="Employee-days affected by each attendance issue type."><ReportDataTable rows={rows} rowKey={(row) => row.name} empty="No attendance issues match this report." columns={[
+    { key: 'name', label: 'Issue type', value: (row) => row.name, render: (row) => <span className="font-medium text-neutral-800">{row.name}</span> },
+    { key: 'value', label: 'Affected days', value: (row) => row.value, render: (row) => <span className="font-semibold">{row.value}</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function EmployeeAttendanceTable({ rows, onFocus }: { rows: Props['attendance']['employees']; onFocus: (userId: number) => void }) {
+  return <ReportTable id="employee-attendance-report" title="Employee attendance report" description="Finalized attendance outcomes and issue totals by employee. Select a row to focus the report."><ReportDataTable rows={rows} rowKey={(row) => row.user_id} minWidth="760px" empty="No finalized employee attendance records match this report." onRowClick={(row) => onFocus(row.user_id)} columns={[
+    { key: 'name', label: 'Employee', value: (row) => row.name, render: (row) => <span><span className="block font-medium text-orange-700">{row.name}</span><span className="text-xs text-neutral-400">{row.department}</span></span> },
+    { key: 'complete', label: 'Complete', value: (row) => row.complete, align: 'right' },
+    { key: 'issues', label: 'Issue days', value: (row) => row.issues, align: 'right' },
+    { key: 'late', label: 'Late', value: (row) => row.late, align: 'right' },
+    { key: 'early', label: 'Early', value: (row) => row.early, align: 'right' },
+    { key: 'missing', label: 'Missing', value: (row) => row.missing, align: 'right' },
+    { key: 'compliance', label: 'Compliance', value: (row) => row.compliance, render: (row) => <span className="font-semibold">{row.compliance}%</span>, align: 'right' },
+  ]} /></ReportTable>;
+}
+
+function DepartmentAttendanceTable({ rows }: { rows: Props['attendance']['departments'] }) {
+  return <ReportTable id="department-attendance-report" title="Department attendance report" description="Compliance and attendance issues by department."><ReportDataTable rows={rows} rowKey={(row) => row.name} empty="No department attendance records match this report." columns={[
+    { key: 'name', label: 'Department', value: (row) => row.name, render: (row) => <span className="font-medium text-neutral-800">{row.name}</span> },
+    { key: 'compliance', label: 'Compliance', value: (row) => row.compliance, render: (row) => <span className="font-semibold">{row.compliance}%</span>, align: 'right' },
+    { key: 'late', label: 'Late', value: (row) => row.late, align: 'right' },
+    { key: 'early', label: 'Early', value: (row) => row.early, align: 'right' },
+    { key: 'missing', label: 'Missing', value: (row) => row.missing, align: 'right' },
+  ]} /></ReportTable>;
 }
 
 function LeaveRequestTable({ filters, requests, onNavigate, onFocus }: {
@@ -895,19 +757,20 @@ function LeaveRequestTable({ filters, requests, onNavigate, onFocus }: {
   onFocus: (userId: number) => void;
 }) {
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [open, setOpen] = useState(true);
   const sort = (key: string) => onNavigate({
     leave_sort: key,
-    leave_direction: filters.leave_sort === key && filters.leave_direction === 'asc' ? 'desc' : 'asc',
+    leave_direction: filters.leave_sort !== key ? 'desc' : filters.leave_direction === 'asc' ? 'desc' : 'asc',
     page: 1,
   });
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-      <RecordTableHeader title="Leave request details" description={`${requests.total} request${requests.total === 1 ? '' : 's'} in the selected scope`} filters={filters} onNavigate={onNavigate} />
-      <div className="overflow-x-auto">
+    <section id="leave-request-report" className="scroll-mt-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <RecordTableHeader title="Leave request details" description={`${requests.total} request${requests.total === 1 ? '' : 's'} in the selected scope`} filters={filters} onNavigate={onNavigate} open={open} onToggle={() => setOpen((value) => !value)} />
+      {open && <><div className="overflow-x-auto">
         <table className="w-full min-w-[1040px] text-left text-sm">
           <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
-            <tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Leave type" sortKey="leave_type" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Period" sortKey="starts_at" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="In-range days" sortKey="days_in_period" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Status" sortKey="status" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><th className="px-4 py-3">Reason</th><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr>
+            <tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Leave type" sortKey="leave_type" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Period" sortKey="starts_at" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="In-range days" sortKey="days_in_period" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Status" sortKey="status" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><SortableHeader label="Reason" sortKey="reason" activeSort={filters.leave_sort} direction={filters.leave_direction} onSort={sort} /><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {requests.data.map((row) => (
@@ -930,7 +793,7 @@ function LeaveRequestTable({ filters, requests, onNavigate, onFocus }: {
           </tbody>
         </table>
       </div>
-      <Pagination rows={requests} onNavigate={onNavigate} />
+      <Pagination rows={requests} onNavigate={onNavigate} /></>}
     </section>
   );
 }
@@ -941,65 +804,80 @@ function AttendanceIssueTable({ filters, issueDays, onNavigate, onFocus }: {
   onNavigate: (patch: Partial<Filters>) => void;
   onFocus: (userId: number) => void;
 }) {
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [open, setOpen] = useState(true);
+  const showReview = issueDays.data.some((row) => row.flagged_events > 0);
   const sort = (key: string) => onNavigate({
     attendance_sort: key,
-    attendance_direction: filters.attendance_sort === key && filters.attendance_direction === 'asc' ? 'desc' : 'asc',
+    attendance_direction: filters.attendance_sort !== key ? 'desc' : filters.attendance_direction === 'asc' ? 'desc' : 'asc',
     page: 1,
   });
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-      <RecordTableHeader title="Attendance issue details" description={`${issueDays.total} finalized issue or flagged day${issueDays.total === 1 ? '' : 's'} in the selected scope`} filters={filters} onNavigate={onNavigate} />
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500"><tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Date" sortKey="date" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Branch" sortKey="site" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Issues" sortKey="issue_count" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Review" sortKey="unresolved_flags" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr></thead>
+    <section id="attendance-issue-report" className="scroll-mt-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <RecordTableHeader title="Attendance details" description={`${issueDays.total} finalized attendance record${issueDays.total === 1 ? '' : 's'} in the selected scope`} filters={filters} onNavigate={onNavigate} open={open} onToggle={() => setOpen((value) => !value)} />
+      {open && <><div className="overflow-x-auto">
+        <table className="w-full min-w-[1120px] text-left text-sm">
+          <thead className="bg-neutral-50/80 text-[11px] uppercase tracking-[0.08em] text-neutral-500"><tr><SortableHeader label="Employee" sortKey="name" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><SortableHeader label="Date" sortKey="date" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} /><th className="px-4 py-3 font-semibold">Morning In</th><th className="px-4 py-3 font-semibold">Lunch Out</th><th className="px-4 py-3 font-semibold">Lunch In</th><th className="px-4 py-3 font-semibold">Final Out</th>{showReview && <SortableHeader label="Review" sortKey="unresolved_flags" activeSort={filters.attendance_sort} direction={filters.attendance_direction} onSort={sort} />}</tr></thead>
           <tbody className="divide-y divide-neutral-100">
             {issueDays.data.map((row) => (
-              <Fragment key={row.id}>
-                <tr className="hover:bg-neutral-50/70">
-                  <td className="px-4 py-3.5"><div className="font-semibold text-neutral-800">{row.name}</div><div className="mt-0.5 text-xs text-neutral-400">{row.department}</div></td>
-                  <td className="px-4 py-3.5 font-medium">{formatDate(row.date)}</td>
-                  <td className="px-4 py-3.5"><span className="inline-flex items-center gap-1.5"><MapPin size={13} className="text-neutral-400" />{row.site}</span></td>
-                  <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1.5">{row.issues.map((issue) => <StatusPill key={issue} status={issue} />)}{row.flagged_events > 0 && <StatusPill status={`${row.flagged_events} flagged`} />}</div></td>
-                  <td className="px-4 py-3.5 text-neutral-600">{row.unresolved_flags > 0 ? `${row.unresolved_flags} unresolved flag(s)` : row.flagged_events > 0 ? 'Reviewed' : 'No verification flags'}</td>
-                  <td className="px-4 py-3.5 text-right"><button type="button" aria-expanded={expanded === row.id} onClick={() => setExpanded(expanded === row.id ? null : row.id)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:border-orange-200 hover:text-orange-700">Punches <ChevronDown size={13} className={expanded === row.id ? 'rotate-180' : ''} /></button></td>
+                <tr key={row.id} className="align-middle hover:bg-neutral-50/60">
+                  <td className="px-4 py-3"><button type="button" onClick={() => onFocus(row.user_id)} className="text-left"><span className="block font-semibold text-neutral-800 hover:text-orange-700">{row.name}</span><span className="mt-0.5 block text-xs text-neutral-400">{row.department}</span></button></td>
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-neutral-700">{formatDate(row.date)}</td>
+                  <PunchCell slot={row.slots.find((slot) => slot.type === 'morning_in')} />
+                  <PunchCell slot={row.slots.find((slot) => slot.type === 'lunch_out')} />
+                  <PunchCell slot={row.slots.find((slot) => slot.type === 'lunch_in')} />
+                  <PunchCell slot={row.slots.find((slot) => slot.type === 'final_out')} />
+                  {showReview && <td className="max-w-40 px-4 py-3 text-xs text-neutral-500">{row.unresolved_flags > 0 ? <span className="font-semibold text-red-600">{row.unresolved_flags} unresolved</span> : row.flagged_events > 0 ? <span className="text-emerald-700">Reviewed</span> : <span className="text-neutral-300">—</span>}</td>}
                 </tr>
-                {expanded === row.id && (
-                  <tr className="bg-orange-50/40"><td colSpan={6} className="px-5 py-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{row.slots.map((slot) => <div key={slot.type} className="rounded-xl border border-neutral-200 bg-white p-3"><div className="text-xs font-bold uppercase tracking-wide text-neutral-500">{titleCase(slot.type)}</div><div className="mt-2 flex items-center justify-between gap-2"><div><div className="text-[10px] uppercase text-neutral-400">Expected</div><div className="font-semibold text-neutral-700">{formatTime(slot.expected_at)}</div></div><ArrowRight size={14} className="text-neutral-300" /><div className="text-right"><div className="text-[10px] uppercase text-neutral-400">Actual</div><div className="font-semibold text-neutral-700">{formatTime(slot.actual_at)}</div></div></div><div className="mt-2"><StatusPill status={slot.status} /></div></div>)}</div><button type="button" onClick={() => onFocus(row.user_id)} className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700">Focus report on {row.name} <ArrowRight size={13} /></button></td></tr>
-                )}
-              </Fragment>
             ))}
-            {!issueDays.data.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-neutral-400">No finalized attendance issue or flagged days match the selected filters.</td></tr>}
+            {!issueDays.data.length && <tr><td colSpan={showReview ? 7 : 6} className="px-4 py-12 text-center text-neutral-400">No finalized attendance records match the selected filters.</td></tr>}
           </tbody>
         </table>
       </div>
-      <Pagination rows={issueDays} onNavigate={onNavigate} />
+      <Pagination rows={issueDays} onNavigate={onNavigate} /></>}
     </section>
   );
 }
 
-function SortableHeader({ label, sortKey, activeSort, direction, onSort }: {
+function PunchCell({ slot }: { slot?: AttendanceIssueDay['slots'][number] }) {
+  const status = slot?.status ?? 'missing';
+  const isIssue = status === 'late' || status === 'early' || status === 'missing';
+  const tone = status === 'missing'
+    ? 'text-red-600 before:bg-red-500'
+    : 'text-orange-700 before:bg-orange-500';
+
+  return (
+    <td className="min-w-32 px-4 py-3">
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="font-semibold text-neutral-800">{slot?.actual_at ? formatTime(slot.actual_at) : '—'}</span>
+        {isIssue && <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide before:h-1.5 before:w-1.5 before:rounded-full ${tone}`}>{titleCase(status)}</span>}
+      </div>
+    </td>
+  );
+}
+
+function SortableHeader({ label, sortKey, activeSort, direction, onSort, align = 'left' }: {
   label: string;
   sortKey: string;
   activeSort: string;
   direction: 'asc' | 'desc';
   onSort: (key: string) => void;
+  align?: 'left' | 'right';
 }) {
   const active = activeSort === sortKey;
 
   return (
-    <th className="px-4 py-3" aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
-      <button type="button" onClick={() => onSort(sortKey)} className={`group inline-flex items-center gap-1.5 font-semibold transition hover:text-orange-700 ${active ? 'text-orange-700' : ''}`}>
+    <th className={`px-4 py-3 ${align === 'right' ? 'text-right' : ''}`} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" onClick={() => onSort(sortKey)} className={`group inline-flex items-center gap-1.5 font-semibold transition hover:text-orange-700 ${align === 'right' ? 'justify-end' : ''} ${active ? 'text-orange-700' : ''}`}>
         {label}
-        <span aria-hidden="true" className={`text-xs ${active ? 'text-orange-600' : 'text-neutral-300 group-hover:text-orange-400'}`}>{active ? (direction === 'asc' ? '↑' : '↓') : '↕'}</span>
+        {active && <span aria-hidden="true" className="text-xs text-orange-600">{direction === 'asc' ? '↑' : '↓'}</span>}
       </button>
     </th>
   );
 }
 
-function RecordTableHeader({ title, description, filters, onNavigate }: { title: string; description: string; filters: Filters; onNavigate: (patch: Partial<Filters>) => void }) {
-  return <div className="flex items-center justify-between gap-4 border-b border-neutral-100 px-5 py-4"><div><h3 className="font-semibold text-neutral-900">{title}</h3><p className="mt-1 text-xs text-neutral-500">{description}</p></div><select aria-label="Rows per page" value={filters.per_page} onChange={(event) => onNavigate({ per_page: Number(event.target.value), page: 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 text-xs"><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></div>;
+function RecordTableHeader({ title, description, filters, onNavigate, open, onToggle }: { title: string; description: string; filters: Filters; onNavigate: (patch: Partial<Filters>) => void; open: boolean; onToggle: () => void }) {
+  return <div className={`flex items-center justify-between gap-4 px-5 py-4 ${open ? 'border-b border-neutral-100' : ''}`}><button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center justify-between gap-4 text-left"><span><span className="block font-semibold text-neutral-900">{title}</span><span className="mt-1 block text-xs text-neutral-500">{description}</span></span><ChevronDown size={18} className={`shrink-0 text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`} /></button>{open && <select aria-label="Rows per page" value={filters.per_page} onChange={(event) => onNavigate({ per_page: Number(event.target.value), page: 1 })} className="rounded-lg border border-neutral-200 px-3 py-2 text-xs"><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select>}</div>;
 }
 
 function Pagination({ rows, onNavigate }: { rows: Pick<Paged<unknown>, 'page' | 'last_page'>; onNavigate: (patch: Partial<Filters>) => void }) {
@@ -1019,160 +897,6 @@ function StatusPill({ status }: { status: string }) {
         : normalized.includes('missing') || normalized.includes('rejected') || normalized.includes('flagged') ? 'bg-red-50 text-red-700 ring-red-200'
           : 'bg-neutral-100 text-neutral-600 ring-neutral-200';
   return <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${tone}`}>{titleCase(status)}</span>;
-}
-
-function ChartSkeleton() {
-  return <div className="grid gap-5 xl:grid-cols-2"><div className="h-96 animate-pulse rounded-2xl bg-neutral-100" /><div className="h-96 animate-pulse rounded-2xl bg-neutral-100" /></div>;
-}
-
-function trendOption(rows: TrendRow[], keys: string[], mode: 'line' | 'bar', yName: string) {
-  return {
-    tooltip: { trigger: 'axis' },
-    legend: { top: 8 },
-    grid: { left: 55, right: 25, top: 55, bottom: 50 },
-    xAxis: { type: 'category', data: rows.map((row) => row.label), axisLabel: { rotate: rows.length > 12 ? 35 : 0 } },
-    yAxis: { type: 'value', name: yName, minInterval: 1 },
-    dataZoom: rows.length > 18 ? [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 6 }] : [],
-    series: keys.map((key, index) => ({
-      name: titleCase(key),
-      type: mode,
-      smooth: mode === 'line',
-      stack: mode === 'bar' ? 'total' : undefined,
-      areaStyle: mode === 'line' ? { opacity: 0.08 } : undefined,
-      itemStyle: { color: CHART_COLORS[index] },
-      data: rows.map((row) => row.values[key] ?? 0),
-    })),
-  };
-}
-
-function attendanceTrend(rows: TrendRow[], mode: 'line' | 'bar') {
-  const option = trendOption(rows, ['complete', 'issues'], mode, 'Records');
-
-  return {
-    ...option,
-    yAxis: [{ type: 'value', name: 'Records', minInterval: 1 }, { type: 'value', name: '%', min: 0, max: 100 }],
-    series: [
-      ...option.series,
-      {
-        name: 'Compliance %',
-        type: 'line',
-        smooth: true,
-        yAxisIndex: 1,
-        itemStyle: { color: '#111827' },
-        data: rows.map((row) => row.compliance ?? 0),
-      },
-    ],
-  };
-}
-
-function compositionOption(data: { name: string; value: number }[], mode: 'donut' | 'treemap' | 'bar') {
-  if (mode === 'treemap') {
-    return { tooltip: { trigger: 'item' }, series: [{ type: 'treemap', roam: false, breadcrumb: { show: false }, label: { show: true, formatter: '{b}\n{c}' }, data }] };
-  }
-  if (mode === 'bar') {
-    return rankingOption(data, 'Occurrences');
-  }
-  return {
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 8 },
-    series: [{ type: 'pie', radius: ['46%', '72%'], center: ['50%', '45%'], label: { formatter: '{b}\n{c}' }, data }],
-  };
-}
-
-function balanceOption(rows: Props['leave']['balances']) {
-  return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { top: 8 },
-    grid: { left: 110, right: 25, top: 55, bottom: 35 },
-    xAxis: { type: 'value', name: 'Days' },
-    yAxis: { type: 'category', data: rows.map((row) => row.name) },
-    series: [
-      { name: 'Used', type: 'bar', stack: 'balance', data: rows.map((row) => row.used) },
-      { name: 'Pending', type: 'bar', stack: 'balance', data: rows.map((row) => row.pending) },
-      { name: 'Available', type: 'bar', stack: 'balance', data: rows.map((row) => row.available) },
-    ],
-  };
-}
-
-function concurrencyDistributionOption(rows: Props['leave']['concurrency_distribution']) {
-  const colors = ['#0f766e', '#2563eb', '#f59e0b', '#dc2626'];
-
-  return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 65, right: 25, top: 30, bottom: 45 },
-    xAxis: { type: 'category', data: rows.map((row) => row.name) },
-    yAxis: { type: 'value', name: 'Working days', minInterval: 1 },
-    series: [{
-      name: 'Working days',
-      type: 'bar',
-      barMaxWidth: 64,
-      label: { show: true, position: 'top' },
-      data: rows.map((row, index) => ({
-        value: row.days,
-        itemStyle: { color: colors[index] },
-      })),
-    }],
-  };
-}
-
-function rankingOption(rows: { name: string; value: number; user_id?: number }[], valueName: string) {
-  const sorted = [...rows].sort((a, b) => a.value - b.value);
-  return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 120, right: 35, top: 25, bottom: 35 },
-    xAxis: { type: 'value', name: valueName },
-    yAxis: { type: 'category', data: sorted.map((row) => row.name), axisLabel: { width: 105, overflow: 'truncate' } },
-    series: [{ type: 'bar', data: sorted.map((row) => ({ value: row.value, user_id: row.user_id })), label: { show: true, position: 'right' } }],
-  };
-}
-
-function heatmapOption(rows: Props['attendance']['heatmap'], start: string, end: string) {
-  const max = Math.max(1, ...rows.map((row) => row.issues));
-  return {
-    tooltip: { formatter: (params: { data: [string, number] }) => `${formatDate(params.data[0])}: ${params.data[1]} issue record(s)` },
-    visualMap: { min: 0, max, orient: 'horizontal', left: 'center', bottom: 8, inRange: { color: ['#fff7ed', '#fdba74', '#c2410c'] } },
-    calendar: { top: 35, left: 35, right: 20, cellSize: ['auto', 18], range: [start, end], itemStyle: { borderWidth: 2, borderColor: '#fff' }, yearLabel: { show: true } },
-    series: [{ type: 'heatmap', coordinateSystem: 'calendar', data: rows.map((row) => [row.date, row.issues]) }],
-  };
-}
-
-function attendanceOutcomeOption(rows: Props['attendance']['employees']) {
-  const sorted = [...rows].sort((a, b) => b.records - a.records || a.name.localeCompare(b.name));
-  return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { top: 8 },
-    grid: { left: 120, right: 30, top: 55, bottom: 35 },
-    xAxis: { type: 'value', name: 'Finalized days', minInterval: 1 },
-    yAxis: { type: 'category', data: sorted.map((row) => row.name), axisLabel: { width: 105, overflow: 'truncate' } },
-    series: [
-      { name: 'Complete', type: 'bar', stack: 'days', color: '#0f766e', data: sorted.map((row) => row.complete) },
-      { name: 'Issues', type: 'bar', stack: 'days', color: '#f97316', data: sorted.map((row) => row.issues) },
-    ],
-  };
-}
-
-function departmentOption(rows: Props['attendance']['departments'], radar: boolean) {
-  if (radar) {
-    const issueMax = Math.max(1, ...rows.flatMap((row) => [row.late, row.early, row.missing]));
-    return {
-      tooltip: {},
-      legend: { bottom: 6 },
-      radar: { indicator: [{ name: 'Compliance', max: 100 }, { name: 'Late-in days', max: issueMax }, { name: 'Early-out days', max: issueMax }, { name: 'Missing-punch days', max: issueMax }] },
-      series: [{ type: 'radar', data: rows.map((row) => ({ name: row.name, value: [row.compliance, row.late, row.early, row.missing] })) }],
-    };
-  }
-  return {
-    tooltip: { trigger: 'axis' },
-    legend: { top: 8 },
-    grid: { left: 55, right: 25, top: 55, bottom: 55 },
-    xAxis: { type: 'category', data: rows.map((row) => row.name) },
-    yAxis: { type: 'value' },
-    series: [
-      { name: 'Compliance %', type: 'bar', data: rows.map((row) => row.compliance) },
-      { name: 'Late-in days', type: 'bar', data: rows.map((row) => row.late) },
-      { name: 'Missing-punch days', type: 'bar', data: rows.map((row) => row.missing) },
-    ],
-  };
 }
 
 function periodFor(preset: PeriodPreset) {
@@ -1244,7 +968,8 @@ function queryPayload(filters: Filters) {
     leave_type_ids: filters.leave_type_ids,
     leave_statuses: filters.leave_statuses,
     attendance_statuses: filters.attendance_statuses,
-    site_ids: filters.site_ids,
+    attendance_statuses_explicit: 1,
+    attendance_issues: filters.attendance_issues,
   };
 }
 
@@ -1254,23 +979,8 @@ function queryString(filters: Filters) {
     if (Array.isArray(value)) value.forEach((item) => params.append(`${key}[]`, String(item)));
     else params.set(key, String(value));
   });
+  params.set('attendance_statuses_explicit', '1');
   return params.toString();
-}
-
-function toneClass(tone: string) {
-  return {
-    neutral: 'bg-neutral-100 text-neutral-600',
-    orange: 'bg-orange-50 text-orange-700',
-    amber: 'bg-amber-50 text-amber-700',
-    teal: 'bg-teal-50 text-teal-700',
-    blue: 'bg-blue-50 text-blue-700',
-    purple: 'bg-purple-50 text-purple-700',
-    red: 'bg-red-50 text-red-700',
-  }[tone] ?? 'bg-neutral-100 text-neutral-600';
-}
-
-function viewButton(active: boolean) {
-  return `inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold transition ${active ? 'bg-white text-orange-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-800'}`;
 }
 
 function sectionButton(active: boolean) {

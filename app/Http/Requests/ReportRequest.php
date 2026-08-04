@@ -45,10 +45,22 @@ class ReportRequest extends FormRequest
             || $this->user()?->hasPermission('reports.view')
             ? 'multi'
             : 'individual';
+        $view = $this->input('view', $defaultView);
+        $section = $this->input('section', 'overview');
+        $attendanceStatuses = $this->arrayInput('attendance_statuses');
+
+        if (
+            $section === 'attendance'
+            && $view === 'multi'
+            && ! $this->has('attendance_statuses')
+            && ! $this->boolean('attendance_statuses_explicit')
+        ) {
+            $attendanceStatuses = ['issues'];
+        }
 
         $this->merge([
-            'view' => $this->input('view', $defaultView),
-            'section' => $this->input('section', 'overview'),
+            'view' => $view,
+            'section' => $section,
             'start_date' => $startDate ?: $now->copy()->subDays(29)->toDateString(),
             'end_date' => $endDate ?: $now->toDateString(),
             'department_ids' => $this->arrayInput('department_ids'),
@@ -57,8 +69,8 @@ class ReportRequest extends FormRequest
             'employee_ids' => $this->arrayInput('employee_ids'),
             'leave_type_ids' => $this->arrayInput('leave_type_ids'),
             'leave_statuses' => $this->arrayInput('leave_statuses'),
-            'attendance_statuses' => $this->arrayInput('attendance_statuses'),
-            'site_ids' => $this->arrayInput('site_ids'),
+            'attendance_statuses' => $attendanceStatuses,
+            'attendance_issues' => $this->arrayInput('attendance_issues'),
             'employment_status' => $this->input('employment_status', 'active'),
             'page' => $this->integer('page', 1),
             'per_page' => $this->integer('per_page', 10),
@@ -93,15 +105,16 @@ class ReportRequest extends FormRequest
             'leave_statuses.*' => ['string', 'distinct', Rule::in(['pending', 'approved', 'rejected', 'cancelled'])],
             'attendance_statuses' => ['array'],
             'attendance_statuses.*' => ['string', 'distinct', Rule::in(['complete', 'issues'])],
-            'site_ids' => ['array'],
-            'site_ids.*' => ['integer', 'distinct'],
+            'attendance_statuses_explicit' => ['sometimes', 'boolean'],
+            'attendance_issues' => ['array'],
+            'attendance_issues.*' => ['string', 'distinct', Rule::in(['late', 'early', 'missing'])],
             'page' => ['integer', 'min:1'],
             'per_page' => ['integer', Rule::in([10, 25, 50])],
-            'sort' => ['string', Rule::in(['name', 'leave_days', 'available_balance', 'attendance_compliance', 'late', 'missing'])],
+            'sort' => ['string', Rule::in(['name', 'department', 'leave_days', 'used_balance', 'available_balance', 'attendance_compliance', 'late', 'early', 'missing'])],
             'direction' => ['string', Rule::in(['asc', 'desc'])],
-            'leave_sort' => ['string', Rule::in(['name', 'leave_type', 'starts_at', 'ends_at', 'days_in_period', 'status', 'approver'])],
+            'leave_sort' => ['string', Rule::in(['name', 'leave_type', 'starts_at', 'ends_at', 'days_in_period', 'status', 'reason', 'approver'])],
             'leave_direction' => ['string', Rule::in(['asc', 'desc'])],
-            'attendance_sort' => ['string', Rule::in(['name', 'date', 'site', 'issue_count', 'unresolved_flags'])],
+            'attendance_sort' => ['string', Rule::in(['name', 'date', 'issue_count', 'unresolved_flags'])],
             'attendance_direction' => ['string', Rule::in(['asc', 'desc'])],
             'month' => ['nullable', 'date_format:Y-m'],
             'start_month' => ['nullable', 'date_format:Y-m'],
@@ -126,7 +139,7 @@ class ReportRequest extends FormRequest
             leaveTypeIds: $this->integerArray($data['leave_type_ids'] ?? []),
             leaveStatuses: array_values(array_unique($data['leave_statuses'] ?? [])),
             attendanceStatuses: array_values(array_unique($data['attendance_statuses'] ?? [])),
-            siteIds: $this->integerArray($data['site_ids'] ?? []),
+            attendanceIssues: array_values(array_unique($data['attendance_issues'] ?? [])),
             page: (int) $data['page'],
             perPage: (int) $data['per_page'],
             sort: $data['sort'],
