@@ -376,11 +376,11 @@ export default function ApplyLeave({ leaveTypes, balances, requests, requestStat
                     {dateSelectionError}
                   </p>
                 )}
-                {!dateSelectionError && (
+                {/* {!dateSelectionError && (
                   <p className="mt-2 text-xs font-normal normal-case tracking-normal text-neutral-400">
                     Requests must start today or later. Weekends and public holidays are excluded from the total.
                   </p>
-                )}
+                )} */}
               </div>
             </div>
 
